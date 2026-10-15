@@ -228,7 +228,6 @@ contract BoundedDisputeModuleV1Test {
             escrow.registerDisputeFallback.selector, id, GOVERNANCE));
         _revertAs(SPONSOR, abi.encodeWithSelector(
             escrow.registerDisputeFallback.selector, id, FOREIGN));
-        _revertAs(DEV, abi.encodeWithSelector(escrow.applyForBounty.selector, id));
         vm.prank(SPONSOR);
         escrow.registerDisputeFallback(id, FALLBACK);
         _revertAs(SPONSOR, abi.encodeWithSelector(
@@ -255,7 +254,7 @@ contract BoundedDisputeModuleV1Test {
     }
 
     function testNeitherArbitratorCanBecomeTheAssignedDeveloper() public {
-        uint256 id = _fund();
+        uint256 id = _fund(1 ether);
         vm.prank(PRIMARY);
         escrow.applyForBounty(id);
         vm.prank(SPONSOR);

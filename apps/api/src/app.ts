@@ -4,10 +4,14 @@ import {
   parseTrustedGitHubWebhook,
 } from "./github/webhook-auth.js";
 import { FileWebhookJournal } from "./github/webhook-journal.js";
+import { PostgresWebhookJournal } from "./github/webhook-postgres.js";
 
 export interface AppConfiguration {
   webhookSecret?: string;
   webhookJournalDirectory?: string;
+  supabaseUrl?: string;
+  supabaseServiceRoleKey?: string;
+  production?: boolean;
 }
 
 function oneHeader(value: string | string[] | undefined): string | undefined {
@@ -19,12 +23,17 @@ export function buildApp(config: AppConfiguration = {}) {
   const secret = config.webhookSecret ?? process.env.GITHUB_WEBHOOK_SECRET;
   const directory =
     config.webhookJournalDirectory ?? process.env.WEBHOOK_JOURNAL_DIR;
+  const supabaseUrl = config.supabaseUrl ?? process.env.SUPABASE_URL;
+  const supabaseKey = config.supabaseServiceRoleKey ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const production = config.production ?? process.env.NODE_ENV === "production";
+  const postgresConfigured = Boolean(supabaseUrl && supabaseKey);
+  const journalConfigured = postgresConfigured || (!production && Boolean(directory));
 
   app.get("/health", async () => ({
     status: "ok",
     service: "certifiks-api",
     productReady: false,
-    webhookIngestionConfigured: Boolean(secret && directory),
+    webhookIngestionConfigured: Boolean(secret && journalConfigured),
     note: "HTTP and webhook transport only; installation OAuth and escrow are not ready",
   }));
 
@@ -38,7 +47,7 @@ export function buildApp(config: AppConfiguration = {}) {
   );
 
   app.post("/webhooks/github", async (request, reply) => {
-    if (!secret || !directory) {
+    if (!secret || !journalConfigured) {
       return reply
         .code(503)
         .send({ error: "Webhook ingestion is not configured" });
@@ -58,7 +67,10 @@ export function buildApp(config: AppConfiguration = {}) {
         },
         secret,
       );
-      const result = await new FileWebhookJournal(directory).record(event);
+      const journal = postgresConfigured
+        ? new PostgresWebhookJournal(supabaseUrl!, supabaseKey!)
+        : new FileWebhookJournal(directory!);
+      const result = await journal.record(event);
       return reply.code(result === "accepted" ? 202 : 200).send({
         deliveryId: event.deliveryId,
         state: result === "accepted" ? "recorded" : "duplicate",

@@ -48,6 +48,7 @@ contract BountyFundingModuleV1Test {
             manifestDigest: bytes32(uint256(1)),
             verifierPolicyDigest: bytes32(uint256(2)),
             disputePolicyDigest: bytes32(uint256(3)),
+            primaryArbitrator: address(0xA4B),
             submissionDeadline: uint64(block.timestamp + 10 days),
             verificationSeconds: 2 days,
             challengeSeconds: 1 days,

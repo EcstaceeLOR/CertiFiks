@@ -55,6 +55,7 @@ contract BountyAssignmentModuleV1Test {
             manifestDigest: bytes32(uint256(1)),
             verifierPolicyDigest: bytes32(uint256(2)),
             disputePolicyDigest: bytes32(uint256(3)),
+            primaryArbitrator: address(0xA4B),
             submissionDeadline: deadline,
             verificationSeconds: 1 days,
             challengeSeconds: 1 days,

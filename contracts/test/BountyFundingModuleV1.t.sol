@@ -48,6 +48,7 @@ contract BountyFundingModuleV1Test {
             manifestDigest: bytes32(uint256(1)),
             verifierPolicyDigest: bytes32(uint256(2)),
             disputePolicyDigest: bytes32(uint256(3)),
+            primaryArbitrator: address(0xA4B),
             submissionDeadline: uint64(block.timestamp + 10 days),
             verificationSeconds: 2 days,
             challengeSeconds: 1 days,
@@ -86,6 +87,18 @@ contract BountyFundingModuleV1Test {
         require(terms.rewardAtoms == 2 ether && terms.assetKind == 0, "bad reward");
         require(escrow.totalReservedAtoms() == 2 ether, "bad liabilities");
         require(address(escrow).balance == 2 ether, "wrong contract balance");
+    }
+
+    function testRejectsMissingOrSponsorControlledPrimaryArbitrator() public {
+        BountyFundingModuleV1.FundingRequest memory request = _valid();
+        request.primaryArbitrator = address(0);
+        _requireReject(request, 1 ether);
+        request.primaryArbitrator = address(0xA112);
+        _requireReject(request, 1 ether);
+        request.primaryArbitrator = address(0xA4B);
+        uint256 bounty = _fund(request, 1 ether);
+        require(escrow.getFundingTerms(bounty).primaryArbitrator == address(0xA4B),
+            "funded arbitrator not immutable");
     }
 
     function testNoFundingWithWrongChain() public {

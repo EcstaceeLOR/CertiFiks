@@ -62,6 +62,7 @@ contract GitSubmissionProtocolV1Test {
             manifestDigest: bytes32(uint256(10)),
             verifierPolicyDigest: bytes32(uint256(11)),
             disputePolicyDigest: bytes32(uint256(12)),
+            primaryArbitrator: address(0xA4B),
             submissionDeadline: uint64(block.timestamp + 10 days),
             verificationSeconds: 1 days,
             challengeSeconds: 1 days,

@@ -71,6 +71,26 @@ jobs:
         working-directory: contracts
         run: forge test -vv
 
+  settlement-adversarial:
+    name: Stateful settlement invariants, gas and coverage (NOT audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.8.5
+      - name: Run seeded stateful invariants and all regression tests
+        working-directory: contracts
+        run: |
+          forge test --match-contract EscrowStatefulInvariantTest --fuzz-seed 0x17 -vv
+          forge test -vv
+      - name: Generate gas profiling and coverage evidence
+        working-directory: contracts
+        run: |
+          forge test --gas-report
+          forge coverage --report summary
+
   dependency-audit:
     name: Production dependency vulnerability scan
     runs-on: ubuntu-latest

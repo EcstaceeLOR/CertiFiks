@@ -65,6 +65,27 @@
         },
         "runnerPolicy": {
           "const": "offline-v1"
+        },
+        "githubPolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allowForkPullRequests": {
+              "type": "boolean"
+            },
+            "requireVerifiedCommitSignature": {
+              "type": "boolean"
+            },
+            "baseBranch": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,99}$"
+            }
+          },
+          "required": [
+            "allowForkPullRequests",
+            "requireVerifiedCommitSignature",
+            "baseBranch"
+          ]
         }
       },
       "required": [
@@ -73,7 +94,8 @@
         "candidateTest",
         "regressionTests",
         "imageDigest",
-        "runnerPolicy"
+        "runnerPolicy",
+        "githubPolicy"
       ]
     },
     "reward": {

@@ -14,7 +14,12 @@
       "candidateTest": "tests/test_bug.py::test_issue_42",
       "regressionTests": ["pytest tests/regression"],
       "imageDigest": "0x4444444444444444444444444444444444444444444444444444444444444444",
-      "runnerPolicy": "offline-v1"
+      "runnerPolicy": "offline-v1",
+      "githubPolicy": {
+        "allowForkPullRequests": true,
+        "requireVerifiedCommitSignature": true,
+        "baseBranch": "main"
+      }
     },
     "reward": {
       "asset": "POT",
@@ -32,5 +37,5 @@
       "fallbackPolicyId": "fallback-panel-v1"
     }
   },
-  "expected": "0xa4f18ab6dbf5cb727a7603965e3f6031fff4e4e1cc957bccab9bbf96a0cdb697"
+  "expected": "0xddb62523e13ee6bc1a60f7921b171cccd3cd62cf1c4af7c9681c27904c47bd44"
 }

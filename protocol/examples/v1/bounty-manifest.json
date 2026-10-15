@@ -12,7 +12,12 @@
     "candidateTest": "tests/test_bug.py::test_issue_42",
     "regressionTests": ["pytest tests/regression"],
     "imageDigest": "0x4444444444444444444444444444444444444444444444444444444444444444",
-    "runnerPolicy": "offline-v1"
+    "runnerPolicy": "offline-v1",
+    "githubPolicy": {
+      "allowForkPullRequests": true,
+      "requireVerifiedCommitSignature": true,
+      "baseBranch": "main"
+    }
   },
   "reward": {
     "asset": "POT",

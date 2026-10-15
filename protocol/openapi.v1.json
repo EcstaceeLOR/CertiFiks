@@ -457,6 +457,27 @@
               },
               "runnerPolicy": {
                 "const": "offline-v1"
+              },
+              "githubPolicy": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "allowForkPullRequests": {
+                    "type": "boolean"
+                  },
+                  "requireVerifiedCommitSignature": {
+                    "type": "boolean"
+                  },
+                  "baseBranch": {
+                    "type": "string",
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,99}$"
+                  }
+                },
+                "required": [
+                  "allowForkPullRequests",
+                  "requireVerifiedCommitSignature",
+                  "baseBranch"
+                ]
               }
             },
             "required": [
@@ -465,7 +486,8 @@
               "candidateTest",
               "regressionTests",
               "imageDigest",
-              "runnerPolicy"
+              "runnerPolicy",
+              "githubPolicy"
             ]
           },
           "reward": {
@@ -592,6 +614,18 @@
             "type": "string",
             "minLength": 5,
             "maxLength": 256
+          },
+          "pullNumber": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "imageDigest": {
+            "type": "string",
+            "pattern": "^0x[a-f0-9]{64}$"
+          },
+          "evidenceDigest": {
+            "type": "string",
+            "pattern": "^0x[a-f0-9]{64}$"
           }
         },
         "required": [
@@ -603,7 +637,10 @@
           "headCommitSha",
           "manifestDigest",
           "submittedAtUnix",
-          "developerAccount"
+          "developerAccount",
+          "pullNumber",
+          "imageDigest",
+          "evidenceDigest"
         ],
         "$schema": "http://json-schema.org/draft-07/schema#",
         "$id": "urn:certifiks:protocol:v1:candidate-attempt"

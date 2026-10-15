@@ -107,6 +107,27 @@ test("canonical RFC8785 manifest hash matches published cross-language fixture",
   };
   assert.notEqual(digestManifestV1(changed), fixture.expected);
 });
+test("funded GitHub signature, fork and base-branch rules must be explicit", () => {
+  const manifest = json("examples/v1/bounty-manifest.json");
+  validateProtocolDocument("manifest", manifest);
+  const missing = structuredClone(manifest);
+  delete missing.acceptance.githubPolicy;
+  assert.throws(() => validateProtocolDocument("manifest", missing), SchemaValidationError);
+  for (const changed of [
+    { ...manifest.acceptance.githubPolicy, allowForkPullRequests: "yes" },
+    { ...manifest.acceptance.githubPolicy, requireVerifiedCommitSignature: null },
+    { ...manifest.acceptance.githubPolicy, baseBranch: "" },
+  ]) {
+    const invalid = structuredClone(manifest);
+    invalid.acceptance.githubPolicy = changed;
+    assert.throws(() => validateProtocolDocument("manifest", invalid), SchemaValidationError);
+  }
+  const retargeted = structuredClone(manifest);
+  retargeted.acceptance.githubPolicy.baseBranch = "develop";
+  validateProtocolDocument("manifest", retargeted);
+  assert.notEqual(digestManifestV1(retargeted), digestManifestV1(manifest));
+});
+
 test("only canonical raw manifest JSON text is accepted for signed replay", () => {
   const fixture = json("vectors/manifest-v1.json");
   // Fixture contains only I-JSON strings, integers and arrays, making JS/Python JCS identical.

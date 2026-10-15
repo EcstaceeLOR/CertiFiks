@@ -226,6 +226,21 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
             who == _assignment[bountyId].developer;
     }
 
+    function _requireReadyForAssignment(uint256 bountyId)
+        internal view override
+    {
+        if (!reviewerRoster[bountyId].configured) revert InvalidDisputePolicy();
+        DisputePolicy storage policy = _disputePolicy[bountyId];
+        if (
+            !policy.configured || !policy.governanceApproved ||
+            !policy.primaryAccepted || !policy.fallbackAccepted
+        ) revert InvalidDisputePolicy();
+        if (_isConflictedArbitrator(bountyId, _fundingTerms[bountyId].primaryArbitrator) ||
+            _isConflictedArbitrator(bountyId, policy.fallbackArbitrator)) {
+            revert ArbitratorConflict();
+        }
+    }
+
     /**
      * A green, independently signed quorum is subject to a real challenge
      * window. Only sponsor or developer can open one. Neither can extend it.

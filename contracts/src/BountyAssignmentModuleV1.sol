@@ -172,9 +172,17 @@ abstract contract BountyAssignmentModuleV1 is BountyFundingModuleV1 {
         emit ApplicationRejected(bountyId, applicant);
     }
 
+    /**
+     * @dev Internal feature hook. The abstract assignment module alone cannot
+     * demand complete custody guarantees. The composed arbitration module
+     * must refuse offering work without an agreed independent recovery path.
+     */
+    function _requireReadyForAssignment(uint256) internal view virtual {}
+
     function offerAssignment(uint256 bountyId, address applicant) external onlyCorrectChain {
         BountyTerms storage terms = _onlySponsor(bountyId);
         _requireOpen(bountyId);
+        _requireReadyForAssignment(bountyId);
         _requireWorkWindow(terms);
         if (applicant == terms.sponsor || applicant == address(0)) revert InvalidApplicant();
         if (_application[bountyId][applicant] != ApplicationState.Applied) {

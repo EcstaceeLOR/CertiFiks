@@ -1,4 +1,4 @@
-import Ajv, { type ErrorObject, type ValidateFunction } from "ajv";
+import { Ajv, type ErrorObject, type ValidateFunction } from "ajv";
 import manifest from "./schemas/v1/bounty-manifest.schema.json" with {
   type: "json",
 };

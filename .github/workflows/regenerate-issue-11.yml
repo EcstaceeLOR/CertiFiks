@@ -1,4 +1,5 @@
 name: Temporary regenerate Issue 11 protocol types
+# Second pass: candidate-attempt schema now includes PR and evidence identity.
 on:
   push:
     branches: [feat/issue-11-immutable-submission]

@@ -24,7 +24,7 @@ export class FileWebhookJournal {
     }
     await mkdir(this.directory, { recursive: true, mode: 0o700 });
     const destination = join(this.directory, event.deliveryId + ".json");
-    let file;
+    let file: Awaited<ReturnType<typeof open>>;
     try {
       file = await open(destination, "wx", 0o600);
     } catch (error) {

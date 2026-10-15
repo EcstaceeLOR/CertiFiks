@@ -6,7 +6,7 @@
 
 | Parameter | Published / observed value | Evidence and confidence |
 |---|---|---|
-| Chain implementation | Substrate runtime with a native contracts pallet; not intrinsically EVM | Official source and contracts RPC docs: https://github.com/portaldotVolunteer/Portaldot and https://portaldot-dev.readthedocs.io/en/latest/module-interface/rpc/contracts.html (high for historical architecture) |
+| Chain implementation | Historical published developer docs show a Substrate/WASM contracts runtime; **the 2026 Portaldot V3 Hacker House separately advertises both WASM and EVM execution**, neither endpoint has yet been live-tested for this repo | Legacy docs: https://github.com/portaldotVolunteer/Portaldot ; 2026 event announcement: https://www.eventbrite.com/e/portaldot-hacker-house-2026-tickets-2002321816454 |
 | Official docs mainnet URL | wss://mainnet.portaldot.io | https://portaldot-dev.readthedocs.io/en/latest/chain-info.html (published, not live-tested here) |
 | Native denomination | POT | Same Portaldot chain information docs (published) |
 | Native decimals | 14 | Same docs (published; must recheck via system_properties at live RPC) |
@@ -16,13 +16,13 @@
 | Community-reported live endpoint | wss://portaldot.philotheephilix.in | Third-party project https://github.com/freedanjeremiah/portaldot-hackathon-2026-inkport-dmk — **not an officially verified RPC** |
 | Historical contracts RPC | contracts_call, contracts_instantiate, contracts_getStorage, contracts_rentProjection | Official legacy docs: https://portaldot-dev.readthedocs.io/en/latest/module-interface/rpc/contracts.html |
 | Contracts ABI | Community reports legacy rent-era seal0 pallet-contracts on their reachable node | Third-party InkPort project above; independently confirm metadata + actual deployment before selecting toolchain |
-| Public V3 EVM RPC / chain ID | **Not independently established** | Do not assume standard MetaMask/Foundry EVM deployment supported |
+| Public V3 EVM RPC / chain ID | **V3 EVM support advertised by organizer; concrete endpoint/chain ID and deployability not independently established** | 2026 organizer event announcement and DoraHacks listing; verify with signed deployment, not marketing alone |
 | Public faucet/explorer URL supporting this specific 2026 hackathon | **Not independently established** | Ask organizers and show observed receipts, never invent URLs |
 
-## Why Solidity starter is not immediately deployable
-The existing ProofPatch/CertiFiks escrow starter is Solidity meant for an EVM. The official Portaldot documentation describes a Substrate / WASM contracts model, and third-party projects report an older seal0 host-function ABI. This is a *VM compatibility question*, not a code-copying task.
+## EVM vs WASM: do not preselect the VM
+The existing ProofPatch/CertiFiks escrow starter is Solidity targeting an EVM. Historical Portaldot developer docs describe a Substrate/WASM contracts runtime, and community projects report an older seal0 host-function ABI. **However, the 2026 Hacker House organizer advertises Portaldot Network V3.0 as EVM-compatible, supporting EVM and WASM smart contracts.** This is now a *live environment and endpoint discovery problem*, not evidence that V3 is WASM-only.
 
-Do not treat a successfully compiled Solidity Foundry contract as a Portaldot deployment. Foundry remains useful for reference-domain accounting tests; implementing the real deployed escrow may require a separate Rust/WASM contract with SCALE-coded runtime transactions. The definitive execution backend must be selected only after probing official/approved RPC metadata and compiling + deploying a minimal read/write contract against it.
+Do not treat a successfully compiled Solidity Foundry contract as a Portaldot deployment. If the actual qualifying V3 EVM endpoint supports deployment, Solidity/Foundry is the preferred path for existing escrow logic. If only a qualifying WASM contracts runtime can be verified and accepted, port/reimplement the on-chain escrow in Rust/WASM while preserving independently tested settlement invariants. Select the definitive execution backend only after probing current official/approved RPC metadata and successfully deploying a minimal read/write contract.
 
 Alternative toolchains require scrutiny: (1) version-matched ink! and cargo-contract if the runtime truly accepts it; (2) auditable raw seal0 Rust for legacy pallet-contracts; (3) third-party Solidity-to-WASM translation **only after** separate equivalence, security and ABI verification. Translation does not make Solidity EVM-compatible or preserve security automatically.
 
@@ -37,6 +37,7 @@ No package install required beyond Node.js >=22. The following only reads RPC me
 Avoid embedding private RPC API keys in committed logs; the probe rejects URLs with credentials/query strings. WebSocket connection failures can result from local DNS/network restrictions, firewall or endpoint problems; **they are not proof that Portaldot is offline**.
 
 ### RPC matrix (observational, not asserted active)
+The 2026 announcement advertises dual-VM V3, but as of this report we have neither an official V3 EVM HTTP/WS URL nor its chain ID. The legacy/docs endpoints below are candidates, not proof of V3 deployment.
 | Candidate | Live handshake from this session | Chain / specVersion | contracts_* | eth_chainId | Contract tx |
 |---|---|---|---|---|---|
 | wss://mainnet.portaldot.io (official docs) | NOT RUN from outbound-enabled runner | UNKNOWN | UNKNOWN | UNKNOWN | NOT DEPLOYED |
@@ -51,8 +52,8 @@ The model execution container cannot resolve external hostnames currently; local
 3. Build a minimal compatible WASM contract with pinned toolchain matching the live pallet ABI, simulate gas/storage and deploy from a controlled wallet.
 4. Execute one real state-changing method and one real read; save exact block/extrinsic hash, finalized block, emitted ContractInstantiated/ContractEmitted or equivalent events, SS58 contract address and relevant remote verification evidence.
 5. Re-run against a clean local Portaldot dev node, document Genesis and runtime version, and verify no irreversible real funds were exposed.
-6. Ask the current Portaldot Hacker House 2026 organizers whether a local legacy dev node, public third-party node or official mainnet is sufficient and which execution environment is scored. Distinguish unverified competitor reports from official organizer confirmation.
-7. If an EVM RPC really exists, separately demonstrate eth_chainId, eth_estimateGas and an actual EVM contract deployment; do not infer EVM from name alone.
+6. The published 2026 event listing specifically requires Portaldot **testnet** deployment for the hackathon. Ask the organizer for the official V3 testnet RPC/faucet/explorer and whether a local legacy dev node or a public third-party node additionally qualifies; earlier Season 1 local-node acceptance is *not* transferable by assumption.
+7. V3 EVM is organizer-advertised, but requires a concrete endpoint. Separately demonstrate eth_chainId, eth_estimateGas and an actual EVM contract deployment; do not infer deployability from publicity alone.
 
 ## Questions requiring first-party organizer confirmation
 - Is the Portaldot V3 network live? Official RPC(s), genesis hash, contract VM, accepted chain IDs, blockchain explorer and faucet?
@@ -62,9 +63,16 @@ The model execution container cannot resolve external hostnames currently; local
 - What exact network integration proof must accompany the registration/check-in and final judging package?
 
 ## Engineering decision (conditional)
-Prefer **native Substrate/WASM custody and native POT units** if runtime probes confirm contracts pallet compatibility; use appropriate Polkadot.js wallets and RPC for user transactions, not EVM-only wallet connectors. Maintain off-chain GitHub verification, signed results and immutable manifest shared across VM implementations. Keep Foundry Solidity reference code for economic/invariant design, but do not deploy or describe it as production Portaldot code.
+**First choice:** Confirm qualifying V3 EVM RPC. If compatible and deployable, keep the Solidity/Foundry escrow architecture and verified EVM wallet stack on that chain. **Fallback:** If only a qualifying WASM contracts runtime is deployable under current organizer rules, implement native Substrate/WASM custody using POT units and Polkadot.js wallets; maintain signed GitHub verification evidence and common immutable manifest hashes. Do not substitute the older community node for the V3 testnet merely because it appears reachable. These options are mutually exclusive *until* the actual network is established.
 
 ## Done vs blocked
 **Implemented on issue branch:** dependency-free RPC read probe and GH Actions syntax/optional evidence workflow; compatibility notes and source inventory.
 
 **Still required:** actual live RPC evidence, eligibility confirmation, compatibly compiled minimal contract and authentic funded testnet/local extrinsic receipts. Without these the issue stays OPEN and cannot be merged/closed as completed. Only merge a non-final PR if it is clearly marked partial and consciously accepted; prefer keep one issue open until its acceptance is real.
+
+
+## 2026-specific event claims and qualification rule (updated)
+- Eventbrite announcement from DoraHacks advertises **Portaldot Network V3.0** as compatible with both EVM and WASM smart contracts: https://www.eventbrite.com/e/portaldot-hacker-house-2026-tickets-2002321816454
+- DoraHacks listing cached by HackathonRadar states **deployment to the Portaldot testnet is mandatory** for project eligibility, with verifiable transaction/contract evidence important for judges: https://www.hackathonradar.com/database/hackathon/portaldot-hacker-house-2026
+- This listing is a third-party reproduction of organizer rules, so final eligibility still requires DoraHacks/organizer confirmation. Do NOT conclude a legacy local dev node alone is sufficient for the current V3 Hacker House.
+- A recent InkPort competitor reports production-compatible raw seal0 WASM deployments to a community RPC; that is useful technical prior art but cannot establish the accepted V3 EVM network for CertiFiks.

@@ -32,3 +32,7 @@ Python reference limitation: only the published ASCII/I-JSON subset; it is not g
 - Authenticated reviewer identities, context-aware chronology/quorum checks and end-to-end replayable real bug-fix evidence.
 
 Keep Issue #19 OPEN until production acceptance is genuinely complete.
+
+## Admission API integration rule
+
+API and worker callers must fetch expectedDigest from independently verified finalized on-chain funding terms; the candidate developer must never control both the raw manifest and the expected digest. Validate GitHub numeric repository ID, authorized GitHub App installation, chain identity, signer eligibility and terminal status separately before persisting or executing a fix verification job. A successful local digest match is not a successful verification run.

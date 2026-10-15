@@ -14,7 +14,7 @@ Two different actions must not be conflated:
 ## 1. Exact on-chain snapshot fields
 - Bounty ID and monotonically numbered attempt ID (first = 1; retries increment).
 - Developer wallet authenticated by `msg.sender`, contract address and pinned chain ID.
-- GitHub **numeric repository ID** from immutable funding terms (#9) and exact PR number.
+- GitHub **numeric repository ID** from immutable funding terms (#9) and exact PR number. The funded manifest now commits explicit fork, signed-commit and target-base-branch policies under `acceptance.githubPolicy`.
 - Funding terms' immutable 20-byte baseline Git SHA-1 and 32-byte policy/manifest SHA-256.
 - Exact 20-byte submitted head SHA-1, 32-byte image digest and 32-byte externally supplied evidence digest.
 - Manifest version must match the funding terms **v1**; zero/unchanged head or empty image/evidence is rejected.
@@ -35,7 +35,7 @@ All old attempts persist as a per-bounty indexed, immutable snapshot. A force-pu
 
 `verifyGitHubRevisionSnapshotV1` requires:
 - Exact numeric target repo ID (repo renames/transfers do not change identity), plus the original funded full name. Any changed path requires **new sponsor-approved funding terms**, not automatic target reassignment.
-- Exact PR number and base repo ID, latest base SHA/head SHA, PR open state and PR author user ID matching a previously bound GitHub + wallet account.
+- Exact PR number, base repo ID, latest base SHA/head SHA, **sponsor-approved base branch**, PR open state and PR author user ID matching a previously bound GitHub + wallet account.
 - Fork PRs only if an explicit funded sponsor policy permits them, with a non-deleted and authenticated fork repository ID.
 - Contents **read** and Pull requests **read** installation permissions, with the target numeric repo included in the installation scope. Permission context must come from trusted GitHub App integration, not a UI form.
 - GitHub-reported signature verification for the requested candidate commit **when policy requires it**. When not required, unsigned commits can be accepted but their status remains in the evidence record.
@@ -51,6 +51,8 @@ Via authenticated GitHub repository/PR reads (not a CertiFiks App installation),
 - [PR #56](https://github.com/EcstaceeLOR/CertiFiks/pull/56): numeric PR ID **4876328862**, PR number **56**, target repo ID **1420771959**, base SHA `d7a1a7f75512aac7fb488bb8329f1b091b66fab9`, head SHA `5caff6398a601b4179a343ace1a78a61b13b6f17` at observation, author numeric GitHub ID **202467598**. Same-repository PR at time of observation.
 
 This is a **public API observation**, not a sponsor-authorized test fixture, consented external customer pilot, commit signature verification, live token validation, or Portaldot contract proof. Never assume those branch SHA values remain current; re-query and fail closed when stale.
+
+**Protocol update in Issue #11:** v1 now requires `acceptance.githubPolicy`, with `allowForkPullRequests`, `requireVerifiedCommitSignature`, and `baseBranch`. The canonical example hash was updated to `0xddb62523e13ee6bc1a60f7921b171cccd3cd62cf1c4af7c9681c27904c47bd44`. This happened before any real funding or deployment; already funded policies can never be retroactively changed. Backend #20/#23 must hydrate these values from the exact committed manifest, not user query parameters.
 
 ## 5. Threat scenarios and tests
 

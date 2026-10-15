@@ -1,0 +1,39 @@
+name: Temporary protocol v1 generation for issue 5
+on:
+  push:
+    branches:
+      - feat/issue-5-protocol-contracts
+    paths:
+      - ".github/workflows/bootstrap-protocol.yml"
+permissions:
+  contents: write
+jobs:
+  generate-protocol-types:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Resolve exact dependency lockfile
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Install locked dependencies without install scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Generate schemas, OpenAPI and TypeScript API types
+        run: |
+          npm run protocol:generate
+      - name: Apply Biome formatting and safe fixes
+        run: npx biome check --write . || true
+      - name: Commit generated types and dependency graph
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(#5): lock protocol dependencies and generate OpenAPI client types"
+            git push origin HEAD:feat/issue-5-protocol-contracts
+          fi

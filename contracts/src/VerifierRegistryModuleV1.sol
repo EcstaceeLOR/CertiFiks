@@ -153,6 +153,10 @@ abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
             capabilityDigest == bytes32(0) || conflictDigest == bytes32(0)
         ) revert InvalidOrganization();
         if (_org[organizationId].everRegistered) revert AlreadyEnrolled();
+        // The central enrollment authority must not vote as its own reviewer.
+        if (controller == registryGovernance || signer == registryGovernance) {
+            revert ConflictingBountyRole();
+        }
         _bindWallet(organizationId, controller);
         _bindWallet(organizationId, signer);
         ReviewerOrganization storage organization = _org[organizationId];

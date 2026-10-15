@@ -204,6 +204,21 @@ contract VerifierRegistryModuleV1Test {
         require(escrow.getReviewerOrganization(ORG1).active, "controller activation missing");
     }
 
+    function testGovernanceWalletCannotEnrollItselfAsReviewer() public {
+        _revertAs(address(this), abi.encodeWithSelector(
+            escrow.enrollReviewerOrganization.selector,
+            ORG1, address(this), S1, bytes32(uint256(1)),
+            bytes32(uint256(2)), bytes32(uint256(3))
+        ));
+        _revertAs(address(this), abi.encodeWithSelector(
+            escrow.enrollReviewerOrganization.selector,
+            ORG1, C1, address(this), bytes32(uint256(1)),
+            bytes32(uint256(2)), bytes32(uint256(3))
+        ));
+        _enroll(ORG1, C1, S1);
+        require(!escrow.getReviewerOrganization(ORG1).active, "did not require controller opt-in");
+    }
+
     function testCannotManufactureTwoOrganizationsWithAnotherSigningKey() public {
         _enroll(ORG1, C1, S1);
         _activate(ORG1, C1);

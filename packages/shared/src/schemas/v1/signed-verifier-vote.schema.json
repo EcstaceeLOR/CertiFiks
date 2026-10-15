@@ -1,0 +1,142 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:certifiks:protocol:v1:signed-verifier-vote",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": "1"
+    },
+    "chainId": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$"
+    },
+    "verifyingContract": {
+      "type": "string",
+      "pattern": "^0x[a-f0-9]{40}$"
+    },
+    "bountyId": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$"
+    },
+    "attemptId": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$"
+    },
+    "organizationId": {
+      "type": "string",
+      "pattern": "^0x[a-f0-9]{64}$"
+    },
+    "signerEpoch": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$"
+    },
+    "attemptDigest": {
+      "type": "string",
+      "pattern": "^0x[a-f0-9]{64}$"
+    },
+    "manifestDigest": {
+      "type": "string",
+      "pattern": "^0x[a-f0-9]{64}$"
+    },
+    "verifierPolicyDigest": {
+      "type": "string",
+      "pattern": "^0x[a-f0-9]{64}$"
+    },
+    "headGitSha": {
+      "type": "string",
+      "pattern": "^0x[a-f0-9]{40}$"
+    },
+    "reportDigest": {
+      "type": "string",
+      "pattern": "^0x[a-f0-9]{64}$"
+    },
+    "imageDigest": {
+      "type": "string",
+      "pattern": "^0x[a-f0-9]{64}$"
+    },
+    "outcome": {
+      "type": "integer",
+      "enum": [
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "baselineFailed": {
+      "type": "boolean"
+    },
+    "candidatePassed": {
+      "type": "boolean"
+    },
+    "regressionsPassed": {
+      "type": "boolean"
+    },
+    "expiresAt": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$"
+    },
+    "signatureScheme": {
+      "const": "eip712-secp256k1"
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^0x[a-f0-9]{130}$"
+    }
+  },
+  "required": [
+    "version",
+    "chainId",
+    "verifyingContract",
+    "bountyId",
+    "attemptId",
+    "organizationId",
+    "signerEpoch",
+    "attemptDigest",
+    "manifestDigest",
+    "verifierPolicyDigest",
+    "headGitSha",
+    "reportDigest",
+    "imageDigest",
+    "outcome",
+    "baselineFailed",
+    "candidatePassed",
+    "regressionsPassed",
+    "expiresAt",
+    "signatureScheme",
+    "signature"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "const": 1
+          }
+        },
+        "required": [
+          "outcome"
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "baselineFailed": {
+            "type": "boolean",
+            "const": true
+          },
+          "candidatePassed": {
+            "type": "boolean",
+            "const": true
+          },
+          "regressionsPassed": {
+            "type": "boolean",
+            "const": true
+          }
+        }
+      }
+    }
+  ]
+}

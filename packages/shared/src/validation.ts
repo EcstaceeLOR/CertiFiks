@@ -9,6 +9,7 @@ import event from "./schemas/v1/chain-event.schema.json" with { type: "json" };
 import dispute from "./schemas/v1/dispute-case.schema.json" with {
   type: "json",
 };
+import vote from "./schemas/v1/signed-verifier-vote.schema.json" with { type: "json" };
 import report from "./schemas/v1/verification-report.schema.json" with {
   type: "json",
 };
@@ -24,6 +25,7 @@ const validators = {
   manifest: ajv.compile(manifest),
   attempt: ajv.compile(attempt),
   report: ajv.compile(report),
+  vote: ajv.compile(vote),
   dispute: ajv.compile(dispute),
   event: ajv.compile(event),
 };

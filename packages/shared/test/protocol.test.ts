@@ -21,6 +21,7 @@ const fixtures = [
   ["manifest", "bounty-manifest"],
   ["attempt", "candidate-attempt"],
   ["report", "verification-report"],
+  ["vote", "signed-verifier-vote"],
   ["dispute", "dispute-case"],
   ["event", "chain-event"],
 ] as const;
@@ -176,4 +177,30 @@ test("only canonical raw manifest JSON text is accepted for signed replay", () =
   assert.throws(() =>
     parseCanonicalManifestV1('{"version":"1","version":"2"}'),
   );
+});
+
+test("EIP712 reviewer votes reject forged approvals and incomplete signatures", () => {
+  const receipt = json("examples/v1/signed-verifier-vote.json");
+  validateProtocolDocument("vote", receipt);
+  for (const change of [
+    { ...receipt, outcome: 1, baselineFailed: false },
+    { ...receipt, outcome: 1, candidatePassed: false },
+    { ...receipt, outcome: 1, regressionsPassed: false },
+    { ...receipt, signature: "0x" + "aa".repeat(64) },
+    { ...receipt, signerEpoch: "0" },
+    { ...receipt, organizationId: "0x" + "ee".repeat(31) },
+    { ...receipt, expiresAt: "0" },
+    { ...receipt, chainId: "0" },
+    { ...receipt, signatureScheme: "ed25519" },
+  ]) {
+    assert.throws(() => validateProtocolDocument("vote", change), SchemaValidationError);
+  }
+  for (const negative of [2, 3, 4]) {
+    validateProtocolDocument("vote", {
+      ...receipt,
+      outcome: negative,
+      candidatePassed: false,
+      regressionsPassed: false,
+    });
+  }
 });

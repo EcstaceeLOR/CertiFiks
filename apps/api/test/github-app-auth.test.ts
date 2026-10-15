@@ -132,8 +132,8 @@ test("PostgreSQL journal sends only authenticated minimal metadata and honors du
     assert.equal(options?.redirect, "error");
     const json = JSON.parse(String(options?.body));
     assert.deepEqual(Object.keys(json).sort(), [
-      "p_body_sha256",
       "p_action",
+      "p_body_sha256",
       "p_delivery_id",
       "p_event_type",
       "p_installation_id",

@@ -1,0 +1,29 @@
+name: Normalize Issue 20 Integration
+on:
+  push:
+    branches:
+      - feat/issue-20-app-auth-and-postgres-queue
+permissions:
+  contents: write
+jobs:
+  format:
+    if: ${{ !contains(github.event.head_commit.message, '[format-ci]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npx biome check --write apps/api/src/github/app-auth.ts apps/api/src/github/authenticated-revision.ts apps/api/src/github/webhook-postgres.ts apps/api/src/github/webhook-auth.ts apps/api/src/app.ts apps/api/test/github-app-auth.test.ts apps/api/test/authenticated-revision.test.ts apps/api/test/app.test.ts
+      - name: Commit only formatting
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/api/src apps/api/test
+          if ! git diff --cached --quiet; then
+            git commit -m "style(#20): normalize typed GitHub integration sources [format-ci]"
+            git push origin HEAD:feat/issue-20-app-auth-and-postgres-queue
+          fi

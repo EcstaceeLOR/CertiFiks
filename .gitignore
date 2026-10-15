@@ -1,0 +1,28 @@
+# JavaScript and Next build artifacts
+node_modules/
+.next/
+**/.next/
+**/dist/
+**/*.tsbuildinfo
+coverage/
+npm-debug.log*
+
+# Foundry and local RPC
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+
+# Secrets; use .env.example
+.env
+.env.*
+!.env.example
+!**/.env.example
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+.DS_Store

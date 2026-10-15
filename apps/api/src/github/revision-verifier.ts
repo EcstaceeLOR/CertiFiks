@@ -141,7 +141,9 @@ function validatePolicy(input: PinnedRevisionPolicyV1): void {
     typeof input.requireVerifiedCommitSignature !== "boolean" ||
     typeof input.baseBranch !== "string" ||
     !BASE_BRANCH.test(input.baseBranch) ||
-    input.baseBranch.split("/").some((segment) => segment === "." || segment === "..")
+    input.baseBranch
+      .split("/")
+      .some((segment) => segment === "." || segment === "..")
   ) {
     throw new GitHubRevisionError(
       "INVALID_SCHEMA",

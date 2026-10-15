@@ -130,7 +130,12 @@ test("PR retargeting to another base branch is rejected even if SHAs match", () 
     "STALE_COMMIT",
   );
   fails(
-    () => verifyGitHubRevisionSnapshotV1({ ...policy, baseBranch: "../secrets" }, access, snapshot),
+    () =>
+      verifyGitHubRevisionSnapshotV1(
+        { ...policy, baseBranch: "../secrets" },
+        access,
+        snapshot,
+      ),
     "INVALID_SCHEMA",
   );
 });

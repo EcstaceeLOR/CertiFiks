@@ -112,15 +112,24 @@ test("funded GitHub signature, fork and base-branch rules must be explicit", () 
   validateProtocolDocument("manifest", manifest);
   const missing = structuredClone(manifest);
   delete missing.acceptance.githubPolicy;
-  assert.throws(() => validateProtocolDocument("manifest", missing), SchemaValidationError);
+  assert.throws(
+    () => validateProtocolDocument("manifest", missing),
+    SchemaValidationError,
+  );
   for (const changed of [
     { ...manifest.acceptance.githubPolicy, allowForkPullRequests: "yes" },
-    { ...manifest.acceptance.githubPolicy, requireVerifiedCommitSignature: null },
+    {
+      ...manifest.acceptance.githubPolicy,
+      requireVerifiedCommitSignature: null,
+    },
     { ...manifest.acceptance.githubPolicy, baseBranch: "" },
   ]) {
     const invalid = structuredClone(manifest);
     invalid.acceptance.githubPolicy = changed;
-    assert.throws(() => validateProtocolDocument("manifest", invalid), SchemaValidationError);
+    assert.throws(
+      () => validateProtocolDocument("manifest", invalid),
+      SchemaValidationError,
+    );
   }
   const retargeted = structuredClone(manifest);
   retargeted.acceptance.githubPolicy.baseBranch = "develop";

@@ -127,6 +127,11 @@ export interface components {
         imageDigest: string;
         /** @constant */
         runnerPolicy: "offline-v1";
+        githubPolicy: {
+          allowForkPullRequests: boolean;
+          requireVerifiedCommitSignature: boolean;
+          baseBranch: string;
+        };
       };
       reward: {
         asset: string;

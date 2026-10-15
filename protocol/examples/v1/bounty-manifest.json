@@ -10,9 +10,7 @@
     "baselineTest": "tests/test_bug.py::test_issue_42",
     "expectedFailureFingerprint": "0x6666666666666666666666666666666666666666666666666666666666666666",
     "candidateTest": "tests/test_bug.py::test_issue_42",
-    "regressionTests": [
-      "pytest tests/regression"
-    ],
+    "regressionTests": ["pytest tests/regression"],
     "imageDigest": "0x4444444444444444444444444444444444444444444444444444444444444444",
     "runnerPolicy": "offline-v1",
     "githubPolicy": {
@@ -32,10 +30,7 @@
     "arbitrationTimeoutSeconds": 86400
   },
   "review": {
-    "verifierOrganizations": [
-      "reviewer-a",
-      "reviewer-b"
-    ],
+    "verifierOrganizations": ["reviewer-a", "reviewer-b"],
     "quorum": 2,
     "fallbackPolicyId": "fallback-panel-v1"
   }

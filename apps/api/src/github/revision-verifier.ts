@@ -106,14 +106,20 @@ function validatePolicy(input: PinnedRevisionPolicyV1): void {
     !positiveSafeInt(input.pullNumber) ||
     !positiveSafeInt(input.developerGitHubUserId)
   ) {
-    throw new GitHubRevisionError("INVALID_SCHEMA", "Invalid numeric repository, PR or developer identity");
+    throw new GitHubRevisionError(
+      "INVALID_SCHEMA",
+      "Invalid numeric repository, PR or developer identity",
+    );
   }
   const parts = input.repositoryFullName.split("/");
   if (
     parts.length !== 2 ||
     parts.some((part) => !REPO_PART.test(part) || part === "." || part === "..")
   ) {
-    throw new GitHubRevisionError("INVALID_SCHEMA", "Repository coordinate is not owner/name");
+    throw new GitHubRevisionError(
+      "INVALID_SCHEMA",
+      "Repository coordinate is not owner/name",
+    );
   }
   if (
     !SHA.test(input.baseCommitSha) ||
@@ -122,13 +128,19 @@ function validatePolicy(input: PinnedRevisionPolicyV1): void {
     !DIGEST.test(input.manifestDigest) ||
     !DIGEST.test(input.imageDigest)
   ) {
-    throw new GitHubRevisionError("INVALID_SCHEMA", "Noncanonical or missing immutable proof fields");
+    throw new GitHubRevisionError(
+      "INVALID_SCHEMA",
+      "Noncanonical or missing immutable proof fields",
+    );
   }
   if (
     typeof input.allowForkPullRequests !== "boolean" ||
     typeof input.requireVerifiedCommitSignature !== "boolean"
   ) {
-    throw new GitHubRevisionError("INVALID_SCHEMA", "Explicit fork and commit-signing policy required");
+    throw new GitHubRevisionError(
+      "INVALID_SCHEMA",
+      "Explicit fork and commit-signing policy required",
+    );
   }
 }
 
@@ -137,19 +149,28 @@ function validatePermissions(
   access: InstalledRepositoryPermissionsV1,
 ): void {
   if (!positiveSafeInt(access.installationId)) {
-    throw new GitHubRevisionError("UNAUTHORIZED", "Missing authenticated GitHub App installation");
+    throw new GitHubRevisionError(
+      "UNAUTHORIZED",
+      "Missing authenticated GitHub App installation",
+    );
   }
   if (
     !Array.isArray(access.accessibleRepositoryIds) ||
     !access.accessibleRepositoryIds.includes(policy.repositoryId)
   ) {
-    throw new GitHubRevisionError("FORBIDDEN", "GitHub App installation does not have target repository access");
+    throw new GitHubRevisionError(
+      "FORBIDDEN",
+      "GitHub App installation does not have target repository access",
+    );
   }
   if (
     !["read", "write"].includes(access.granted.contents) ||
     !["read", "write"].includes(access.granted.pull_requests)
   ) {
-    throw new GitHubRevisionError("FORBIDDEN", "GitHub App needs Contents + Pull requests read permissions");
+    throw new GitHubRevisionError(
+      "FORBIDDEN",
+      "GitHub App needs Contents + Pull requests read permissions",
+    );
   }
 }
 
@@ -166,9 +187,15 @@ export function verifyGitHubRevisionSnapshotV1(
   validatePermissions(policy, access);
 
   if (!snapshot.repo || snapshot.repo.id !== policy.repositoryId) {
-    throw new GitHubRevisionError("STALE_COMMIT", "Repository numeric identity changed or cannot be proven");
+    throw new GitHubRevisionError(
+      "STALE_COMMIT",
+      "Repository numeric identity changed or cannot be proven",
+    );
   }
-  if (snapshot.repo.full_name.toLowerCase() !== policy.repositoryFullName.toLowerCase()) {
+  if (
+    snapshot.repo.full_name.toLowerCase() !==
+    policy.repositoryFullName.toLowerCase()
+  ) {
     // Rename/transfer is NOT permission to silently alter funded manifest.
     throw new GitHubRevisionError(
       "MANIFEST_MISMATCH",
@@ -176,7 +203,10 @@ export function verifyGitHubRevisionSnapshotV1(
     );
   }
   if (snapshot.repo.archived || snapshot.repo.disabled) {
-    throw new GitHubRevisionError("FORBIDDEN", "Repository no longer accepts submissions");
+    throw new GitHubRevisionError(
+      "FORBIDDEN",
+      "Repository no longer accepts submissions",
+    );
   }
   const p = snapshot.pull;
   if (
@@ -185,32 +215,56 @@ export function verifyGitHubRevisionSnapshotV1(
     p.base?.repo?.id !== policy.repositoryId ||
     p.state !== "open"
   ) {
-    throw new GitHubRevisionError("STALE_COMMIT", "PR is missing, closed or belongs to a different repository");
+    throw new GitHubRevisionError(
+      "STALE_COMMIT",
+      "PR is missing, closed or belongs to a different repository",
+    );
   }
-  if (p.base.sha !== policy.baseCommitSha || p.head.sha !== policy.headCommitSha) {
-    throw new GitHubRevisionError("STALE_COMMIT", "PR moved from the sponsor-approved baseline/head revision");
+  if (
+    p.base.sha !== policy.baseCommitSha ||
+    p.head.sha !== policy.headCommitSha
+  ) {
+    throw new GitHubRevisionError(
+      "STALE_COMMIT",
+      "PR moved from the sponsor-approved baseline/head revision",
+    );
   }
   if (!p.user || p.user.id !== policy.developerGitHubUserId) {
-    throw new GitHubRevisionError("UNAUTHORIZED", "PR author is not the developer bound to the accepted wallet");
+    throw new GitHubRevisionError(
+      "UNAUTHORIZED",
+      "PR author is not the developer bound to the accepted wallet",
+    );
   }
   if (!p.head.repo || !positiveSafeInt(p.head.repo.id)) {
-    throw new GitHubRevisionError("STALE_COMMIT", "Fork/repository source was deleted or cannot be authenticated");
+    throw new GitHubRevisionError(
+      "STALE_COMMIT",
+      "Fork/repository source was deleted or cannot be authenticated",
+    );
   }
 
   const fork = p.head.repo.id !== policy.repositoryId;
   if (fork && !policy.allowForkPullRequests) {
-    throw new GitHubRevisionError("FORBIDDEN", "Fork PR is forbidden under the funded sponsor policy");
+    throw new GitHubRevisionError(
+      "FORBIDDEN",
+      "Fork PR is forbidden under the funded sponsor policy",
+    );
   }
   if (
     !snapshot.commit ||
     snapshot.commit.sha !== policy.headCommitSha ||
     typeof snapshot.commit.commit?.verification?.verified !== "boolean"
   ) {
-    throw new GitHubRevisionError("STALE_COMMIT", "Commit record is missing or does not match pinned SHA");
+    throw new GitHubRevisionError(
+      "STALE_COMMIT",
+      "Commit record is missing or does not match pinned SHA",
+    );
   }
   const commitSignatureVerified = snapshot.commit.commit.verification.verified;
   if (policy.requireVerifiedCommitSignature && !commitSignatureVerified) {
-    throw new GitHubRevisionError("FORBIDDEN", "The GitHub commit signature is not verified");
+    throw new GitHubRevisionError(
+      "FORBIDDEN",
+      "The GitHub commit signature is not verified",
+    );
   }
 
   const fields = {
@@ -261,10 +315,17 @@ export async function fetchGitHubRevisionSnapshotV1(
 ): Promise<GitHubSnapshotV1> {
   validatePolicy(policy);
   if (typeof installationToken !== "string" || installationToken.length < 8) {
-    throw new GitHubRevisionError("UNAUTHORIZED", "GitHub App installation token required");
+    throw new GitHubRevisionError(
+      "UNAUTHORIZED",
+      "GitHub App installation token required",
+    );
   }
   const [owner, repository] = policy.repositoryFullName.split("/");
-  const prefix = "/repos/" + encodeURIComponent(owner) + "/" + encodeURIComponent(repository);
+  const prefix =
+    "/repos/" +
+    encodeURIComponent(owner) +
+    "/" +
+    encodeURIComponent(repository);
 
   async function read(path: string): Promise<any> {
     const response = await request(API_BASE + path, {
@@ -277,17 +338,31 @@ export async function fetchGitHubRevisionSnapshotV1(
       redirect: "error",
       cache: "no-store",
     });
-    if (response.status === 401) throw new GitHubRevisionError("UNAUTHORIZED", "GitHub token expired or invalid");
+    if (response.status === 401)
+      throw new GitHubRevisionError(
+        "UNAUTHORIZED",
+        "GitHub token expired or invalid",
+      );
     if (response.status === 403 || response.status === 404) {
-      throw new GitHubRevisionError("FORBIDDEN", "GitHub App token lacks repository read access");
+      throw new GitHubRevisionError(
+        "FORBIDDEN",
+        "GitHub App token lacks repository read access",
+      );
     }
-    if (!response.ok) throw new GitHubRevisionError("DEPENDENCY_UNAVAILABLE", "GitHub API unavailable");
+    if (!response.ok)
+      throw new GitHubRevisionError(
+        "DEPENDENCY_UNAVAILABLE",
+        "GitHub API unavailable",
+      );
     return response.json();
   }
 
   const repo: GitHubRepositoryV1 = await read(prefix);
   if (repo.id !== policy.repositoryId) {
-    throw new GitHubRevisionError("STALE_COMMIT", "Repository numeric ID mismatch");
+    throw new GitHubRevisionError(
+      "STALE_COMMIT",
+      "Repository numeric ID mismatch",
+    );
   }
   const pull: GitHubPullV1 = await read(prefix + "/pulls/" + policy.pullNumber);
   const commit: GitHubCommitV1 = await read(

@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 const DELIVERY_ID = /^[0-9a-fA-F-]{36}$/;
 const ALLOWED_EVENTS = new Set([
@@ -19,6 +19,7 @@ export class GitHubWebhookError extends Error {
 
 export interface TrustedWebhookEvent {
   deliveryId: string;
+  bodySha256: string;
   eventType: string;
   action: string;
   installationId: number;
@@ -143,6 +144,7 @@ export function parseTrustedGitHubWebhook(
   }
   return {
     deliveryId: deliveryId.toLowerCase(),
+    bodySha256: createHash("sha256").update(body).digest("hex"),
     eventType,
     action,
     installationId: installation.id,

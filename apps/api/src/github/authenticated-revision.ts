@@ -1,14 +1,14 @@
 import {
+  GitHubAppAuthError,
+  type GitHubAppCredentials,
+  mintRepositoryInstallationToken,
+} from "./app-auth.js";
+import {
   fetchGitHubRevisionSnapshotV1,
-  verifyGitHubRevisionSnapshotV1,
   type GitHubRevisionReceiptV1,
   type PinnedRevisionPolicyV1,
+  verifyGitHubRevisionSnapshotV1,
 } from "./revision-verifier.js";
-import {
-  GitHubAppAuthError,
-  mintRepositoryInstallationToken,
-  type GitHubAppCredentials,
-} from "./app-auth.js";
 
 /**
  * A trusted installation binding must come from a user-authenticated,
@@ -40,7 +40,10 @@ export async function getAuthenticatedRevisionReceiptV1(
     trustedConnection.connectedOwnerUserId !== options.requestedOwnerUserId ||
     trustedConnection.repositoryId !== policy.repositoryId
   ) {
-    throw new GitHubAppAuthError("FORBIDDEN", "Repository owner consent or access revoked");
+    throw new GitHubAppAuthError(
+      "FORBIDDEN",
+      "Repository owner consent or access revoked",
+    );
   }
   const request = options.request ?? fetch;
   const scoped = await mintRepositoryInstallationToken(
@@ -49,6 +52,10 @@ export async function getAuthenticatedRevisionReceiptV1(
     trustedConnection.repositoryId,
     request,
   );
-  const snapshot = await fetchGitHubRevisionSnapshotV1(policy, scoped.token, request);
+  const snapshot = await fetchGitHubRevisionSnapshotV1(
+    policy,
+    scoped.token,
+    request,
+  );
   return verifyGitHubRevisionSnapshotV1(policy, scoped.permissions, snapshot);
 }

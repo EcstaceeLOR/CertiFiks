@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { generateKeyPairSync } from "node:crypto";
 import test from "node:test";
+import { GitHubAppAuthError } from "../src/github/app-auth.js";
 import {
   getAuthenticatedRevisionReceiptV1,
   type VerifiedGitHubConnectionV1,
 } from "../src/github/authenticated-revision.js";
-import { GitHubAppAuthError } from "../src/github/app-auth.js";
 import type { PinnedRevisionPolicyV1 } from "../src/github/revision-verifier.js";
 
 const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
@@ -36,7 +36,10 @@ const policy: PinnedRevisionPolicyV1 = {
 
 test("consent-bound installation scope then immutable repo/PR/commit read yields unsigned evidence", async () => {
   const paths: string[] = [];
-  const request = (async (url: string, options?: RequestInit): Promise<Response> => {
+  const request = (async (
+    url: string,
+    options?: RequestInit,
+  ): Promise<Response> => {
     const value = String(url);
     paths.push(value);
     const data = value.includes("/access_tokens")
@@ -59,14 +62,21 @@ test("consent-bound installation scope then immutable repo/PR/commit read yields
               sha: policy.headCommitSha,
               commit: { verification: { verified: true, reason: "valid" } },
             }
-          : { id: 315, full_name: "owner/repository", archived: false, disabled: false };
+          : {
+              id: 315,
+              full_name: "owner/repository",
+              archived: false,
+              disabled: false,
+            };
     assert.equal(options?.redirect, "error");
     return new Response(JSON.stringify(data), {
       status: value.includes("/access_tokens") ? 201 : 200,
     });
   }) as typeof fetch;
   const receipt = await getAuthenticatedRevisionReceiptV1(
-    credentials, connection, policy,
+    credentials,
+    connection,
+    policy,
     { requestedOwnerUserId: "maintainer-123", request },
   );
   assert.equal(receipt.repositoryId, 315);
@@ -84,7 +94,9 @@ test("revoked, unconsented, wrong-account and wrong-repository bindings never mi
     await assert.rejects(
       getAuthenticatedRevisionReceiptV1(credentials, changed, policy, {
         requestedOwnerUserId: "maintainer-123",
-        request: (async () => { throw new Error("must not access GitHub"); }) as typeof fetch,
+        request: (async () => {
+          throw new Error("must not access GitHub");
+        }) as typeof fetch,
       }),
       GitHubAppAuthError,
     );
@@ -92,7 +104,9 @@ test("revoked, unconsented, wrong-account and wrong-repository bindings never mi
   await assert.rejects(
     getAuthenticatedRevisionReceiptV1(credentials, connection, policy, {
       requestedOwnerUserId: "attacker-999",
-      request: (async () => { throw new Error("must not access GitHub"); }) as typeof fetch,
+      request: (async () => {
+        throw new Error("must not access GitHub");
+      }) as typeof fetch,
     }),
     GitHubAppAuthError,
   );

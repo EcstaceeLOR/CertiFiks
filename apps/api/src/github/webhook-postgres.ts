@@ -9,11 +9,23 @@ export class PostgresWebhookJournal {
     private readonly request: typeof fetch = fetch,
   ) {
     const url = new URL(supabaseUrl);
-    if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash) {
-      throw new Error("Transactional webhook journal requires clean HTTPS Supabase URL");
+    if (
+      url.protocol !== "https:" ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash
+    ) {
+      throw new Error(
+        "Transactional webhook journal requires clean HTTPS Supabase URL",
+      );
     }
-    if (!serverKey || serverKey.length < 16) throw new Error("Service role key missing");
-    this.endpoint = new URL("/rest/v1/rpc/certifiks_ingest_github_event", url).href;
+    if (!serverKey || serverKey.length < 16)
+      throw new Error("Service role key missing");
+    this.endpoint = new URL(
+      "/rest/v1/rpc/certifiks_ingest_github_event",
+      url,
+    ).href;
   }
 
   async record(event: TrustedWebhookEvent): Promise<"accepted" | "duplicate"> {
@@ -43,7 +55,9 @@ export class PostgresWebhookJournal {
     if (!reply.ok) throw new Error("Transactional webhook journal unavailable");
     const result: unknown = await reply.json();
     if (result !== "accepted" && result !== "duplicate") {
-      throw new Error("Transactional webhook journal returned invalid confirmation");
+      throw new Error(
+        "Transactional webhook journal returned invalid confirmation",
+      );
     }
     return result;
   }

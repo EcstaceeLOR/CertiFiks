@@ -24,10 +24,12 @@ export function buildApp(config: AppConfiguration = {}) {
   const directory =
     config.webhookJournalDirectory ?? process.env.WEBHOOK_JOURNAL_DIR;
   const supabaseUrl = config.supabaseUrl ?? process.env.SUPABASE_URL;
-  const supabaseKey = config.supabaseServiceRoleKey ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseKey =
+    config.supabaseServiceRoleKey ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
   const production = config.production ?? process.env.NODE_ENV === "production";
   const postgresConfigured = Boolean(supabaseUrl && supabaseKey);
-  const journalConfigured = postgresConfigured || (!production && Boolean(directory));
+  const journalConfigured =
+    postgresConfigured || (!production && Boolean(directory));
 
   app.get("/health", async () => ({
     status: "ok",

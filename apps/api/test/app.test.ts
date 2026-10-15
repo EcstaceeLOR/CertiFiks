@@ -15,7 +15,6 @@ test("health reports accurate transport-only readiness", async () => {
   }
 });
 
-
 test("production refuses filesystem-only webhook persistence", async () => {
   const app = buildApp({
     production: true,

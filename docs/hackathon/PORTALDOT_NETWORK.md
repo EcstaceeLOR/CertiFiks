@@ -40,11 +40,11 @@ Avoid embedding private RPC API keys in committed logs; the probe rejects URLs w
 The 2026 announcement advertises dual-VM V3, but as of this report we have neither an official V3 EVM HTTP/WS URL nor its chain ID. The legacy/docs endpoints below are candidates, not proof of V3 deployment.
 | Candidate | Live handshake from this session | Chain / specVersion | contracts_* | eth_chainId | Contract tx |
 |---|---|---|---|---|---|
-| wss://mainnet.portaldot.io (official docs) | NOT RUN from outbound-enabled runner | UNKNOWN | UNKNOWN | UNKNOWN | NOT DEPLOYED |
-| wss://portaldot.philotheephilix.in (community report) | NOT RUN from outbound-enabled runner | UNKNOWN | Community reports legacy seal0 | UNKNOWN | CertiFiks NOT DEPLOYED |
+| wss://mainnet.portaldot.io (official docs) | **SUCCESS via GitHub Actions 2026-10-15** | Portaldot Mainnet; specVersion 1002 | Advertises 4 older contracts_* methods; no deployment | **-32601 unsupported** | NOT DEPLOYED |
+| wss://portaldot.philotheephilix.in (community report) | **Handshake failed from GitHub runner** | UNKNOWN | UNKNOWN | NOT TESTED | NOT DEPLOYED |
 | ws://127.0.0.1:9944 (local) | NOT RUN (no local Portaldot node launched here) | UNKNOWN | UNKNOWN | UNKNOWN | NOT DEPLOYED |
 
-The model execution container cannot resolve external hostnames currently; local DNS failures there should not be construed as provider downtime. CI includes a reproducible read-only diagnostic. Do not mark #2 complete from someone else's project receipts.
+The local execution container cannot resolve external hostnames, but GitHub Actions **did** establish a direct read-only connection to documented Portaldot Mainnet on 2026-10-15; the community endpoint handshake failed. Both outcomes are recorded in the [probe report](./evidence/2026-10-15-read-only-rpc.md). Mainnet proof is **not** V3 testnet deployment proof; no contracts were deployed.
 
 ## Deployment evidence needed to pass #2
 1. Query latest real chain info, genesis hash, runtime version, feature availability and network approval, and capture a timestamped public/private trace.
@@ -66,7 +66,7 @@ The model execution container cannot resolve external hostnames currently; local
 **First choice:** Confirm qualifying V3 EVM RPC. If compatible and deployable, keep the Solidity/Foundry escrow architecture and verified EVM wallet stack on that chain. **Fallback:** If only a qualifying WASM contracts runtime is deployable under current organizer rules, implement native Substrate/WASM custody using POT units and Polkadot.js wallets; maintain signed GitHub verification evidence and common immutable manifest hashes. Do not substitute the older community node for the V3 testnet merely because it appears reachable. These options are mutually exclusive *until* the actual network is established.
 
 ## Done vs blocked
-**Implemented on issue branch:** dependency-free RPC read probe and GH Actions syntax/optional evidence workflow; compatibility notes and source inventory.
+**Implemented on issue branch:** dependency-free read-only Substrate/EVM probes, GitHub Actions syntax and live read-only diagnostics, verified public mainnet runtime metadata and source inventory. See [timestamped probe report](./evidence/2026-10-15-read-only-rpc.md) and [GitHub Actions run](https://github.com/EcstaceeLOR/CertiFiks/actions/runs/38746763936).
 
 **Still required:** actual live RPC evidence, eligibility confirmation, compatibly compiled minimal contract and authentic funded testnet/local extrinsic receipts. Without these the issue stays OPEN and cannot be merged/closed as completed. Only merge a non-final PR if it is clearly marked partial and consciously accepted; prefer keep one issue open until its acceptance is real.
 

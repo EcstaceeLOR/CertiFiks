@@ -59,7 +59,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: stable
+          version: v1.8.5
       - name: Build source (does not certify security or Portaldot compatibility)
         working-directory: contracts
         run: forge build

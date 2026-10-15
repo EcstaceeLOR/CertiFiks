@@ -238,6 +238,9 @@ contract BoundedArbitrationModuleV1Test {
             bounty, 1, keccak256("sponsor challenges result"),
             keccak256("archive evidence, baseline reproduction")
         );
+        // Existing tests exercise primary rulings after the guaranteed
+        // counterparty evidence grace period, not unfair instant rulings.
+        vm.warp(block.timestamp + 1 hours);
     }
 
     function _openEscalation(uint256 bounty) internal {
@@ -246,6 +249,7 @@ contract BoundedArbitrationModuleV1Test {
             bounty, 1, keccak256("independent review disagreed"),
             keccak256("reproduction transcript evidence")
         );
+        vm.warp(block.timestamp + 1 hours);
     }
 
     function _failAs(address actor, bytes memory calldataPayload) internal {
@@ -317,6 +321,8 @@ contract BoundedArbitrationModuleV1Test {
         ));
         vm.prank(SPONSOR);
         escrow.appealPrimaryRuling(bounty, 1, bytes32(uint256(30)), bytes32(uint256(31)));
+        vm.prank(DEVELOPER);
+        escrow.respondToAppeal(bounty, 1, bytes32(uint256(390)));
         require(escrow.getDisputeCase(bounty, 1).phase ==
             BoundedArbitrationModuleV1.CasePhase.AppealReview, "appeal ignored");
         vm.prank(FALLBACK);
@@ -357,6 +363,8 @@ contract BoundedArbitrationModuleV1Test {
         escrow.appealPrimaryRuling(
             bounty, 1, bytes32(uint256(46)), bytes32(uint256(47))
         );
+        vm.prank(SPONSOR);
+        escrow.respondToAppeal(bounty, 1, bytes32(uint256(460)));
         _failAs(DEVELOPER, abi.encodeWithSelector(
             escrow.appealPrimaryRuling.selector, bounty, uint64(1),
             bytes32(uint256(48)), bytes32(uint256(49))
@@ -829,6 +837,77 @@ contract BoundedArbitrationModuleV1Test {
         ));
         require(escrow.getAssignment(bounty).offeredTo == DEVELOPER,
             "failed conflicted acceptance destroyed pending offer");
+    }
+
+    function testChallengedDeveloperCanPostImmutableResponseBeforePrimaryRuling() public {
+        uint256 bounty = _approved();
+        vm.prank(SPONSOR);
+        escrow.challengeApprovedAttempt(
+            bounty, 1, bytes32(uint256(2001)), bytes32(uint256(2002))
+        );
+        BoundedArbitrationModuleV1.DisputeCase memory beforeResponse = escrow.getDisputeCase(bounty, 1);
+        require(beforeResponse.responseUntil > block.timestamp, "reply time absent");
+        _failAs(ARBITRATOR, abi.encodeWithSelector(
+            escrow.ruleOnDispute.selector, bounty, uint64(1),
+            BoundedArbitrationModuleV1.Award.SponsorRefund,
+            bytes32(uint256(2003)), bytes32(uint256(2004))
+        ));
+        _failAs(CONTROLLER_A, abi.encodeWithSelector(
+            escrow.respondToDispute.selector, bounty, uint64(1), bytes32(uint256(2005))
+        ));
+        _failAs(DEVELOPER, abi.encodeWithSelector(
+            escrow.respondToDispute.selector, bounty, uint64(1), bytes32(0)
+        ));
+        vm.prank(DEVELOPER);
+        escrow.respondToDispute(bounty, 1, bytes32(uint256(2006)));
+        _failAs(DEVELOPER, abi.encodeWithSelector(
+            escrow.respondToDispute.selector, bounty, uint64(1), bytes32(uint256(2007))
+        ));
+        require(escrow.getDisputeCase(bounty, 1).developerResponseDigest == bytes32(uint256(2006)),
+            "developer evidence replaced");
+        // Reply is publicly indexed and primary can now hear the dispute
+        // without forcing a needless one-hour delay.
+        vm.prank(ARBITRATOR);
+        escrow.ruleOnDispute(
+            bounty, 1, BoundedArbitrationModuleV1.Award.DeveloperReward,
+            bytes32(uint256(2008)), bytes32(uint256(2009))
+        );
+        require(escrow.getDisputeCase(bounty, 1).phase ==
+            BoundedArbitrationModuleV1.CasePhase.PrimaryAppealWindow, "reply not heard");
+    }
+
+    function testLosingPartyAppealCannotBeRuledBeforeWinnerCanAnswer() public {
+        uint256 bounty = _approved();
+        _openChallenge(bounty);
+        vm.prank(ARBITRATOR);
+        escrow.ruleOnDispute(
+            bounty, 1, BoundedArbitrationModuleV1.Award.DeveloperReward,
+            bytes32(uint256(2101)), bytes32(uint256(2102))
+        );
+        vm.prank(SPONSOR);
+        escrow.appealPrimaryRuling(bounty, 1, bytes32(uint256(2103)), bytes32(uint256(2104)));
+        _failAs(FALLBACK, abi.encodeWithSelector(
+            escrow.ruleOnDispute.selector, bounty, uint64(1),
+            BoundedArbitrationModuleV1.Award.SponsorRefund,
+            bytes32(uint256(2105)), bytes32(uint256(2106))
+        ));
+        _failAs(SPONSOR, abi.encodeWithSelector(
+            escrow.respondToAppeal.selector, bounty, uint64(1), bytes32(uint256(2107))
+        ));
+        vm.prank(DEVELOPER);
+        escrow.respondToAppeal(bounty, 1, bytes32(uint256(2108)));
+        _failAs(DEVELOPER, abi.encodeWithSelector(
+            escrow.respondToAppeal.selector, bounty, uint64(1), bytes32(uint256(2109))
+        ));
+        vm.prank(FALLBACK);
+        escrow.ruleOnDispute(
+            bounty, 1, BoundedArbitrationModuleV1.Award.SponsorRefund,
+            bytes32(uint256(2110)), bytes32(uint256(2111))
+        );
+        require(escrow.getDisputeCase(bounty, 1).phase ==
+            BoundedArbitrationModuleV1.CasePhase.Resolved, "appeal stalled");
+        require(address(escrow).balance == escrow.totalReservedAtoms(),
+            "appeal moved locked funds");
     }
 
     function testFuzzAttackerCannotArbitrateUnrelatedCase(address attacker) public {

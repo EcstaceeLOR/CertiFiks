@@ -10,6 +10,7 @@ import { createHash } from "node:crypto";
 const SHA = /^[a-f0-9]{40}$/;
 const DIGEST = /^0x[a-f0-9]{64}$/;
 const REPO_PART = /^[a-zA-Z0-9_.-]{1,100}$/;
+const BASE_BRANCH = /^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,99}$/;
 const API_BASE = "https://api.github.com";
 
 export type VerificationFailureCode =
@@ -41,6 +42,7 @@ export interface PinnedRevisionPolicyV1 {
   imageDigest: string;
   allowForkPullRequests: boolean;
   requireVerifiedCommitSignature: boolean;
+  baseBranch: string;
 }
 
 /** Values must come from an authenticated GitHub App installation context. */
@@ -63,7 +65,7 @@ export interface GitHubRepositoryV1 {
 export interface GitHubPullV1 {
   number: number;
   state: string;
-  base: { sha: string; repo: { id: number } };
+  base: { sha: string; ref: string; repo: { id: number } };
   head: { sha: string; repo: { id: number } | null };
   user: { id: number } | null;
 }
@@ -86,6 +88,7 @@ export interface GitHubRevisionReceiptV1 {
   pullNumber: number;
   fork: boolean;
   baseCommitSha: string;
+  baseBranch: string;
   headCommitSha: string;
   developerGitHubUserId: number;
   installationId: number;
@@ -135,11 +138,14 @@ function validatePolicy(input: PinnedRevisionPolicyV1): void {
   }
   if (
     typeof input.allowForkPullRequests !== "boolean" ||
-    typeof input.requireVerifiedCommitSignature !== "boolean"
+    typeof input.requireVerifiedCommitSignature !== "boolean" ||
+    typeof input.baseBranch !== "string" ||
+    !BASE_BRANCH.test(input.baseBranch) ||
+    input.baseBranch.split("/").some((segment) => segment === "." || segment === "..")
   ) {
     throw new GitHubRevisionError(
       "INVALID_SCHEMA",
-      "Explicit fork and commit-signing policy required",
+      "Explicit fork, commit-signing and sponsor-approved base branch policy required",
     );
   }
 }
@@ -222,6 +228,7 @@ export function verifyGitHubRevisionSnapshotV1(
   }
   if (
     p.base.sha !== policy.baseCommitSha ||
+    p.base.ref !== policy.baseBranch ||
     p.head.sha !== policy.headCommitSha
   ) {
     throw new GitHubRevisionError(
@@ -275,6 +282,7 @@ export function verifyGitHubRevisionSnapshotV1(
     sourceRepositoryId: p.head.repo.id,
     fork,
     baseCommitSha: p.base.sha,
+    baseBranch: p.base.ref,
     headCommitSha: p.head.sha,
     developerGitHubUserId: p.user.id,
     installationId: access.installationId,
@@ -294,6 +302,7 @@ export function verifyGitHubRevisionSnapshotV1(
     pullNumber: fields.pullNumber,
     fork: fields.fork,
     baseCommitSha: fields.baseCommitSha,
+    baseBranch: fields.baseBranch,
     headCommitSha: fields.headCommitSha,
     developerGitHubUserId: fields.developerGitHubUserId,
     installationId: fields.installationId,

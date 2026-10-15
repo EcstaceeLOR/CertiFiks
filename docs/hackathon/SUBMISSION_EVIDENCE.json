@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "project": "CertiFiks",
+  "asOfUtc": "2026-10-15",
+  "competition": "Portaldot Hacker House 2026",
+  "submissionPortal": "https://dorahacks.io/hackathon/2362/detail",
+  "sourceConfidence": "Organizer event confirms dates (Oct14-Nov6), V3 WASM/EVM support, and solo participation; detailed time-of-day, rules and scoring from a third-party reproduction require organizer confirmation.",
+  "checkinDeadlineWat": "2026-10-24T13:00:00+01:00",
+  "finalDeadlineWat": "2026-11-06T05:00:00+01:00",
+  "entryEligibility": "unconfirmed_for_nigerian_residents_and_prize_payouts",
+  "statuses": {
+    "public_repo": {
+      "state": "verified",
+      "evidence": "https://github.com/EcstaceeLOR/CertiFiks",
+      "owner": "#4",
+      "note": "Repository is reachable and has public read access."
+    },
+    "readme": {
+      "state": "verified",
+      "evidence": "https://github.com/EcstaceeLOR/CertiFiks/blob/main/README.md",
+      "owner": "#4",
+      "note": "Truthfully documents foundation and missing live features; may need product updates before check-in."
+    },
+    "commit_history": {
+      "state": "verified",
+      "evidence": "https://github.com/EcstaceeLOR/CertiFiks/commits/main/",
+      "owner": "#4",
+      "note": "Seven commits on main since Oct 14 as observed Oct 15, but working core is still missing."
+    },
+    "architecture_diagram": {
+      "state": "verified",
+      "evidence": "https://github.com/EcstaceeLOR/CertiFiks/blob/feat/issue-8-submission-evidence/docs/architecture/COMPETITION_ARCHITECTURE.md",
+      "owner": "#8",
+      "note": "Genuine published Mermaid architecture document on the PR branch; most depicted components are explicitly unimplemented, not a working flow."
+    },
+    "working_core_flow": {
+      "state": "missing",
+      "owner": "#40",
+      "note": "No real deployed bounty lifecycle or verifiable isolated runner; no synthetic-success fallback."
+    },
+    "qualifying_testnet": {
+      "state": "blocked",
+      "owner": "#18",
+      "note": "No organizer-approved V3 testnet RPC/chain ID verified and no CertiFiks deployment."
+    },
+    "contract_address": {
+      "state": "missing",
+      "owner": "#18",
+      "note": "Never substitute historical mainnet RPC probe for deployed contract address."
+    },
+    "testnet_transaction": {
+      "state": "missing",
+      "owner": "#18",
+      "note": "No genuine deployment/state-changing tx receipt; CI and local Foundry tests do not qualify."
+    },
+    "testnet_explorer": {
+      "state": "missing",
+      "owner": "#18",
+      "note": "If official explorer is unavailable, include independently verifiable tx/block metadata and label unavailable."
+    },
+    "initial_demo_video": {
+      "state": "missing",
+      "owner": "#45",
+      "note": "Live link OR max-3-minute core feature recording expected for check-in, based on secondary rules; no recording yet."
+    },
+    "initial_demo_live": {
+      "state": "missing",
+      "owner": "#45",
+      "note": "Live functional core alternative to video for check-in; no production-live URL."
+    },
+    "checkin_submitted": {
+      "state": "missing",
+      "owner": "#45",
+      "note": "Not yet submitted in DoraHacks; never set verified without actual receipt."
+    },
+    "final_working_build": {
+      "state": "missing",
+      "owner": "#40",
+      "note": "Working real end-to-end chain/GitHub verification absent."
+    },
+    "final_video": {
+      "state": "missing",
+      "owner": "#45",
+      "note": "Max 3 minutes, shows real core flow and Portaldot integration."
+    },
+    "pitch_deck": {
+      "state": "missing",
+      "owner": "#45",
+      "note": "PDF or public deck addressing problem, ecosystem necessity, proof, and roadmap."
+    },
+    "final_submission_submitted": {
+      "state": "missing",
+      "owner": "#45",
+      "note": "No final DoraHacks submission confirmation."
+    },
+    "nigeria_entry_and_prize": {
+      "state": "blocked",
+      "owner": "#8",
+      "note": "No event-specific written confirmation about Nigerian entrants' prize payment requirements."
+    },
+    "organizer_v3_rpc": {
+      "state": "blocked",
+      "owner": "#18",
+      "note": "Event advertises V3 EVM/WASM but official testnet endpoint unavailable in verified sources."
+    }
+  }
+}

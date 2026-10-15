@@ -21,7 +21,10 @@
     "build": "npm run build -ws --if-present",
     "check": "npm run lint && npm run typecheck && npm run test && npm run build",
     "protocol:generate": "node protocol/generate-openapi.mjs && openapi-typescript protocol/openapi.v1.json -o packages/shared/src/generated/openapi.d.ts && biome format --write protocol/openapi.v1.json packages/shared/src/generated/openapi.d.ts",
-    "protocol:check": "node protocol/generate-openapi.mjs --check && openapi-typescript protocol/openapi.v1.json -o packages/shared/src/generated/openapi.d.ts && biome format --write packages/shared/src/generated/openapi.d.ts && git diff --exit-code -- packages/shared/src/generated/openapi.d.ts"
+    "protocol:check": "node protocol/generate-openapi.mjs --check && openapi-typescript protocol/openapi.v1.json -o packages/shared/src/generated/openapi.d.ts && biome format --write packages/shared/src/generated/openapi.d.ts && git diff --exit-code -- packages/shared/src/generated/openapi.d.ts",
+    "submission:status": "node scripts/check-submission-readiness.mjs",
+    "submission:checkin": "node scripts/check-submission-readiness.mjs --require-checkin",
+    "submission:final": "node scripts/check-submission-readiness.mjs --require-final"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

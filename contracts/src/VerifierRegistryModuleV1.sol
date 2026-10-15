@@ -115,6 +115,7 @@ abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
     mapping(bytes32 => ReviewerOrganization) internal _org;
     mapping(uint256 => ReviewerRoster) public reviewerRoster;
     mapping(uint256 => mapping(bytes32 => bool)) public isCommittedReviewer;
+    mapping(uint256 => bytes32[]) internal _committedRosterMembers;
     mapping(address => bytes32) public walletOrganization;
     mapping(uint256 => mapping(uint64 => mapping(bytes32 => ReviewerJob))) internal _jobs;
     mapping(uint256 => mapping(uint64 => uint8)) public reviewerJobCount;
@@ -301,6 +302,7 @@ abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
         });
         for (uint256 i = 0; i < organizationIds.length; i++) {
             isCommittedReviewer[bountyId][organizationIds[i]] = true;
+            _committedRosterMembers[bountyId].push(organizationIds[i]);
         }
         emit ReviewerRosterConfigured(
             bountyId, commitment, quorum, uint8(organizationIds.length)
@@ -416,6 +418,13 @@ abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
         job.declaredReportDigest = reportDigest;
         _org[organizationId].declaredEvidenceCount += 1;
         emit ReviewerEvidenceDeclared(bountyId, attemptId, organizationId, msg.sender, reportDigest);
+    }
+
+    function getCommittedReviewerIds(uint256 bountyId)
+        external view returns (bytes32[] memory)
+    {
+        _terms(bountyId);
+        return _committedRosterMembers[bountyId];
     }
 
     function getReviewerRoster(uint256 bountyId) external view returns (ReviewerRoster memory) {

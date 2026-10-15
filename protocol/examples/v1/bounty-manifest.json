@@ -1,0 +1,37 @@
+{
+  "version": "1",
+  "repository": {
+    "id": "123456",
+    "owner": "example",
+    "name": "repo"
+  },
+  "baseCommitSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "acceptance": {
+    "baselineTest": "tests/test_bug.py::test_issue_42",
+    "expectedFailureFingerprint": "0x6666666666666666666666666666666666666666666666666666666666666666",
+    "candidateTest": "tests/test_bug.py::test_issue_42",
+    "regressionTests": [
+      "pytest tests/regression"
+    ],
+    "imageDigest": "0x4444444444444444444444444444444444444444444444444444444444444444",
+    "runnerPolicy": "offline-v1"
+  },
+  "reward": {
+    "asset": "POT",
+    "amountAtoms": "100000000000000"
+  },
+  "deadlines": {
+    "submissionUnix": "1780000000",
+    "verificationTimeoutSeconds": 86400,
+    "challengeSeconds": 172800,
+    "arbitrationTimeoutSeconds": 86400
+  },
+  "review": {
+    "verifierOrganizations": [
+      "reviewer-a",
+      "reviewer-b"
+    ],
+    "quorum": 2,
+    "fallbackPolicyId": "fallback-panel-v1"
+  }
+}

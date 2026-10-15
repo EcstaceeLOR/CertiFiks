@@ -1,0 +1,68 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": "1"
+    },
+    "kind": {
+      "enum": [
+        "BountyFunded",
+        "DeveloperAssigned",
+        "FixSubmitted",
+        "VerificationCommitted",
+        "ReviewStarted",
+        "ChallengeOpened",
+        "DisputeResolved",
+        "CreditAllocated",
+        "WithdrawalCompleted",
+        "RefundCompleted"
+      ]
+    },
+    "chainGenesis": {
+      "type": "string",
+      "pattern": "^0x[a-f0-9]{64}$"
+    },
+    "contractLocatorHash": {
+      "type": "string",
+      "pattern": "^0x[a-f0-9]{64}$"
+    },
+    "transactionHash": {
+      "type": "string",
+      "pattern": "^0x[a-f0-9]{64}$"
+    },
+    "blockHeight": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)$"
+    },
+    "logIndex": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 2147483647
+    },
+    "finalized": {
+      "type": "boolean"
+    },
+    "bountyId": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$"
+    },
+    "payload": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "version",
+    "kind",
+    "chainGenesis",
+    "contractLocatorHash",
+    "transactionHash",
+    "blockHeight",
+    "logIndex",
+    "finalized",
+    "bountyId",
+    "payload"
+  ],
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://certifiks.dev/schemas/v1/chain-event.schema.json"
+}

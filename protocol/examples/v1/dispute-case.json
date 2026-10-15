@@ -1,0 +1,12 @@
+{
+  "version": "1",
+  "bountyId": "17",
+  "attemptId": "2",
+  "openedBy": "sponsor",
+  "reasonDigest": "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "evidenceDigest": "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "openedAtUnix": "1780000000",
+  "responseDeadlineUnix": "1780003600",
+  "escalationDeadlineUnix": "1780080000",
+  "status": "opened"
+}

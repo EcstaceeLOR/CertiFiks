@@ -161,6 +161,7 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
     {
         DisputePolicy storage policy = _policy(bountyId);
         if (policy.governanceApproved) revert DisputePolicyAlreadyConfigured();
+        if (_assignment[bountyId].state != AssignmentState.Open) revert InvalidReviewState();
         if (_isConflictedArbitrator(bountyId, _fundingTerms[bountyId].primaryArbitrator) ||
             _isConflictedArbitrator(bountyId, policy.fallbackArbitrator)) {
             revert ArbitratorConflict();

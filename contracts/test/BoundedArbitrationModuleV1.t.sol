@@ -442,6 +442,7 @@ contract BoundedArbitrationModuleV1Test {
         escrow.openReviewEscalation(
             bounty, 1, bytes32(uint256(61)), bytes32(uint256(62))
         );
+        vm.warp(escrow.getDisputeCase(bounty, 1).primaryDeadline);
         vm.prank(CONTROLLER_B);
         escrow.advanceDispute(bounty, 1);
         uint256 terminal = escrow.getDisputeCase(bounty, 1).fallbackDeadline;
@@ -525,9 +526,8 @@ contract BoundedArbitrationModuleV1Test {
     function testUnsignedOrUnvettedArbitratorCannotRuleAndTimeoutStillWorks() public {
         uint256 bounty = _approved();
         _openChallenge(bounty);
-        vm.prank(CONTROLLER_A);
         escrow.enrollReviewerOrganization(
-            keccak256("later-linked-primary-key"), CONTROLLER_A, ARBITRATOR,
+            keccak256("later-linked-primary-key"), address(0xC333), ARBITRATOR,
             bytes32(uint256(2)), bytes32(uint256(3)), bytes32(uint256(4))
         );
         _failAs(ARBITRATOR, abi.encodeWithSelector(

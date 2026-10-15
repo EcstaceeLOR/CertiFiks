@@ -1,0 +1,38 @@
+name: Temporary dependency lockfile bootstrap (issue 4)
+on:
+  push:
+    branches:
+      - feat/issue-4-reproducible-bootstrap
+    paths:
+      - "package.json"
+      - "apps/**/package.json"
+      - "workers/**/package.json"
+      - "packages/**/package.json"
+      - ".github/workflows/bootstrap-lock.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  generate-commit-lockfile:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Generate exact package-lock.json without running package scripts
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Commit pinned dependency graph to exploration branch only
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(#4): lock npm workspace dependencies"
+            git push origin HEAD:feat/issue-4-reproducible-bootstrap
+          fi

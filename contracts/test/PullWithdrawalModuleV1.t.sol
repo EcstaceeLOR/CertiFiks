@@ -543,10 +543,12 @@ contract PullWithdrawalModuleV1Test {
             require(uint256(accruals[i].topics[1]) == bounty, "credit bounty mismatch");
             require(address(uint160(uint256(accruals[i].topics[2]))) == SPONSOR,
                 "credit beneficiary mismatch");
-            (uint256 amount,,,,) = abi.decode(
-                accruals[i].data, (uint256, uint8, bytes32, bytes32, bytes32)
+            (uint256 amount, uint8 reason,,) = abi.decode(
+                accruals[i].data, (uint256, uint8, bytes32, bytes32)
             );
             require(amount == 1 ether, "credit receipt amount mismatch");
+            require(reason == uint8(FairEntitlementModuleV1.Reason.UnassignedSponsorCancellation),
+                "incorrect refund reason");
             foundCredit = true;
         }
         require(foundCredit, "missing canonical credit event");

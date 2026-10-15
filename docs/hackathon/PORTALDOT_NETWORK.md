@@ -1,6 +1,6 @@
 # CertiFiks — Portaldot execution environment / chain qualification
 
-**Issue:** #2 · **Observed:** 2026-10-15 · **Status:** IN PROGRESS / BLOCKED on independent live RPC+deployment proof and current-organizer eligibility confirmation.
+**Issue:** #2 · **Observed:** 2026-10-15 · **Status:** Read-only chain investigation COMPLETE; qualifying V3 deployment **BLOCKED / NO-GO**. See [formal decision](./network.md) and hard on-chain deployment gate #18.
 
 ## Reliable published technical facts (NOT a fresh live transaction)
 
@@ -68,7 +68,7 @@ The local execution container cannot resolve external hostnames, but GitHub Acti
 ## Done vs blocked
 **Implemented on issue branch:** dependency-free read-only Substrate/EVM probes, GitHub Actions syntax and live read-only diagnostics, verified public mainnet runtime metadata and source inventory. See [timestamped probe report](./evidence/2026-10-15-read-only-rpc.md) and [GitHub Actions run](https://github.com/EcstaceeLOR/CertiFiks/actions/runs/38746763936).
 
-**Still required:** actual live RPC evidence, eligibility confirmation, compatibly compiled minimal contract and authentic funded testnet/local extrinsic receipts. Without these the issue stays OPEN and cannot be merged/closed as completed. Only merge a non-final PR if it is clearly marked partial and consciously accepted; prefer keep one issue open until its acceptance is real.
+**Still required for *actual deployment*:** organizer-approved V3 live testnet RPC, eligibility confirmation, compatible minimal contract and signed finalized deployment/read/write receipts. **Issue #2's explicit alternative acceptance condition** is a documented BLOCKED verdict supported by reproducible evidence. The chain investigation can therefore be reviewed/merged/closed under that alternative, while #18 remains a hard blocker for any deployed-product or hackathon-qualification claim. This does **not** mean V3 integration or settlement has been implemented.
 
 
 ## 2026-specific event claims and qualification rule (updated)

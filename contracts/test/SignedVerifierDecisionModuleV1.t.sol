@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {SignedVerifierDecisionModuleV1} from "../src/SignedVerifierDecisionModuleV1.sol";
+import {VerifierRegistryModuleV1} from "../src/VerifierRegistryModuleV1.sol";
 import {BountyFundingModuleV1} from "../src/BountyFundingModuleV1.sol";
 import {BountySubmissionModuleV1} from "../src/BountySubmissionModuleV1.sol";
 
@@ -158,11 +159,11 @@ contract SignedVerifierDecisionModuleV1Test {
     function _vote(
         uint256 bounty, bytes32 org, uint8 outcome
     ) internal view returns (SignedVerifierDecisionModuleV1.SignedVerdict memory v) {
-        SignedVerifierDecisionModuleV1.ReviewerJob memory job =
+        VerifierRegistryModuleV1.ReviewerJob memory job =
             escrow.getReviewerJob(bounty, 1, org);
-        SignedVerifierDecisionModuleV1.FixAttempt memory attempt =
+        BountySubmissionModuleV1.FixAttempt memory attempt =
             escrow.getPinnedAttempt(bounty, 1);
-        SignedVerifierDecisionModuleV1.BountyTerms memory terms =
+        BountyFundingModuleV1.BountyTerms memory terms =
             escrow.getFundingTerms(bounty);
         v = SignedVerifierDecisionModuleV1.SignedVerdict({
             bountyId: bounty,
@@ -364,12 +365,12 @@ contract SignedVerifierDecisionModuleV1Test {
         uint256 bounty = _ready();
         SignedVerifierDecisionModuleV1.SignedVerdict memory v = _vote(bounty, ORG_A, 1);
         bytes memory signature = _sign(v, KEY_A);
+        address successor = vm.addr(444);
         vm.prank(CONTROLLER_A);
-        escrow.proposeReviewerSigner(ORG_A, vm.addr(444));
+        escrow.proposeReviewerSigner(ORG_A, successor);
         escrow.approveReviewerSignerRotation(ORG_A);
         _reject(v, signature);
-        uint256 bounty2 = _ready();
-        SignedVerifierDecisionModuleV1.SignedVerdict memory v2 = _vote(bounty2, ORG_B, 1);
+        SignedVerifierDecisionModuleV1.SignedVerdict memory v2 = _vote(bounty, ORG_B, 1);
         escrow.revokeReviewerOrganization(ORG_B);
         _reject(v2, _sign(v2, KEY_B));
     }
@@ -386,12 +387,12 @@ contract SignedVerifierDecisionModuleV1Test {
     function testWrongChainSignatureAndRuntimeFailClosed() public {
         uint256 bounty = _ready();
         SignedVerifierDecisionModuleV1.SignedVerdict memory v = _vote(bounty, ORG_A, 1);
+        bytes32 originalDigest = escrow.typedVerdictDigest(v);
         bytes memory signature = _sign(v, KEY_A);
         vm.chainId(CHAIN + 1);
         _reject(v, signature);
-        require(escrow.typedVerdictDigest(v) !=
-            keccak256(abi.encodePacked(hex"1901", bytes32(0), bytes32(0))),
-            "impossible signature digest");
+        require(escrow.typedVerdictDigest(v) != originalDigest,
+            "wrong chain reuses same EIP712 domain");
     }
 
     function testNoReportDeclarationOrUnacceptedJobCannotSign() public {

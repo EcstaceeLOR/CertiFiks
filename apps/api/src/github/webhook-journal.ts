@@ -13,7 +13,9 @@ export class FileWebhookJournal {
 
   constructor(directory: string) {
     if (!directory || !directory.startsWith("/")) {
-      throw new Error("Webhook journal requires an absolute persistent directory");
+      throw new Error(
+        "Webhook journal requires an absolute persistent directory",
+      );
     }
     this.directory = resolve(directory);
   }

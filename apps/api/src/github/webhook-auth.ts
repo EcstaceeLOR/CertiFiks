@@ -87,7 +87,10 @@ export function parseTrustedGitHubWebhook(
   }
   const installation = bodyValue.installation;
   if (!record(installation) || !positiveId(installation.id)) {
-    throw new GitHubWebhookError(422, "Missing authenticated installation identity");
+    throw new GitHubWebhookError(
+      422,
+      "Missing authenticated installation identity",
+    );
   }
   const action = bodyValue.action;
   if (typeof action !== "string" || !/^[a-z_]{3,48}$/.test(action)) {
@@ -108,12 +111,31 @@ export function parseTrustedGitHubWebhook(
     ) {
       throw new GitHubWebhookError(422, "Malformed pull request identity");
     }
-    if (!["opened", "reopened", "synchronize", "edited", "closed"].includes(action)) {
+    if (
+      !["opened", "reopened", "synchronize", "edited", "closed"].includes(
+        action,
+      )
+    ) {
       throw new GitHubWebhookError(422, "Unsupported pull-request action");
     }
-  } else if (eventType === "installation" && !["created", "deleted", "suspend", "unsuspend", "new_permissions_accepted"].includes(action)) {
-    throw new GitHubWebhookError(422, "Unsupported installation lifecycle action");
-  } else if (eventType === "installation_repositories" && !["added", "removed"].includes(action)) {
+  } else if (
+    eventType === "installation" &&
+    ![
+      "created",
+      "deleted",
+      "suspend",
+      "unsuspend",
+      "new_permissions_accepted",
+    ].includes(action)
+  ) {
+    throw new GitHubWebhookError(
+      422,
+      "Unsupported installation lifecycle action",
+    );
+  } else if (
+    eventType === "installation_repositories" &&
+    !["added", "removed"].includes(action)
+  ) {
     throw new GitHubWebhookError(422, "Unsupported repository access action");
   }
   if (Number.isNaN(now.getTime())) {

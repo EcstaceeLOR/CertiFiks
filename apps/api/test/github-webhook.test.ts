@@ -81,15 +81,10 @@ test("signed pull request is persisted once, even under concurrent deliveries", 
       app.inject(request("pull_request", "opened", { delivery })),
       app.inject(request("pull_request", "opened", { delivery })),
     ]);
-    assert.deepEqual(
-      [first.statusCode, second.statusCode].sort(),
-      [200, 202],
-    );
+    assert.deepEqual([first.statusCode, second.statusCode].sort(), [200, 202]);
     const files = await readdir(directory);
     assert.deepEqual(files, [delivery + ".json"]);
-    const entry = JSON.parse(
-      await readFile(join(directory, files[0]), "utf8"),
-    );
+    const entry = JSON.parse(await readFile(join(directory, files[0]), "utf8"));
     assert.equal(entry.repositoryId, REPOSITORY_ID);
     assert.equal(entry.installationId, INSTALLATION_ID);
     assert.equal(entry.pullNumber, 12);
@@ -135,11 +130,19 @@ test("expired installation access, malformed and unsupported PR events fail clos
       installation: { id: 0 },
     });
     assert.equal(
-      (await app.inject(request("pull_request", "opened", { body: badInstallation }))).statusCode,
+      (
+        await app.inject(
+          request("pull_request", "opened", { body: badInstallation }),
+        )
+      ).statusCode,
       422,
     );
     assert.equal(
-      (await app.inject(request("pull_request", "opened", { body: "{invalid" }))).statusCode,
+      (
+        await app.inject(
+          request("pull_request", "opened", { body: "{invalid" }),
+        )
+      ).statusCode,
       400,
     );
     assert.equal(

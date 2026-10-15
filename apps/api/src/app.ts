@@ -1,9 +1,9 @@
 import Fastify from "fastify";
-import { FileWebhookJournal } from "./github/webhook-journal.js";
 import {
   GitHubWebhookError,
   parseTrustedGitHubWebhook,
 } from "./github/webhook-auth.js";
+import { FileWebhookJournal } from "./github/webhook-journal.js";
 
 export interface AppConfiguration {
   webhookSecret?: string;
@@ -39,11 +39,15 @@ export function buildApp(config: AppConfiguration = {}) {
 
   app.post("/webhooks/github", async (request, reply) => {
     if (!secret || !directory) {
-      return reply.code(503).send({ error: "Webhook ingestion is not configured" });
+      return reply
+        .code(503)
+        .send({ error: "Webhook ingestion is not configured" });
     }
     try {
       if (!Buffer.isBuffer(request.body)) {
-        return reply.code(415).send({ error: "JSON raw request bytes required" });
+        return reply
+          .code(415)
+          .send({ error: "JSON raw request bytes required" });
       }
       const event = parseTrustedGitHubWebhook(
         request.body,

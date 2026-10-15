@@ -9,6 +9,13 @@ import {VerifierRegistryModuleV1} from "../src/VerifierRegistryModuleV1.sol";
 import {SignedVerifierDecisionModuleV1} from "../src/SignedVerifierDecisionModuleV1.sol";
 
 interface VmPull {
+    struct Log {
+        bytes32[] topics;
+        bytes data;
+        address emitter;
+    }
+    function recordLogs() external;
+    function getRecordedLogs() external returns (Log[] memory);
     function prank(address who) external;
     function deal(address who, uint256 value) external;
     function warp(uint256 value) external;
@@ -517,6 +524,53 @@ contract PullWithdrawalModuleV1Test {
         vm.prank(SPONSOR);
         escrow.withdrawBountyCredit(bounty, payable(SPONSOR), 0.5 ether);
         _assertLedger(0, 0);
+    }
+
+    function testReceiptEventsBindExactBountySignerRecipientAndPaidAtomicAmount() public {
+        uint256 bounty = _fund(1 ether);
+        _refund(bounty);
+        vm.recordLogs();
+        escrow.accrueFinalCredits(bounty);
+        VmPull.Log[] memory accruals = vm.getRecordedLogs();
+        bytes32 creditTopic = keccak256(
+            "NativeCreditAccrued(uint256,address,uint256,uint8,bytes32,bytes32)"
+        );
+        bool foundCredit;
+        for (uint256 i = 0; i < accruals.length; i++) {
+            if (accruals[i].emitter != address(escrow) ||
+                accruals[i].topics.length != 3 ||
+                accruals[i].topics[0] != creditTopic) continue;
+            require(uint256(accruals[i].topics[1]) == bounty, "credit bounty mismatch");
+            require(address(uint160(uint256(accruals[i].topics[2]))) == SPONSOR,
+                "credit beneficiary mismatch");
+            (uint256 amount,,,,) = abi.decode(
+                accruals[i].data, (uint256, uint8, bytes32, bytes32, bytes32)
+            );
+            require(amount == 1 ether, "credit receipt amount mismatch");
+            foundCredit = true;
+        }
+        require(foundCredit, "missing canonical credit event");
+
+        vm.recordLogs();
+        vm.prank(SPONSOR);
+        escrow.withdrawBountyCredit(bounty, payable(OUTSIDER), 0.25 ether);
+        VmPull.Log[] memory logs = vm.getRecordedLogs();
+        bytes32 paidTopic = keccak256(
+            "NativeCreditWithdrawn(uint256,address,address,uint256,uint256)"
+        );
+        bool foundPayment;
+        for (uint256 i = 0; i < logs.length; i++) {
+            if (logs[i].emitter != address(escrow) || logs[i].topics.length != 4 ||
+                logs[i].topics[0] != paidTopic) continue;
+            require(uint256(logs[i].topics[1]) == bounty, "wrong paid bounty");
+            require(address(uint160(uint256(logs[i].topics[2]))) == SPONSOR, "wrong payer claim");
+            require(address(uint160(uint256(logs[i].topics[3]))) == OUTSIDER, "wrong recipient");
+            (uint256 amount, uint256 remaining) = abi.decode(logs[i].data, (uint256, uint256));
+            require(amount == 0.25 ether && remaining == 0.75 ether, "receipt lies about paid atoms");
+            foundPayment = true;
+        }
+        require(foundPayment, "missing canonical withdrawal event");
+        _assertLedger(0.75 ether, 0.75 ether);
     }
 
     function testForcedExtraNativeAtomsCannotCreateExtraCreditOrBeSwept() public {

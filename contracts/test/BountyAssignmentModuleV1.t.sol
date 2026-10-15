@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {BountyAssignmentModuleV1} from "../src/BountyAssignmentModuleV1.sol";
+import {BountyFundingModuleV1} from "../src/BountyFundingModuleV1.sol";
 
 interface VmAssignment {
     function deal(address who, uint256 newBalance) external;
@@ -46,9 +47,9 @@ contract BountyAssignmentModuleV1Test {
     }
 
     function _spec(uint64 deadline)
-        internal pure returns (BountyAssignmentModuleV1.FundingRequest memory)
+        internal pure returns (BountyFundingModuleV1.FundingRequest memory)
     {
-        return BountyAssignmentModuleV1.FundingRequest({
+        return BountyFundingModuleV1.FundingRequest({
             repositoryId: 150721,
             baselineGitSha: hex"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             manifestDigest: bytes32(uint256(1)),
@@ -344,11 +345,11 @@ contract BountyAssignmentModuleV1Test {
 
     function testAssignmentNeverMutatesImmutableFundingTerms() public {
         uint256 id = _fund();
-        BountyAssignmentModuleV1.BountyTerms memory beforeTerms = escrow.getFundingTerms(id);
+        BountyFundingModuleV1.BountyTerms memory beforeTerms = escrow.getFundingTerms(id);
         _accepted(id);
         vm.prank(DEV_A);
         escrow.resignAssignment(id);
-        BountyAssignmentModuleV1.BountyTerms memory afterTerms = escrow.getFundingTerms(id);
+        BountyFundingModuleV1.BountyTerms memory afterTerms = escrow.getFundingTerms(id);
         require(beforeTerms.manifestDigest == afterTerms.manifestDigest, "manifest mutated");
         require(beforeTerms.baselineGitSha == afterTerms.baselineGitSha, "base mutated");
         require(beforeTerms.rewardAtoms == afterTerms.rewardAtoms, "payout edited");

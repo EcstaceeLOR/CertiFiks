@@ -89,6 +89,7 @@ test("rejects wrong repository, absent scopes, rejected installation and near ex
 
 const event: TrustedWebhookEvent = {
   deliveryId: "ef8547d1-b420-450c-a3ab-f976b54896ed",
+  bodySha256: "ab".repeat(32),
   eventType: "pull_request",
   action: "opened",
   installationId: 555,
@@ -105,6 +106,7 @@ test("PostgreSQL journal sends only authenticated minimal metadata and honors du
     assert.equal(options?.redirect, "error");
     const json = JSON.parse(String(options?.body));
     assert.deepEqual(Object.keys(json).sort(), [
+      "p_body_sha256",
       "p_action", "p_delivery_id", "p_event_type", "p_installation_id",
       "p_received_at", "p_repository_id",
     ]);

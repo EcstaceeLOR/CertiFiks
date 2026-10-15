@@ -1,0 +1,33 @@
+name: Temporary regenerate Issue 11 protocol types
+on:
+  push:
+    branches: [feat/issue-11-immutable-submission]
+    paths: [".github/workflows/regenerate-issue-11.yml"]
+permissions:
+  contents: write
+jobs:
+  regenerate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Recreate generated OpenAPI types from updated v1 policy
+        run: npm run protocol:generate
+      - name: Apply formatter and safe source fixes
+        run: npx biome check --write . || true
+      - name: Commit generated files into this branch only
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(#11): regenerate client types and format pinned GitHub policy schema"
+            git push origin HEAD:feat/issue-11-immutable-submission
+          fi

@@ -16,6 +16,14 @@ import {BountySubmissionModuleV1} from "./BountySubmissionModuleV1.sol";
  */
 abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
     uint8 public constant MAX_REVIEWER_ORGS_PER_ATTEMPT = 5;
+    bytes internal constant ROSTER_DOMAIN = "CertiFiks:verifier-roster:v1";
+
+    struct ReviewerRoster {
+        bytes32 policyDigest;
+        uint8 quorum;
+        uint8 eligibleOrganizations;
+        bool configured;
+    }
 
     struct ReviewerOrganization {
         address controller;
@@ -67,6 +75,10 @@ abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
     error NoPendingSignerRotation();
     error StaleSignerEpoch();
     error InvalidSigner();
+    error InvalidReviewerRoster();
+    error ReviewerRosterAlreadyConfigured();
+    error ReviewerRosterPolicyMismatch();
+    error ReviewerNotInCommittedRoster();
 
     event ReviewerOrganizationEnrolled(
         bytes32 indexed organizationId, address indexed controller, address indexed signer,
@@ -78,6 +90,9 @@ abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
     event ReviewerSignerRotationProposed(bytes32 indexed organizationId, address indexed proposedSigner);
     event ReviewerSignerRotated(bytes32 indexed organizationId, address indexed newSigner, uint64 epoch);
     event ReviewerCapabilityUpdated(bytes32 indexed organizationId, bytes32 profileDigest);
+    event ReviewerRosterConfigured(
+        uint256 indexed bountyId, bytes32 policyDigest, uint8 quorum, uint8 eligibleOrganizations
+    );
     event ReviewerJobAssigned(
         uint256 indexed bountyId, uint64 indexed attemptId, bytes32 indexed organizationId,
         address assignedSigner, uint64 epoch, uint64 deadline, bytes32 attemptDigest
@@ -98,6 +113,8 @@ abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
     address public immutable registryGovernance;
 
     mapping(bytes32 => ReviewerOrganization) internal _org;
+    mapping(uint256 => ReviewerRoster) public reviewerRoster;
+    mapping(uint256 => mapping(bytes32 => bool)) public isCommittedReviewer;
     mapping(address => bytes32) public walletOrganization;
     mapping(uint256 => mapping(uint64 => mapping(bytes32 => ReviewerJob))) internal _jobs;
     mapping(uint256 => mapping(uint64 => uint8)) public reviewerJobCount;
@@ -247,6 +264,46 @@ abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
     }
 
     /**
+     * @notice One-time sponsor declaration of the EXACT originally funded,
+     * ordered organization set. Different, reordered or added organizations
+     * produce a different SHA-256 digest and cannot be substituted by admin.
+     * Registration must precede developer acceptance/submission.
+     */
+    function registerCommittedReviewerRoster(
+        uint256 bountyId, bytes32[] calldata organizationIds, uint8 quorum
+    ) external onlyCorrectChain {
+        BountyTerms storage terms = _onlySponsor(bountyId);
+        if (reviewerRoster[bountyId].configured) revert ReviewerRosterAlreadyConfigured();
+        if (_assignment[bountyId].state != AssignmentState.Open) revert InvalidReviewState();
+        if (
+            organizationIds.length < 2 || organizationIds.length > MAX_REVIEWER_ORGS_PER_ATTEMPT ||
+            quorum < 2 || quorum > organizationIds.length
+        ) revert InvalidReviewerRoster();
+        bytes32 previous = bytes32(0);
+        for (uint256 i = 0; i < organizationIds.length; i++) {
+            bytes32 orgId = organizationIds[i];
+            // Strict increasing ordering prevents duplicates / order ambiguity.
+            if (orgId <= previous) revert InvalidReviewerRoster();
+            previous = orgId;
+        }
+        bytes32 commitment = sha256(abi.encode(ROSTER_DOMAIN, quorum, organizationIds));
+        if (commitment != terms.verifierPolicyDigest) revert ReviewerRosterPolicyMismatch();
+
+        reviewerRoster[bountyId] = ReviewerRoster({
+            policyDigest: commitment,
+            quorum: quorum,
+            eligibleOrganizations: uint8(organizationIds.length),
+            configured: true
+        });
+        for (uint256 i = 0; i < organizationIds.length; i++) {
+            isCommittedReviewer[bountyId][organizationIds[i]] = true;
+        }
+        emit ReviewerRosterConfigured(
+            bountyId, commitment, quorum, uint8(organizationIds.length)
+        );
+    }
+
+    /**
      * @dev Governance appoints an identity-checked org to an exact submitted
      * attempt. No arbitrary sponsor can appoint itself or create a reviewer
      * identity. This is not yet verifier attestation or payout permission.
@@ -254,6 +311,9 @@ abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
     function assignReviewerJob(uint256 bountyId, bytes32 organizationId)
         external onlyCorrectChain onlyRegistryGovernance
     {
+        if (!reviewerRoster[bountyId].configured || !isCommittedReviewer[bountyId][organizationId]) {
+            revert ReviewerNotInCommittedRoster();
+        }
         ReviewerOrganization storage organization = _active(organizationId);
         if (_assignment[bountyId].state != AssignmentState.Submitted) revert InvalidReviewState();
         uint64 attemptId = latestAttemptId[bountyId];

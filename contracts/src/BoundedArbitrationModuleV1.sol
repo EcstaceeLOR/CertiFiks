@@ -30,7 +30,8 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
     enum Award {
         None,
         DeveloperReward,
-        SponsorRefund
+        SponsorRefund,
+        SharedResolution // Explicit 50/50 default ONLY if all arbiters fail with no reviewer quorum.
     }
 
     struct DisputePolicy {
@@ -564,8 +565,10 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
     /**
      * Permissionless terminal progression. A silent primary is replaced by
      * the precommitted fallback. A silent fallback cannot veto forever.
-     * Default: previously verified approval -> developer, otherwise sponsor.
-     * This default MUST be independently reviewed before any real deposits.
+     * Default: independently verified positive quorum -> developer;
+     * insufficient or disputed evidence and absent arbitrators -> symmetric
+     * 50/50 shared resolution, NOT an automatic sponsor windfall. This
+     * fixed protocol rule must be disclosed before funding and audited.
      */
     function advanceDispute(uint256 bountyId, uint64 attemptId) external onlyCorrectChain {
         _currentAttempt(bountyId, attemptId);
@@ -594,7 +597,7 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
     {
         // No silent 'green' when worker/reviewer consensus was missing.
         return _decisions[bountyId][attemptId].status == ReviewStatus.ChallengeWindow
-            ? Award.DeveloperReward : Award.SponsorRefund;
+            ? Award.DeveloperReward : Award.SharedResolution;
     }
 
     function _resolve(

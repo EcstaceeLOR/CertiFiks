@@ -40,7 +40,7 @@ stateDiagram-v2
     AppealReview --> Superseded: authorized new attempt
 ```
 
-`Resolved` means *entitlement decision only*, with `Award.DeveloperReward` or `Award.SponsorRefund`. `None` and `Superseded` cannot be credited. If a new permitted fix attempt supersedes an open dispute, the old case can be marked `Superseded`; #15/#16 must always check the current on-chain attempt ID before any credit. This prevents replaying an old case's award onto a new committed fix.
+`Resolved` means *entitlement decision only*, with `Award.DeveloperReward`, `Award.SponsorRefund`, or protocol-default `Award.SharedResolution` (one half to each participant). `None` and `Superseded` cannot be credited. If a new permitted fix attempt supersedes an open dispute, the old case can be marked `Superseded`; #15/#16 must always check the current on-chain attempt ID before any credit. This prevents replaying an old case's award onto a new committed fix.
 
 ## Exact bounded deadlines (all computed from immutable funded durations)
 
@@ -109,3 +109,7 @@ The current implementation takes **no monetary challenge bond or filing fee**, p
 - [ ] Real dispute reaching **terminal payout/refund** with audited value conservation, not just a simulated local award (#40/#41).
 
 **Decision:** code may be reviewed in a stacked **draft PR**. Keep **Issue #14 open** until real service and value-moving acceptance conditions hold. No test harness is deployable production custody.
+
+## Fairness correction (Issue #15)
+
+When both primary and fallback arbitrators are absent and no verified reviewer quorum exists, the former rule awarded all funds back to the sponsor **even for a timely submitted candidate**, recreating the security baseline's original unfair-refund exploit. Issue #15 changes this **before any real deployment**: `Award.SharedResolution` records a symmetric 50% sponsor / 50% developer entitlement as the fallback. This does **not** pretend the patch was verified. An authenticated primary/fallback human arbitrator still awards either full developer or full sponsor value on facts. A positive signed quorum with no arbiter response continues to default to the contributor. The future #16 credit contract must implement exact integer rounding and an auditable split, and the sponsor/developer must be shown this rule before funding/accepting.

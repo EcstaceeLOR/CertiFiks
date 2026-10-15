@@ -26,6 +26,7 @@ abstract contract BountyFundingModuleV1 {
         bytes32 manifestDigest;
         bytes32 verifierPolicyDigest;
         bytes32 disputePolicyDigest;
+        address primaryArbitrator;
         uint64 submissionDeadline;
         uint64 verificationSeconds;
         uint64 challengeSeconds;
@@ -41,6 +42,7 @@ abstract contract BountyFundingModuleV1 {
         bytes32 manifestDigest;
         bytes32 verifierPolicyDigest;
         bytes32 disputePolicyDigest;
+        address primaryArbitrator;
         uint64 submissionDeadline;
         uint64 verificationSeconds;
         uint64 challengeSeconds;
@@ -57,6 +59,7 @@ abstract contract BountyFundingModuleV1 {
     error MissingManifestDigest();
     error MissingVerifierPolicy();
     error MissingDisputePolicy();
+    error InvalidPrimaryArbitrator();
     error UnsupportedAsset(uint8 kind);
     error InvalidSubmissionDeadline();
     error InvalidVerificationWindow();
@@ -103,6 +106,9 @@ abstract contract BountyFundingModuleV1 {
         if (request.manifestDigest == bytes32(0)) revert MissingManifestDigest();
         if (request.verifierPolicyDigest == bytes32(0)) revert MissingVerifierPolicy();
         if (request.disputePolicyDigest == bytes32(0)) revert MissingDisputePolicy();
+        if (request.primaryArbitrator == address(0) || request.primaryArbitrator == msg.sender) {
+            revert InvalidPrimaryArbitrator();
+        }
         if (request.assetKind != uint8(AssetKind.Native)) {
             revert UnsupportedAsset(request.assetKind);
         }
@@ -133,6 +139,7 @@ abstract contract BountyFundingModuleV1 {
             manifestDigest: request.manifestDigest,
             verifierPolicyDigest: request.verifierPolicyDigest,
             disputePolicyDigest: request.disputePolicyDigest,
+            primaryArbitrator: request.primaryArbitrator,
             submissionDeadline: request.submissionDeadline,
             verificationSeconds: request.verificationSeconds,
             challengeSeconds: request.challengeSeconds,

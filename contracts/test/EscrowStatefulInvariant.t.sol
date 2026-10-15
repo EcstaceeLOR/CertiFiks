@@ -10,7 +10,6 @@ interface VmInvariantV1 {
     function warp(uint256 value) external;
     function deal(address account, uint256 value) external;
     function prank(address account) external;
-    function targetContract(address target) external;
 }
 
 contract CreditAttackHandlerV1 {
@@ -146,7 +145,12 @@ contract EscrowStatefulInvariantTest {
             }
         }
         handler = new CreditAttackHandlerV1(escrow, SPONSOR, OUTSIDER, ids);
-        vm.targetContract(address(handler));
+    }
+
+    // Exposed in the exact shape read by the Foundry invariant engine; no forge-std dependency.
+    function targetContracts() public view returns (address[] memory targets) {
+        targets = new address[](1);
+        targets[0] = address(handler);
     }
 
     function invariant_escrowNativeAccountingAlwaysConserved() public view {

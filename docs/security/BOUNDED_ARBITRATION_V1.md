@@ -19,7 +19,9 @@ After funding, sponsor registers exactly that policy before assignment, central 
 - **Missing quorum:** once the verifier deadline is reached, anybody may open escalation even if the #13 decision still reads `Pending`. The later #15 accounting module must give precedence to the arbitration case's terminal status over an earlier unsigned/pending report; no report may be accepted past the job's signed expiry.
 - **No challenge:** once a positive independently signed quorum's immutable challenge window has expired, anyone can finalize an unchallenged entitlement as `DeveloperReward`. No wallet receives any tokens at this stage; it only records an entitlement for a *future, audited* settlement module.
 
-An on-chain digest is an evidence reference, **not proof evidence exists or is authentic**. #22/#24/#26 must archive signed versioned evidence, provide the other party access and a response period, preserve proof of notice, and bind the actual off-chain report hash to the on-chain value. The current module cannot determine whether a submitted hash describes false or irrelevant evidence.
+**Counterevidence and an enforceable minimum reply interval:** both sponsor and developer can now submit a single immutable nonzero `respondToDispute` evidence digest for each open primary/fallback case. The opposing party's first response is publicly visible with an `ArbitrationResponseRecorded` event. A primary cannot rule until the counterparty answers **or** the case's bounded `responseUntil` cutoff expires (at most one hour from case opening, never later than the original funded primary deadline). When the losing party appeals, the original winner similarly has a single `respondToAppeal` response opportunity: the fallback cannot rule until that reply or the bounded `appealResponseUntil` cutoff. These windows are **not sponsor-extendable** and preserve the originally funded terminal deadlines. Permissionless late-opened cases may already be beyond the original primary cutoff and therefore have no primary response time; the fallback and default rules still apply. That is a disclosed limitation, not a promise of guaranteed notice.
+
+An on-chain digest is an evidence reference, **not proof evidence exists or is authentic**. #22/#24/#26 must archive signed versioned evidence, provide the other party real read access, enforce delivery of notice, and bind off-chain report bytes to the on-chain digest. **On-chain response submission is implemented; genuine document access, notification and human examination of that response are not.**
 
 ## State machine
 
@@ -45,6 +47,8 @@ stateDiagram-v2
 For a positive review with quorum, let `anchor = review.challengeUntil`. For a rejected/inconclusive/timed-out/no-quorum review, let `anchor = attempt.submittedAt + verificationSeconds`.
 
 - **Primary arbitration deadline:** `anchor + arbitrationSeconds`.
+- **Initial counterparty response cutoff:** `min(openedAt + min(arbitrationSeconds/3, 1 hour), primaryDeadline)`. An eligible early counterresponse lets the primary rule immediately; otherwise it must wait until this fixed cutoff.
+- **Appeal reply cutoff:** `min(appealedAt + min(arbitrationSeconds/3, 1 hour), fallbackDeadline)`. The winning party can reply early, permitting an earlier fallback ruling.
 - **Fallback finalization deadline:** `primaryDeadline + challengeSeconds + arbitrationSeconds`.
 - **If the primary rules before its deadline:** the losing party may appeal until `min(primaryRulingAt + challengeSeconds, primaryDeadline + challengeSeconds)`.
 - **If the losing party appeals:** only the precommitted fallback wallet may issue its ruling before the fallback deadline. An unresponsive fallback **cannot indefinitely block** the original primary ruling; `advanceDispute` eventually makes that primary ruling the final entitlement.
@@ -64,7 +68,7 @@ When **both** committed arbitrators are silent or disqualified, local v1 rules u
 
 A primary finding is *not final immediately*. Only the party who lost that primary ruling may appeal **once**, within the fixed appeal window, with a distinct nonzero reason and evidence hash. The beneficiary of the ruling may not appeal a result they already won. The fallback decides once; it cannot be appealed again through this module. If the fallback remains silent, the signed primary decision stands after the immutable deadline. No appeal can be made after resolution, no case may be opened twice for one attempt, and no conflicting second ruling can overwrite historical artifacts.
 
-The current implementation takes **no monetary challenge bond or filing fee**, pays **no arbitrator compensation**, provides **no actual notice/delivery of reports**, and enforces **no human response rights** beyond fixed windows. These are release-blocking operational/product economics for #14/#15/#24/#26, not features to fake using UI or test fixtures. The deployed product must disclose estimated service fees, arbitral terms, decision bias risks and which party pays costs; failure of operator service must have an explicit user remedy.
+The current implementation takes **no monetary challenge bond or filing fee**, pays **no arbitrator compensation**, provides **no actual notice/delivery of reports**, and guarantees an on-chain counterevidence opportunity only until its bounded cutoff. A real human's ability to receive, inspect and answer evidence is not guaranteed without the #22/#24/#26 access and notifications. These are release-blocking operational/product economics for #14/#15/#24/#26, not features to fake using UI or test fixtures. The deployed product must disclose estimated service fees, arbitral terms, decision bias risks and which party pays costs; failure of operator service must have an explicit user remedy.
 
 ## Threat matrix and Foundry evidence
 
@@ -79,6 +83,9 @@ The current implementation takes **no monetary challenge bond or filing fee**, p
 | Sponsor attempts to assign original or fallback arbitrator as developer | Assignment refused before acceptance |
 | Arbitrator shares sponsor, developer, org signer/controller or registry governance wallet | Conflict rejection on setup/assignment/ruling |
 | Sponsor's challenge has no reason/evidence or tries to extend time | Reject; immutable reason & evidence persist |
+| Arbitrator tries to rule before challenged developer can respond | Reject until developer posts counterevidence or the one-hour-or-less response window closes |
+| Unrelated caller tries to respond / legitimate party overwrites evidence | Reject; one immutable response digest per side, indexed event |
+| Fallback tries to rush a losing-party appeal before original winner responds | Reject until winner's single response or bounded appeal reply cutoff |
 | Stranger challenges approval before cutoff | Reject; only sponsor/developer |
 | Either side tries to set a new appeal deadline | Reject; anchored to immutable funding windows |
 | Primary is silent or key compromised | Permissionless fallback starts at deadline; governance may permanently disqualify key |

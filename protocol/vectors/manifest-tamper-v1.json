@@ -3,15 +3,39 @@
   "goldenVector": "manifest-v1.json",
   "tampering": [
     { "path": ["repository", "id"], "value": "123457" },
-    { "path": ["baseCommitSha"], "value": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" },
-    { "path": ["acceptance", "baselineTest"], "value": "tests/test_other.py::test_bug" },
-    { "path": ["acceptance", "candidateTest"], "value": "tests/test_bug.py::test_wrong" },
-    { "path": ["acceptance", "expectedFailureFingerprint"], "value": "0x7777777777777777777777777777777777777777777777777777777777777777" },
-    { "path": ["acceptance", "imageDigest"], "value": "0x5555555555555555555555555555555555555555555555555555555555555555" },
+    {
+      "path": ["baseCommitSha"],
+      "value": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    {
+      "path": ["acceptance", "baselineTest"],
+      "value": "tests/test_other.py::test_bug"
+    },
+    {
+      "path": ["acceptance", "candidateTest"],
+      "value": "tests/test_bug.py::test_wrong"
+    },
+    {
+      "path": ["acceptance", "expectedFailureFingerprint"],
+      "value": "0x7777777777777777777777777777777777777777777777777777777777777777"
+    },
+    {
+      "path": ["acceptance", "imageDigest"],
+      "value": "0x5555555555555555555555555555555555555555555555555555555555555555"
+    },
     { "path": ["acceptance", "runnerPolicy"], "value": "network-enabled" },
-    { "path": ["acceptance", "githubPolicy", "baseBranch"], "value": "release" },
-    { "path": ["acceptance", "githubPolicy", "allowForkPullRequests"], "value": false },
-    { "path": ["review", "verifierOrganizations"], "value": ["reviewer-a", "reviewer-c"] },
+    {
+      "path": ["acceptance", "githubPolicy", "baseBranch"],
+      "value": "release"
+    },
+    {
+      "path": ["acceptance", "githubPolicy", "allowForkPullRequests"],
+      "value": false
+    },
+    {
+      "path": ["review", "verifierOrganizations"],
+      "value": ["reviewer-a", "reviewer-c"]
+    },
     { "path": ["review", "quorum"], "value": 3 },
     { "path": ["review", "fallbackPolicyId"], "value": "other-fallback-v1" },
     { "path": ["deadlines", "submissionUnix"], "value": "1780000100" },

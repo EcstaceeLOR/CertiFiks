@@ -1,8 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import {
-  digestManifestV1,
-  parseCanonicalManifestV1,
-} from "./commitments.js";
+import { digestManifestV1, parseCanonicalManifestV1 } from "./commitments.js";
 import { validateProtocolDocument } from "./validation.js";
 
 const SHA256_HEX = /^0x[a-f0-9]{64}$/;

@@ -49,7 +49,10 @@ test("admits only validated canonical bytes matching the funded commitment", () 
   assert.equal(admitted.digest, golden.expected);
   assert.deepEqual(admitted.document, golden.input);
   assert.throws(() =>
-    admitCommittedManifestV1(JSON.stringify(golden.input, null, 2), golden.expected),
+    admitCommittedManifestV1(
+      JSON.stringify(golden.input, null, 2),
+      golden.expected,
+    ),
   );
   assert.throws(() =>
     admitCommittedManifestV1(canonical, golden.expected.toUpperCase()),

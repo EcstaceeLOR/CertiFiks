@@ -69,6 +69,7 @@ abstract contract SignedVerifierDecisionModuleV1 is VerifierRegistryModuleV1 {
         uint8 recordedVotes;
         uint8 positiveVotes;
         uint64 challengeUntil;
+        uint64 decidedAt;
         bytes32 triggeringVoteDigest;
     }
 
@@ -231,6 +232,7 @@ abstract contract SignedVerifierDecisionModuleV1 is VerifierRegistryModuleV1 {
             decision.challengeUntil = uint64(until);
         }
         if (decision.status != ReviewStatus.Pending) {
+            decision.decidedAt = uint64(block.timestamp);
             decision.triggeringVoteDigest = digest;
             emit ReviewDecisionChanged(
                 vote.bountyId, vote.attemptId, decision.status,
@@ -259,6 +261,7 @@ abstract contract SignedVerifierDecisionModuleV1 is VerifierRegistryModuleV1 {
             uint256(terms.verificationSeconds);
         if (block.timestamp < deadline) revert ReviewDeadlineNotReached();
         decision.status = ReviewStatus.TimedOut;
+        decision.decidedAt = uint64(block.timestamp);
         emit ReviewDecisionChanged(
             bountyId, attemptId, ReviewStatus.TimedOut,
             decision.recordedVotes, decision.positiveVotes, bytes32(0), 0

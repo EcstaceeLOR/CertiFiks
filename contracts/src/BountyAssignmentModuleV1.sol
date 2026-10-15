@@ -224,6 +224,7 @@ abstract contract BountyAssignmentModuleV1 is BountyFundingModuleV1 {
         }
         if (block.timestamp > assignment.offerUntil) revert OfferExpired();
         _requireWorkWindow(terms);
+        _validateAcceptedRole(bountyId, msg.sender);
 
         assignment.state = AssignmentState.Accepted;
         assignment.developer = msg.sender;
@@ -234,6 +235,9 @@ abstract contract BountyAssignmentModuleV1 is BountyFundingModuleV1 {
         _application[bountyId][msg.sender] = ApplicationState.Accepted;
         emit AssignmentAccepted(bountyId, msg.sender);
     }
+
+    /** Derived dispute module can reject conflicted arbiter wallets. */
+    function _validateAcceptedRole(uint256, address) internal view virtual {}
 
     function resignAssignment(uint256 bountyId) external onlyCorrectChain {
         _terms(bountyId);

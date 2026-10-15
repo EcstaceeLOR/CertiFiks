@@ -24,7 +24,11 @@
           "maxLength": 100
         }
       },
-      "required": ["id", "owner", "name"]
+      "required": [
+        "id",
+        "owner",
+        "name"
+      ]
     },
     "baseCommitSha": {
       "type": "string",
@@ -65,6 +69,27 @@
         },
         "runnerPolicy": {
           "const": "offline-v1"
+        },
+        "githubPolicy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allowForkPullRequests": {
+              "type": "boolean"
+            },
+            "requireVerifiedCommitSignature": {
+              "type": "boolean"
+            },
+            "baseBranch": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,99}$"
+            }
+          },
+          "required": [
+            "allowForkPullRequests",
+            "requireVerifiedCommitSignature",
+            "baseBranch"
+          ]
         }
       },
       "required": [
@@ -73,7 +98,8 @@
         "candidateTest",
         "regressionTests",
         "imageDigest",
-        "runnerPolicy"
+        "runnerPolicy",
+        "githubPolicy"
       ]
     },
     "reward": {
@@ -89,7 +115,10 @@
           "pattern": "^[1-9][0-9]*$"
         }
       },
-      "required": ["asset", "amountAtoms"]
+      "required": [
+        "asset",
+        "amountAtoms"
+      ]
     },
     "deadlines": {
       "type": "object",
@@ -146,7 +175,11 @@
           "pattern": "^[a-z0-9][a-z0-9-]{2,63}$"
         }
       },
-      "required": ["verifierOrganizations", "quorum", "fallbackPolicyId"]
+      "required": [
+        "verifierOrganizations",
+        "quorum",
+        "fallbackPolicyId"
+      ]
     }
   },
   "required": [

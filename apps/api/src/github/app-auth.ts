@@ -31,7 +31,7 @@ export function issueGitHubAppJwt(
   if (!positiveInteger(credentials.appId) || !Number.isSafeInteger(nowSeconds)) {
     throw new GitHubAppAuthError("MISCONFIGURED", "Invalid GitHub App identity or clock");
   }
-  let key;
+  let key: ReturnType<typeof createPrivateKey>;
   try {
     key = createPrivateKey(credentials.privateKeyPem.replace(/\\n/g, "\n"));
     if (key.asymmetricKeyType !== "rsa") throw new Error("RSA required");

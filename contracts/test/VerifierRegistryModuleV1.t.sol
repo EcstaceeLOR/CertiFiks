@@ -206,11 +206,15 @@ contract VerifierRegistryModuleV1Test {
         _revertAs(address(this), abi.encodeWithSelector(
             escrow.assignReviewerJob.selector, bounty, signerOrg
         ));
+        // A wallet enrolled in one org cannot later impersonate a second
+        // org. Verify the controller conflict against a clean registry, too.
+        escrow = new VerifierRegistryHarness(CHAIN, address(this));
         bytes32 controllerOrg = keccak256("sponsor-controls-verifier");
         _enroll(controllerOrg, SPONSOR, S3);
         _activate(controllerOrg, SPONSOR);
+        uint256 secondBounty = _submitted();
         _revertAs(address(this), abi.encodeWithSelector(
-            escrow.assignReviewerJob.selector, bounty, controllerOrg
+            escrow.assignReviewerJob.selector, secondBounty, controllerOrg
         ));
     }
 
@@ -335,8 +339,7 @@ contract VerifierRegistryModuleV1Test {
     }
 
     function testJobsExpireByFundedVerificationWindow() public {
-        _enroll(ORG1, C1, S1);
-        _activate(ORG1, C1);
+        _admitBoth();
         uint256 bounty = _submitted();
         escrow.assignReviewerJob(bounty, ORG1);
         uint64 end = escrow.getReviewerJob(bounty, 1, ORG1).deadline;

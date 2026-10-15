@@ -75,18 +75,15 @@ contract CreditAttackHandlerV1 {
     function attemptCancel(uint8 bountySelector, bool impersonateSponsor) external {
         uint256 bounty = ids[uint256(bountySelector) % 3];
         // Cancellation must not re-open or duplicate already cancelled/refunded bounties.
-        vm.prank(impersonateSponsor ? sponsor : outsider);
+        // The live third fixture may only be probed by an unauthorized actor:
+        // we deliberately never grant this handler power to settle that fixture.
+        address actor = bounty == ids[2] ? outsider :
+            (impersonateSponsor ? sponsor : outsider);
+        vm.prank(actor);
         (bool ok,) = address(escrow).call(
             abi.encodeWithSelector(escrow.cancelUnassignedBounty.selector, bounty)
         );
-        // Third bounty remains live: its legitimate sponsor may cancel once.
-        // Never allow this handler to cancel it, because the invariant's
-        // deliberately unresolved-liability fixture must stay unresolved.
-        if (bounty == ids[2] && impersonateSponsor) {
-            require(ok || !ok, "unreachable");
-        } else {
-            require(!ok, "terminal cancellation accepted");
-        }
+        require(!ok, "unauthorized or repeated cancellation accepted");
     }
 
     function attemptForeignAccrual(uint8 bountySelector, uint8 actorSelector) external {

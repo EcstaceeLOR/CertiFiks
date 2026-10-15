@@ -37,7 +37,7 @@ On-chain/off-chain attestation signers MUST hash a byte string with the followin
 
 | Order | Field | Encoding | Bytes |
 |---|---|---|---|
-| 0 | domain = "CertiFiks:attempt-attestation:v1" + NUL | UTF8 ASCII | 32 |
+| 0 | domain = "CertiFiks:attempt-attestation:v1" + NUL | UTF8 ASCII | 33 |
 | 1 | chainGenesis | raw bytes32 | 32 |
 | 2 | contractLocatorHash | raw bytes32 | 32 |
 | 3 | bountyId | uint256 big endian | 32 |

@@ -60,7 +60,6 @@ abstract contract BountyAssignmentModuleV1 is BountyFundingModuleV1 {
     error OfferNotExpired();
     error OfferTooLate();
     error SubmissionDeadlinePassed();
-    error FundingNotRefundableYet();
 
     event DeveloperApplied(uint256 indexed bountyId, address indexed applicant);
     event ApplicationWithdrawn(uint256 indexed bountyId, address indexed applicant);
@@ -115,7 +114,12 @@ abstract contract BountyAssignmentModuleV1 is BountyFundingModuleV1 {
 
     function applyForBounty(uint256 bountyId) external onlyCorrectChain {
         BountyTerms storage terms = _terms(bountyId);
-        _requireOpen(bountyId);
+        // New applicants can join while another applicant considers an offer.
+        // Only one offer / accepted contributor is allowed, not just one applicant.
+        AssignmentState phase = _assignment[bountyId].state;
+        if (phase != AssignmentState.Open && phase != AssignmentState.Offered) {
+            revert InvalidAssignmentState();
+        }
         _requireWorkWindow(terms);
         if (msg.sender == address(0) || msg.sender == terms.sponsor) revert InvalidApplicant();
         if (_application[bountyId][msg.sender] != ApplicationState.None) {
@@ -308,10 +312,12 @@ abstract contract BountyAssignmentModuleV1 is BountyFundingModuleV1 {
      * @dev Called only by a future authenticated pinned-GitHub-submission
      * implementation (#11). No public implementation is exposed here.
      */
-    function _lockTimelySubmission(uint256 bountyId, address developer) internal {
-        _assertCanSubmit(bountyId, developer);
+    function _lockTimelySubmission(uint256 bountyId) internal {
+        // Never trust an arbitrary developer argument from a future API.
+        // The same EVM wallet that accepted MUST sign the submission call.
+        _assertCanSubmit(bountyId, msg.sender);
         _assignment[bountyId].state = AssignmentState.Submitted;
-        emit AssignmentSubmissionLocked(bountyId, developer);
+        emit AssignmentSubmissionLocked(bountyId, msg.sender);
     }
 
     function canSubmit(uint256 bountyId, address developer) external view returns (bool) {

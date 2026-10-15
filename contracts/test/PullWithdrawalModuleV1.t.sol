@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {PullWithdrawalModuleV1} from "../src/PullWithdrawalModuleV1.sol";
+import {FairEntitlementModuleV1} from "../src/FairEntitlementModuleV1.sol";
 import {BountyFundingModuleV1} from "../src/BountyFundingModuleV1.sol";
 import {BountySubmissionModuleV1} from "../src/BountySubmissionModuleV1.sol";
 import {BoundedArbitrationModuleV1} from "../src/BoundedArbitrationModuleV1.sol";

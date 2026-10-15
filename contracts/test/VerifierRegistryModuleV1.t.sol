@@ -60,13 +60,24 @@ contract VerifierRegistryModuleV1Test {
         escrow = new VerifierRegistryHarness(CHAIN, address(this));
     }
 
-    function _fund() internal returns (uint256 bounty) {
+    function _sortedRoster(bytes32 a, bytes32 b)
+        internal pure returns (bytes32[] memory list)
+    {
+        require(a != b && a != bytes32(0) && b != bytes32(0), "bad fixture org");
+        list = new bytes32[](2);
+        (list[0], list[1]) = a < b ? (a, b) : (b, a);
+    }
+
+    function _fundFor(bytes32 a, bytes32 b) internal returns (uint256 bounty) {
+        bytes32[] memory roster = _sortedRoster(a, b);
         BountyFundingModuleV1.FundingRequest memory request =
             BountyFundingModuleV1.FundingRequest({
                 repositoryId: 56789,
                 baselineGitSha: BASE,
                 manifestDigest: bytes32(uint256(10)),
-                verifierPolicyDigest: bytes32(uint256(11)),
+                verifierPolicyDigest: sha256(
+                    abi.encode("CertiFiks:verifier-roster:v1", uint8(2), roster)
+                ),
                 disputePolicyDigest: bytes32(uint256(12)),
                 primaryArbitrator: ARBITRATOR,
                 submissionDeadline: uint64(block.timestamp + 8 days),
@@ -77,6 +88,12 @@ contract VerifierRegistryModuleV1Test {
             });
         vm.prank(SPONSOR);
         bounty = escrow.testFund{value: 1 ether}(request);
+        vm.prank(SPONSOR);
+        escrow.registerCommittedReviewerRoster(bounty, roster, 2);
+    }
+
+    function _fund() internal returns (uint256 bounty) {
+        return _fundFor(ORG1, ORG2);
     }
 
     function _candidate() internal pure returns (BountySubmissionModuleV1.Candidate memory) {
@@ -93,7 +110,11 @@ contract VerifierRegistryModuleV1Test {
     }
 
     function _submitted() internal returns (uint256 bounty) {
-        bounty = _fund();
+        return _submittedFor(ORG1, ORG2);
+    }
+
+    function _submittedFor(bytes32 orgA, bytes32 orgB) internal returns (uint256 bounty) {
+        bounty = _fundFor(orgA, orgB);
         vm.prank(DEV);
         escrow.applyForBounty(bounty);
         vm.prank(SPONSOR);
@@ -202,7 +223,7 @@ contract VerifierRegistryModuleV1Test {
         bytes32 signerOrg = keccak256("sponsor-is-verifier-key");
         _enroll(signerOrg, C1, SPONSOR);
         _activate(signerOrg, C1);
-        uint256 bounty = _submitted();
+        uint256 bounty = _submittedFor(signerOrg, ORG1);
         _revertAs(address(this), abi.encodeWithSelector(
             escrow.assignReviewerJob.selector, bounty, signerOrg
         ));
@@ -212,7 +233,7 @@ contract VerifierRegistryModuleV1Test {
         bytes32 controllerOrg = keccak256("sponsor-controls-verifier");
         _enroll(controllerOrg, SPONSOR, S3);
         _activate(controllerOrg, SPONSOR);
-        uint256 secondBounty = _submitted();
+        uint256 secondBounty = _submittedFor(controllerOrg, ORG1);
         _revertAs(address(this), abi.encodeWithSelector(
             escrow.assignReviewerJob.selector, secondBounty, controllerOrg
         ));
@@ -225,7 +246,7 @@ contract VerifierRegistryModuleV1Test {
         bytes32 arbOrg = keccak256("arbitrator-verifier");
         _enroll(arbOrg, ARBITRATOR, S2);
         _activate(arbOrg, ARBITRATOR);
-        uint256 bounty = _submitted();
+        uint256 bounty = _submittedFor(devOrg, arbOrg);
         _revertAs(address(this), abi.encodeWithSelector(escrow.assignReviewerJob.selector, bounty, devOrg));
         _revertAs(address(this), abi.encodeWithSelector(escrow.assignReviewerJob.selector, bounty, arbOrg));
     }
@@ -381,6 +402,72 @@ contract VerifierRegistryModuleV1Test {
         escrow.revokeReviewerOrganization(ORG2);
         require(address(escrow).balance == 1 ether, "review moved sponsor funds");
         require(escrow.totalReservedAtoms() == 1 ether, "review minted a credit");
+    }
+
+    function testSponsorCannotChangePrecommittedRosterOrQuorum() public {
+        uint256 bounty = _fund();
+        bytes32[] memory roster = _sortedRoster(ORG1, ORG2);
+        require(escrow.reviewerRoster(bounty).configured, "policy unregistered");
+        require(escrow.reviewerRoster(bounty).quorum == 2, "unexpected quorum");
+        bytes32 savedDigest = escrow.reviewerRoster(bounty).policyDigest;
+        _revertAs(ATTACKER, abi.encodeWithSelector(
+            escrow.registerCommittedReviewerRoster.selector, bounty, roster, uint8(2)
+        ));
+        _revertAs(SPONSOR, abi.encodeWithSelector(
+            escrow.registerCommittedReviewerRoster.selector, bounty, roster, uint8(2)
+        ));
+        require(escrow.reviewerRoster(bounty).policyDigest == savedDigest, "policy rewritten");
+    }
+
+    function testGovernanceCannotAssignApprovedOrgOutsideFundedRoster() public {
+        _admitBoth();
+        bytes32 otherOrg = keccak256("org-not-on-funded-list");
+        _enroll(otherOrg, address(0xC333), address(0x5304));
+        _activate(otherOrg, address(0xC333));
+        uint256 bounty = _submitted();
+        _revertAs(address(this), abi.encodeWithSelector(
+            escrow.assignReviewerJob.selector, bounty, otherOrg
+        ));
+        require(escrow.reviewerJobCount(bounty, 1) == 0, "unauthorized member counted");
+    }
+
+    function testFundingPolicyDigestRejectsChangedOrganizationSet() public {
+        bytes32[] memory approved = _sortedRoster(ORG1, ORG2);
+        BountyFundingModuleV1.FundingRequest memory request =
+            BountyFundingModuleV1.FundingRequest({
+                repositoryId: 56789,
+                baselineGitSha: BASE,
+                manifestDigest: bytes32(uint256(10)),
+                verifierPolicyDigest: sha256(
+                    abi.encode("CertiFiks:verifier-roster:v1", uint8(2), approved)
+                ),
+                disputePolicyDigest: bytes32(uint256(12)),
+                primaryArbitrator: ARBITRATOR,
+                submissionDeadline: uint64(block.timestamp + 8 days),
+                verificationSeconds: 2 days,
+                challengeSeconds: 1 days,
+                arbitrationSeconds: 2 days,
+                assetKind: 0
+            });
+        vm.prank(SPONSOR);
+        uint256 bounty = escrow.testFund{value: 1 ether}(request);
+        bytes32[] memory swapped = new bytes32[](2);
+        swapped[0] = approved[1];
+        swapped[1] = approved[0];
+        _revertAs(SPONSOR, abi.encodeWithSelector(
+            escrow.registerCommittedReviewerRoster.selector, bounty, swapped, uint8(2)
+        ));
+        bytes32[] memory changed = _sortedRoster(ORG1, keccak256("different-organization"));
+        _revertAs(SPONSOR, abi.encodeWithSelector(
+            escrow.registerCommittedReviewerRoster.selector, bounty, changed, uint8(2)
+        ));
+        _revertAs(SPONSOR, abi.encodeWithSelector(
+            escrow.registerCommittedReviewerRoster.selector, bounty, approved, uint8(1)
+        ));
+        require(!escrow.reviewerRoster(bounty).configured, "mismatched policy activated");
+        vm.prank(SPONSOR);
+        escrow.registerCommittedReviewerRoster(bounty, approved, 2);
+        require(escrow.reviewerRoster(bounty).configured, "correct policy blocked");
     }
 
     function testSignerCannotBeClaimedByMultipleOrgControllers() public {

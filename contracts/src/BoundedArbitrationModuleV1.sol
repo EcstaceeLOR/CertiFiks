@@ -425,11 +425,18 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
         } else {
             caseData.fallbackReasonDigest = reasonDigest;
             caseData.fallbackEvidenceDigest = evidenceDigest;
+            // Indexers observe evidence and the signed ruling BEFORE the
+            // terminal entitlement event, in deterministic log order.
+            emit ArbitrationRuling(
+                bountyId, attemptId, msg.sender, award,
+                reasonDigest, evidenceDigest, true
+            );
             _resolve(bountyId, attemptId, award, reasonDigest, false);
+            return;
         }
         emit ArbitrationRuling(
             bountyId, attemptId, msg.sender, award,
-            reasonDigest, evidenceDigest, !primary
+            reasonDigest, evidenceDigest, false
         );
     }
 

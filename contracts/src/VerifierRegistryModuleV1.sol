@@ -414,6 +414,11 @@ abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
         emit ReviewerEvidenceDeclared(bountyId, attemptId, organizationId, msg.sender, reportDigest);
     }
 
+    function getReviewerRoster(uint256 bountyId) external view returns (ReviewerRoster memory) {
+        _terms(bountyId);
+        return reviewerRoster[bountyId];
+    }
+
     function getReviewerOrganization(bytes32 organizationId)
         external view returns (ReviewerOrganization memory)
     {

@@ -67,7 +67,7 @@ begin
     delivery_id, body_sha256, event_type, action, installation_id, repository_id, received_at
   ) values (
     p_delivery_id, p_body_sha256, p_event_type, p_action, p_installation_id, p_repository_id, p_received_at
-  ) on conflict (delivery_id) do nothing;
+  ) on conflict do nothing;
   get diagnostics inserted_count = row_count;
   if inserted_count = 0 then return 'duplicate'; end if;
 

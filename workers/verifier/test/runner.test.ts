@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { runUntrustedCode, verifierAvailable, verifierLimits } from "../src/index.js";
+import {
+  runUntrustedCode,
+  verifierAvailable,
+  verifierLimits,
+} from "../src/index.js";
 
 const pinnedImage = `registry.example/runner@sha256:${"a".repeat(64)}`;
 

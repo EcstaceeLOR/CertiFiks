@@ -430,12 +430,7 @@
             "minLength": 1
           }
         },
-        "required": [
-          "version",
-          "code",
-          "message",
-          "requestId"
-        ]
+        "required": ["version", "code", "message", "requestId"]
       },
       "DraftReceiptV1": {
         "type": "object",
@@ -456,12 +451,7 @@
             "const": false
           }
         },
-        "required": [
-          "version",
-          "bountyId",
-          "manifestDigest",
-          "funded"
-        ]
+        "required": ["version", "bountyId", "manifestDigest", "funded"]
       },
       "BountyViewV1": {
         "type": "object",
@@ -520,18 +510,10 @@
             "minLength": 1
           },
           "state": {
-            "enum": [
-              "queued",
-              "blocked",
-              "inconclusive"
-            ]
+            "enum": ["queued", "blocked", "inconclusive"]
           }
         },
-        "required": [
-          "version",
-          "jobId",
-          "state"
-        ]
+        "required": ["version", "jobId", "state"]
       }
     }
   }

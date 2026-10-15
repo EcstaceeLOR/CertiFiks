@@ -30,15 +30,26 @@ export interface AttemptCommitmentV1 {
 }
 
 function fixedHex(value: string, bytes: 20 | 32, label: string): Buffer {
-  if (typeof value !== "string" || !(bytes === 20 ? SHA1.test(value) : HEX32.test(value))) {
-    throw new TypeError("Invalid " + label + ": expected canonical lowercase hex of " + bytes + " bytes");
+  if (
+    typeof value !== "string" ||
+    !(bytes === 20 ? SHA1.test(value) : HEX32.test(value))
+  ) {
+    throw new TypeError(
+      "Invalid " +
+        label +
+        ": expected canonical lowercase hex of " +
+        bytes +
+        " bytes",
+    );
   }
   return Buffer.from(bytes === 20 ? value : value.slice(2), "hex");
 }
 
 function uintBytes(value: string, byteLength: 8 | 32, label: string): Buffer {
   if (typeof value !== "string" || !DECIMAL.test(value)) {
-    throw new TypeError("Invalid " + label + ": expected a canonical decimal integer string");
+    throw new TypeError(
+      "Invalid " + label + ": expected a canonical decimal integer string",
+    );
   }
   const integer = BigInt(value);
   if (integer > (byteLength === 8 ? MAX_U64 : MAX_U256)) {
@@ -57,14 +68,23 @@ function sha256(data: Uint8Array): string {
 
 /** RFC8785 canonical JSON manifest commitment with fixed domain separation. */
 export function digestManifestV1(document: unknown): string {
-  if (document === null || Array.isArray(document) || typeof document !== "object") {
+  if (
+    document === null ||
+    Array.isArray(document) ||
+    typeof document !== "object"
+  ) {
     throw new TypeError("Manifest must be an object");
   }
   const canonical = canonicalize(document);
   if (typeof canonical !== "string" || canonical.length === 0) {
     throw new TypeError("Manifest is not canonicalizable JSON");
   }
-  return sha256(Buffer.concat([Buffer.from(MANIFEST_DOMAIN, "utf8"), Buffer.from(canonical, "utf8")]));
+  return sha256(
+    Buffer.concat([
+      Buffer.from(MANIFEST_DOMAIN, "utf8"),
+      Buffer.from(canonical, "utf8"),
+    ]),
+  );
 }
 
 /**
@@ -72,7 +92,8 @@ export function digestManifestV1(document: unknown): string {
  * duplicate-key and serializer ambiguity, not merely JSON.parse agreement.
  */
 export function parseCanonicalManifestV1(rawJson: string): unknown {
-  if (typeof rawJson !== "string") throw new TypeError("Expected UTF-8 JSON text");
+  if (typeof rawJson !== "string")
+    throw new TypeError("Expected UTF-8 JSON text");
   let parsed: unknown;
   try {
     parsed = JSON.parse(rawJson);
@@ -80,7 +101,8 @@ export function parseCanonicalManifestV1(rawJson: string): unknown {
     throw new TypeError("Invalid JSON");
   }
   const canonical = canonicalize(parsed);
-  if (canonical !== rawJson) throw new TypeError("Manifest bytes are not canonical RFC8785 JSON");
+  if (canonical !== rawJson)
+    throw new TypeError("Manifest bytes are not canonical RFC8785 JSON");
   return parsed;
 }
 

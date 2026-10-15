@@ -14,10 +14,7 @@
       "pattern": "^(0|[1-9][0-9]*)$"
     },
     "openedBy": {
-      "enum": [
-        "sponsor",
-        "developer"
-      ]
+      "enum": ["sponsor", "developer"]
     },
     "reasonDigest": {
       "type": "string",

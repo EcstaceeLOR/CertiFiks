@@ -12,5 +12,5 @@ export type BountyStatus =
   | "settled"
   | "refunded";
 export * from "./commitments.js";
+export type { components, paths } from "./generated/openapi.js";
 export * from "./validation.js";
-export type { paths, components } from "./generated/openapi.js";

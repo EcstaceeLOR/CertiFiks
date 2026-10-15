@@ -207,3 +207,11 @@ test("EIP712 reviewer votes reject forged approvals and incomplete signatures", 
     });
   }
 });
+
+test("unsigned EIP712 signing intent is distinct from a verifiable signed report", () => {
+  const complete = json("examples/v1/signed-verifier-vote.json");
+  const { signature: _signature, ...unsigned } = complete;
+  validateProtocolDocument("voteUnsigned", unsigned);
+  assert.throws(() => validateProtocolDocument("vote", unsigned), SchemaValidationError);
+  assert.throws(() => validateProtocolDocument("voteUnsigned", complete), SchemaValidationError);
+});

@@ -3,11 +3,13 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { prepareVerifierVoteTypedDataV1 } from "../src/verifier-vote.js";
 
-const fixture = JSON.parse(
+const signedFixture = JSON.parse(
   readFileSync(new URL("../../../protocol/examples/v1/signed-verifier-vote.json", import.meta.url), "utf8"),
 );
 
-test("vote prepares precise EIP712 chain, contract, full field ordering and typed outcome", () => {
+const { signature: _signature, ...fixture } = signedFixture;
+
+test("unsigned vote prepares precise EIP712 chain, contract, full field ordering and typed outcome", () => {
   const data = prepareVerifierVoteTypedDataV1(fixture);
   assert.equal(data.domain.name, "CertiFiksVerifier");
   assert.equal(data.domain.version, "1");

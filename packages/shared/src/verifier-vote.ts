@@ -1,7 +1,7 @@
 import { validateProtocolDocument } from "./validation.js";
 
 /**
- * Type-safe, read-only construction of the Solidity v1 EIP-712 verifier vote.
+ * Type-safe construction of an UNSIGNED Solidity v1 EIP-712 verifier vote.
  * This produces data to sign; it DOES NOT create a signature, authenticate
  * GitHub reports, or authorize a payout. The signature must be verified by
  * SignedVerifierDecisionModuleV1 against an enrolled organization.
@@ -65,8 +65,8 @@ function parseUintString(field: string, input: string, max: bigint): bigint {
 }
 
 export function prepareVerifierVoteTypedDataV1(source: unknown) {
-  validateProtocolDocument("vote", source);
-  const vote = source as VerifierVoteEnvelopeV1;
+  validateProtocolDocument("voteUnsigned", source);
+  const vote = source as Omit<VerifierVoteEnvelopeV1, "signature">;
 
   return {
     domain: {

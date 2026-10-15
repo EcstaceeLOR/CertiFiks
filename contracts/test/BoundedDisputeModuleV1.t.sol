@@ -96,10 +96,14 @@ contract BoundedDisputeModuleV1Test {
     }
 
     function _fundUnconfigured(uint256 reward) internal returns (uint256 id) {
+        // Build the request BEFORE prank: _spec queries the contract, and that
+        // external view would otherwise consume the single-call impersonation.
+        BountyFundingModuleV1.FundingRequest memory request = _spec(reward);
+        bytes32[] memory roster = _roster();
         vm.prank(SPONSOR);
-        id = escrow.testFund{value: reward}(_spec(reward));
+        id = escrow.testFund{value: reward}(request);
         vm.prank(SPONSOR);
-        escrow.registerCommittedReviewerRoster(id, _roster(), 2);
+        escrow.registerCommittedReviewerRoster(id, roster, 2);
     }
 
     function _fund(uint256 reward) internal returns (uint256 id) {

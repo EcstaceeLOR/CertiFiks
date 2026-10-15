@@ -10,11 +10,11 @@ on:
         default: "wss://portaldot.philotheephilix.in"
   push:
     paths:
-      - "scripts/probe-portaldot.mjs"
+      - "scripts/probe-portaldot*.mjs"
       - ".github/workflows/portaldot-network-probe.yml"
   pull_request:
     paths:
-      - "scripts/probe-portaldot.mjs"
+      - "scripts/probe-portaldot*.mjs"
       - ".github/workflows/portaldot-network-probe.yml"
 
 permissions:
@@ -28,7 +28,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: node --check scripts/probe-portaldot.mjs
+      - run: |
+          node --check scripts/probe-portaldot.mjs
+          node --check scripts/probe-portaldot-evm.mjs
 
   live-read-only-probe:
     if: github.event_name == 'workflow_dispatch'

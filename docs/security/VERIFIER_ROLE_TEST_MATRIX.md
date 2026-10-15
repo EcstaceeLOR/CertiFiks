@@ -4,7 +4,10 @@ All cases below are tested with **synthetic wallets and organizations in Foundry
 
 | Case | Expected result | Foundry test |
 |---|---|---|
-| Two separately enrolled active organizations | Each can accept own exact attempt job; each may declare once | testApprovedTwoOrganizationsCanAcceptAndDeclareOnOneAttempt |
+| Two separately enrolled active organizations in sponsor-approved roster | Each can accept own exact attempt job; each may declare once | testApprovedTwoOrganizationsCanAcceptAndDeclareOnOneAttempt |
+| Sponsor attempts second registration or third party registers roster | Reject after first exact funded roster commitment | testSponsorCannotChangePrecommittedRosterOrQuorum |
+| Governance admits valid org but it isn't in bounty's funded roster | Reject job appointment | testGovernanceCannotAssignApprovedOrgOutsideFundedRoster |
+| Sponsor swaps roster org, order or committed quorum | Reject changed policy, preserve correct roster registration | testFundingPolicyDigestRejectsChangedOrganizationSet |
 | Organization registered but controller has not accepted | Inactive, cannot be appointed | testUnapprovedOrInactiveCannotAcceptReview |
 | Unknown caller tries enrolling/activating | Reject unauthorized governance/controller | testGovernanceAdmissionAndControllerAcceptanceCannotBeForged |
 | Same controller or signer reused across org IDs | Reject enrollment, regardless of second key | testCannotManufactureTwoOrganizationsWithAnotherSigningKey |

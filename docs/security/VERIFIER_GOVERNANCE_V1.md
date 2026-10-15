@@ -15,7 +15,8 @@ Start with **named, vetted, permissioned reviewer organizations**, publicly disc
 - Governance registers an organization under a never-reusable `bytes32 organizationId`, a **controller wallet**, a **current signing wallet**, and nonzero SHA-256-like commitment fields representing identity dossier, technical capability profile and conflict disclosure.
 - The controller separately signs an **activation** transaction. A merely registered, inactive organization cannot accept assignments.
 - Each wallet used as controller or signer is permanently linked to exactly one on-chain organization ID, even after signer rotation or revocation. **A new wallet under the SAME organization is not a second reviewer**. Organizational independence across different wallet controllers still requires human checks; identity attestations alone do not solve Sybil attacks.
-- Registry governance authorizes specific jobs for the exact current immutable bounty attempt. Only active, uniquely enrolled, non-conflicting organizations can be assigned.
+- At funding, the sponsor precommits an ordered organization roster and quorum using `SHA256(abi.encode('CertiFiks:verifier-roster:v1', uint8(quorum), bytes32[] ascendingOrgIds))` as `verifierPolicyDigest`. The sponsor must register the **same exact sorted roster and quorum once**, before any developer accepts an assignment. A different organization, reordered IDs, duplicate IDs, reduced quorum or arbitrary governance-selected reviewer **cannot substitute** the funded policy; the registry checks `isCommittedReviewer` before granting any job. This commitment is a Solidity-native encoding; off-chain JS canonicalization/manifest indexing must be tested against a signed vector in #13/#20. If the sponsor miscomputes this hash, funds would be unassignable: build preflight and safe refund paths before real funding (#14–#16/#32).
+- Registry governance authorizes specific jobs for the exact current immutable bounty attempt, **limited to the sponsor-committed roster**. Only active, uniquely enrolled, non-conflicting organizations can be assigned.
 - Only the current enrolled signer for the pinned **signer epoch** can accept a job and submit a **wallet-signed, single-use report digest** before the funded verifier timeout. This is *not* a passing test, signed off-chain attestation, consensus, or payout authorization. Formal signature validation and positive/verdict quorum are #13.
 - Organization activity counters are **accepted jobs and reported evidence**, never an automatic quality/reputation score. Adjudication-based dispute/upheld-rate will require #13/#14 and safeguards against biased sponsors.
 
@@ -28,6 +29,8 @@ Start with **named, vetted, permissioned reviewer organizations**, publicly disc
 5. Before assigning a particular bounty, re-check conflicts across sponsor wallet, accepted developer wallet, primary arbitrator wallet, reviewer controller, signer and historic linked wallets; record human-checked common beneficial ownership.
 6. Enforce explicit per-job timeouts. Missing or dissenting evidence must never silently turn into a passing report. Revoke on demonstrated conflict, compromised signing key, dishonest reporting or organizational misrepresentation; preserve evidence and offer due process.
 
+**Important conflict rule:** A reviewer organization must also be present in the funded sponsor roster. Admin identity approval **alone is never sufficient** to appoint a reviewer. The roster minimum quorum is 2 and maximum approved organizations is 5. Its future verifier-decision contract (#13) must count **distinct organization IDs satisfying the committed quorum**, not distinct signer wallets.
+
 **Operational reality:** These steps are a protocol and procedural plan. No identity records have been collected, no external reviewer has enrolled and no real customers/users have been granted trust in the registry.
 
 ## Governance abilities and limitations
@@ -36,7 +39,8 @@ Start with **named, vetted, permissioned reviewer organizations**, publicly disc
 |---|---|---|
 | Enroll organization | Immutable governance wallet | None; sets pending identity and profile |
 | Activate | Enrolled controller wallet | None; eligible for future jobs only |
-| Appoint reviewer to exact attempt | Governance wallet | None; pins org ID, signer epoch, attempt hash and deadline |
+| Commit sponsor-approved reviewer roster | Sponsor wallet, **once** before developer acceptance | None; exact funded SHA-256 roster/quorum cannot change |
+| Appoint reviewer to exact attempt | Governance wallet, restricted to committed organization IDs | None; pins org ID, signer epoch, attempt hash and deadline |
 | Accept or declare report hash | Current active assigned signer | None; records participation, not a verdict |
 | Rotate key | Controller proposes, governance approves | None; new key epoch; old key linked forever |
 | Refresh job after rotation | Governance, **only if not accepted and not declared** | None; does not reset accepted/completed evidence |

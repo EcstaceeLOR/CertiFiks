@@ -7,5 +7,8 @@
   "headCommitSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
   "manifestDigest": "0x3333333333333333333333333333333333333333333333333333333333333333",
   "submittedAtUnix": "1775000000",
-  "developerAccount": "eip155:evm:0xabcde"
+  "developerAccount": "eip155:evm:0xabcde",
+  "pullNumber": "42",
+  "imageDigest": "0x4444444444444444444444444444444444444444444444444444444444444444",
+  "evidenceDigest": "0x5555555555555555555555555555555555555555555555555555555555555555"
 }

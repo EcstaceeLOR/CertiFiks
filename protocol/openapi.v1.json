@@ -416,7 +416,11 @@
                 "maxLength": 100
               }
             },
-            "required": ["id", "owner", "name"]
+            "required": [
+              "id",
+              "owner",
+              "name"
+            ]
           },
           "baseCommitSha": {
             "type": "string",
@@ -503,7 +507,10 @@
                 "pattern": "^[1-9][0-9]*$"
               }
             },
-            "required": ["asset", "amountAtoms"]
+            "required": [
+              "asset",
+              "amountAtoms"
+            ]
           },
           "deadlines": {
             "type": "object",
@@ -560,7 +567,11 @@
                 "pattern": "^[a-z0-9][a-z0-9-]{2,63}$"
               }
             },
-            "required": ["verifierOrganizations", "quorum", "fallbackPolicyId"]
+            "required": [
+              "verifierOrganizations",
+              "quorum",
+              "fallbackPolicyId"
+            ]
           }
         },
         "required": [
@@ -614,6 +625,18 @@
             "type": "string",
             "minLength": 5,
             "maxLength": 256
+          },
+          "pullNumber": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "imageDigest": {
+            "type": "string",
+            "pattern": "^0x[a-f0-9]{64}$"
+          },
+          "evidenceDigest": {
+            "type": "string",
+            "pattern": "^0x[a-f0-9]{64}$"
           }
         },
         "required": [
@@ -625,7 +648,10 @@
           "headCommitSha",
           "manifestDigest",
           "submittedAtUnix",
-          "developerAccount"
+          "developerAccount",
+          "pullNumber",
+          "imageDigest",
+          "evidenceDigest"
         ],
         "$schema": "http://json-schema.org/draft-07/schema#",
         "$id": "urn:certifiks:protocol:v1:candidate-attempt"
@@ -666,34 +692,52 @@
             "additionalProperties": false,
             "properties": {
               "status": {
-                "enum": ["expected_failure", "unexpected_pass", "inconclusive"]
+                "enum": [
+                  "expected_failure",
+                  "unexpected_pass",
+                  "inconclusive"
+                ]
               },
               "evidenceDigest": {
                 "type": "string",
                 "pattern": "^0x[a-f0-9]{64}$"
               }
             },
-            "required": ["status", "evidenceDigest"]
+            "required": [
+              "status",
+              "evidenceDigest"
+            ]
           },
           "candidate": {
             "type": "object",
             "additionalProperties": false,
             "properties": {
               "status": {
-                "enum": ["passed", "failed", "inconclusive"]
+                "enum": [
+                  "passed",
+                  "failed",
+                  "inconclusive"
+                ]
               },
               "evidenceDigest": {
                 "type": "string",
                 "pattern": "^0x[a-f0-9]{64}$"
               }
             },
-            "required": ["status", "evidenceDigest"]
+            "required": [
+              "status",
+              "evidenceDigest"
+            ]
           },
           "regressionsPassed": {
             "type": "boolean"
           },
           "verdict": {
-            "enum": ["approved", "rejected", "inconclusive"]
+            "enum": [
+              "approved",
+              "rejected",
+              "inconclusive"
+            ]
           },
           "signerOrganization": {
             "type": "string",
@@ -705,7 +749,10 @@
             "maxLength": 256
           },
           "signatureScheme": {
-            "enum": ["secp256k1", "ed25519"]
+            "enum": [
+              "secp256k1",
+              "ed25519"
+            ]
           },
           "signature": {
             "type": "string",
@@ -745,7 +792,9 @@
                   "const": "approved"
                 }
               },
-              "required": ["verdict"]
+              "required": [
+                "verdict"
+              ]
             },
             "then": {
               "type": "object",
@@ -790,7 +839,10 @@
             "pattern": "^(0|[1-9][0-9]*)$"
           },
           "openedBy": {
-            "enum": ["sponsor", "developer"]
+            "enum": [
+              "sponsor",
+              "developer"
+            ]
           },
           "reasonDigest": {
             "type": "string",
@@ -941,7 +993,12 @@
             "minLength": 1
           }
         },
-        "required": ["version", "code", "message", "requestId"]
+        "required": [
+          "version",
+          "code",
+          "message",
+          "requestId"
+        ]
       },
       "DraftReceiptV1": {
         "type": "object",
@@ -962,7 +1019,12 @@
             "const": false
           }
         },
-        "required": ["version", "bountyId", "manifestDigest", "funded"]
+        "required": [
+          "version",
+          "bountyId",
+          "manifestDigest",
+          "funded"
+        ]
       },
       "BountyViewV1": {
         "type": "object",
@@ -1021,10 +1083,18 @@
             "minLength": 1
           },
           "state": {
-            "enum": ["queued", "blocked", "inconclusive"]
+            "enum": [
+              "queued",
+              "blocked",
+              "inconclusive"
+            ]
           }
         },
-        "required": ["version", "jobId", "state"]
+        "required": [
+          "version",
+          "jobId",
+          "state"
+        ]
       }
     }
   }

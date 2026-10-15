@@ -39,6 +39,8 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
         bool governanceApproved;
         bool primaryAccepted;
         bool fallbackAccepted;
+        bool primaryDisqualified;
+        bool fallbackDisqualified;
     }
 
     struct DisputeCase {
@@ -80,6 +82,7 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
     error CaseAlreadyOpened();
     error AppealNotPermitted();
     error DisputeDeadlineOverflow();
+    error ArbitratorAlreadyDisqualified();
 
     event DisputePolicyRegistered(
         uint256 indexed bountyId, address indexed primaryArbitrator,
@@ -87,6 +90,7 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
     );
     event DisputePolicyApproved(uint256 indexed bountyId, address indexed governance);
     event ArbitratorConsented(uint256 indexed bountyId, address indexed arbitrator);
+    event ArbitratorDisqualified(uint256 indexed bountyId, address indexed arbitrator, bytes32 indexed reasonDigest);
     event ArbitrationOpened(
         uint256 indexed bountyId, uint64 indexed attemptId, address indexed challenger,
         bytes32 attemptDigest, bytes32 reasonDigest, bytes32 evidenceDigest,
@@ -149,7 +153,9 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
             configured: true,
             governanceApproved: false,
             primaryAccepted: false,
-            fallbackAccepted: false
+            fallbackAccepted: false,
+            primaryDisqualified: false,
+            fallbackDisqualified: false
         });
         emit DisputePolicyRegistered(
             bountyId, terms.primaryArbitrator, fallbackArbitrator, commitment
@@ -176,15 +182,39 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
         if (_assignment[bountyId].state != AssignmentState.Open) revert InvalidReviewState();
         if (_isConflictedArbitrator(bountyId, msg.sender)) revert ArbitratorConflict();
         if (msg.sender == _fundingTerms[bountyId].primaryArbitrator) {
+            if (policy.primaryDisqualified) revert ArbitratorAlreadyDisqualified();
             if (policy.primaryAccepted) revert DuplicateArbitratorConsent();
             policy.primaryAccepted = true;
         } else if (msg.sender == policy.fallbackArbitrator) {
+            if (policy.fallbackDisqualified) revert ArbitratorAlreadyDisqualified();
             if (policy.fallbackAccepted) revert DuplicateArbitratorConsent();
             policy.fallbackAccepted = true;
         } else {
             revert UnauthorizedArbitrator();
         }
         emit ArbitratorConsented(bountyId, msg.sender);
+    }
+
+    /** Irreversible governance intervention for a compromised/suspected arbiter.
+     * Historic rulings and evidence remain immutable; no replacement outside
+     * sponsor-committed roster is possible. Fixed deadlines still guarantee
+     * permissionless fallback resolution even if both are disqualified.
+     */
+    function disqualifyArbitrator(
+        uint256 bountyId, address arbitrator, bytes32 reasonDigest
+    ) external onlyCorrectChain onlyRegistryGovernance {
+        DisputePolicy storage policy = _policy(bountyId);
+        if (reasonDigest == bytes32(0)) revert InvalidCaseEvidence();
+        if (arbitrator == _fundingTerms[bountyId].primaryArbitrator) {
+            if (policy.primaryDisqualified) revert ArbitratorAlreadyDisqualified();
+            policy.primaryDisqualified = true;
+            policy.primaryAccepted = false;
+        } else if (arbitrator == policy.fallbackArbitrator) {
+            if (policy.fallbackDisqualified) revert ArbitratorAlreadyDisqualified();
+            policy.fallbackDisqualified = true;
+            policy.fallbackAccepted = false;
+        } else revert UnauthorizedArbitrator();
+        emit ArbitratorDisqualified(bountyId, arbitrator, reasonDigest);
     }
 
     function _policy(uint256 bountyId)
@@ -233,7 +263,8 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
         DisputePolicy storage policy = _disputePolicy[bountyId];
         if (
             !policy.configured || !policy.governanceApproved ||
-            !policy.primaryAccepted || !policy.fallbackAccepted
+            !policy.primaryAccepted || !policy.fallbackAccepted ||
+            policy.primaryDisqualified || policy.fallbackDisqualified
         ) revert InvalidDisputePolicy();
         if (_isConflictedArbitrator(bountyId, _fundingTerms[bountyId].primaryArbitrator) ||
             _isConflictedArbitrator(bountyId, policy.fallbackArbitrator)) {
@@ -345,8 +376,8 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
             ? _fundingTerms[bountyId].primaryArbitrator
             : policy.fallbackArbitrator;
         if (msg.sender != requiredSigner) revert UnauthorizedArbitrator();
-        if (primary && !policy.primaryAccepted ||
-            fallbackReview && !policy.fallbackAccepted) {
+        if (primary && (!policy.primaryAccepted || policy.primaryDisqualified) ||
+            fallbackReview && (!policy.fallbackAccepted || policy.fallbackDisqualified)) {
             revert UnauthorizedArbitrator();
         }
         if (_isConflictedArbitrator(bountyId, msg.sender)) revert ArbitratorConflict();

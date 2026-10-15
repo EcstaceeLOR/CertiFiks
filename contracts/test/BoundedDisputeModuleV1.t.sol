@@ -412,6 +412,40 @@ contract BoundedDisputeModuleV1Test {
         require(developer == 0.5 ether, "contract ignored half split");
     }
 
+    function testDissentAutomaticallyOpensCaseInSameSignedReviewTransition() public {
+        uint256 id = _dissent();
+        BoundedDisputeModuleV1.DisputeCase memory record = escrow.readDisputeCase(id, 1);
+        require(record.state == BoundedDisputeModuleV1.CaseState.PrimaryReview,
+            "dissent did not immediately trigger a case");
+        require(record.openedAt == escrow.readReviewDecision(id, 1).decidedAt,
+            "review and case timestamps are not atomic");
+        uint64 cutoff = record.primaryUntil;
+        vm.warp(block.timestamp + 12 hours);
+        vm.prank(FOREIGN);
+        escrow.materializeEscalatedReview(id);
+        require(escrow.readDisputeCase(id, 1).primaryUntil == cutoff,
+            "late caller reset original arbitration clock");
+    }
+
+    function testReviewTimeoutOpensCaseImmediatelyWithoutManualRequest() public {
+        uint256 id = _submitted();
+        vm.warp(uint256(escrow.getPinnedAttempt(id, 1).submittedAt) + 2 days);
+        escrow.expireIncompleteReview(id, 1);
+        BoundedDisputeModuleV1.DisputeCase memory record = escrow.readDisputeCase(id, 1);
+        require(record.state == BoundedDisputeModuleV1.CaseState.PrimaryReview,
+            "timeout left no case for a timely contributor");
+        require(record.openedAt == block.timestamp, "case did not begin at timeout");
+    }
+
+    function testCommittedReviewerSignerCannotAlsoAcceptDeveloperAssignment() public {
+        uint256 id = _fund(1 ether);
+        vm.prank(signerA);
+        escrow.applyForBounty(id);
+        vm.prank(SPONSOR);
+        escrow.offerAssignment(id, signerA);
+        _revertAs(signerA, abi.encodeWithSelector(escrow.acceptAssignment.selector, id));
+    }
+
     function testNoVerifierQuorumTimeoutAllowsDeterministicResolution() public {
         uint256 id = _submitted(5);
         uint64 submitted = escrow.getPinnedAttempt(id, 1).submittedAt;

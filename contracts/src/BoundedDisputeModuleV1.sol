@@ -133,7 +133,11 @@ abstract contract BoundedDisputeModuleV1 is SignedVerifierDecisionModuleV1 {
         ) revert InvalidFallbackArbitrator();
         if (
             walletOrganization[fallbackArbitrator] != bytes32(0) ||
-            walletOrganization[terms.primaryArbitrator] != bytes32(0)
+            walletOrganization[terms.primaryArbitrator] != bytes32(0) ||
+            (
+                walletOrganization[terms.sponsor] != bytes32(0) &&
+                isCommittedReviewer[bountyId][walletOrganization[terms.sponsor]]
+            )
         ) revert ConflictedArbitrator();
         bytes32 computed = disputePolicyCommitment(terms.primaryArbitrator, fallbackArbitrator);
         if (computed != terms.disputePolicyDigest) revert DisputePolicyMismatch();
@@ -156,7 +160,11 @@ abstract contract BoundedDisputeModuleV1 is SignedVerifierDecisionModuleV1 {
         if (
             developer == terms.primaryArbitrator ||
             developer == _disputePolicies[bountyId].fallbackArbitrator ||
-            developer == registryGovernance
+            developer == registryGovernance ||
+            (
+                walletOrganization[developer] != bytes32(0) &&
+                isCommittedReviewer[bountyId][walletOrganization[developer]]
+            )
         ) revert ConflictedArbitrator();
     }
 

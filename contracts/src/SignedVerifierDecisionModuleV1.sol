@@ -136,8 +136,17 @@ abstract contract SignedVerifierDecisionModuleV1 is VerifierRegistryModuleV1 {
     function submitSignedVerdict(SignedVerdict calldata vote, bytes calldata signature)
         external onlyCorrectChain
     {
+        address assignedSigner = _assertEligibleVote(vote);
+        bytes32 digest = typedVerdictDigest(vote);
+        address recovered = _recoverSigner(digest, signature);
+        if (recovered != assignedSigner) revert InvalidSignatureSigner();
+        _commitVerifiedVote(vote, digest, recovered);
+    }
+
+    function _assertEligibleVote(SignedVerdict calldata vote)
+        internal view returns (address assignedSigner)
+    {
         BountyTerms storage terms = _terms(vote.bountyId);
-        FixAttempt storage attempt = _attempts[vote.bountyId][vote.attemptId];
         if (
             vote.attemptId == 0 ||
             latestAttemptId[vote.bountyId] != vote.attemptId ||
@@ -150,7 +159,6 @@ abstract contract SignedVerifierDecisionModuleV1 is VerifierRegistryModuleV1 {
             !isCommittedReviewer[vote.bountyId][vote.organizationId]) {
             revert ReviewerNotInCommittedRoster();
         }
-
         ReviewerJob storage job = _job(vote.bountyId, vote.attemptId, vote.organizationId);
         ReviewerOrganization storage organization = _active(vote.organizationId);
         _requireNoRoleConflict(vote.bountyId, vote.organizationId);
@@ -163,6 +171,8 @@ abstract contract SignedVerifierDecisionModuleV1 is VerifierRegistryModuleV1 {
             job.signerEpoch != vote.signerEpoch ||
             job.assignedSigner != organization.currentSigner
         ) revert MismatchedVerdictIdentity();
+
+        FixAttempt storage attempt = _attempts[vote.bountyId][vote.attemptId];
         if (
             attempt.attemptDigest != vote.attemptDigest ||
             attempt.candidate.headGitSha != vote.headGitSha ||
@@ -181,14 +191,16 @@ abstract contract SignedVerifierDecisionModuleV1 is VerifierRegistryModuleV1 {
             vote.outcome == uint8(Outcome.Approved) &&
             (!vote.baselineFailed || !vote.candidatePassed || !vote.regressionsPassed)
         ) revert ContradictoryApproval();
+        if (_verdicts[vote.bountyId][vote.attemptId][vote.organizationId].recorded) {
+            revert DuplicateVerdict();
+        }
+        assignedSigner = job.assignedSigner;
+    }
 
+    function _commitVerifiedVote(
+        SignedVerdict calldata vote, bytes32 digest, address recovered
+    ) internal {
         RecordedVerdict storage prior = _verdicts[vote.bountyId][vote.attemptId][vote.organizationId];
-        if (prior.recorded) revert DuplicateVerdict();
-
-        bytes32 digest = typedVerdictDigest(vote);
-        address recovered = _recoverSigner(digest, signature);
-        if (recovered != job.assignedSigner) revert InvalidSignatureSigner();
-
         prior.typedDigest = digest;
         prior.reportDigest = vote.reportDigest;
         prior.attemptDigest = vote.attemptDigest;
@@ -201,21 +213,19 @@ abstract contract SignedVerifierDecisionModuleV1 is VerifierRegistryModuleV1 {
         prior.regressionsPassed = vote.regressionsPassed;
         prior.recorded = true;
 
-        ReviewDecision storage decision = _decisions[vote.bountyId][vote.attemptId];
-        decision.recordedVotes += 1;
-        if (vote.outcome == uint8(Outcome.Approved)) decision.positiveVotes += 1;
-
         emit SignedVerdictRecorded(
             vote.bountyId, vote.attemptId, vote.organizationId, recovered,
             digest, vote.reportDigest, vote.outcome, vote.signerEpoch
         );
 
+        ReviewDecision storage decision = _decisions[vote.bountyId][vote.attemptId];
+        decision.recordedVotes += 1;
+        if (vote.outcome == uint8(Outcome.Approved)) decision.positiveVotes += 1;
+
         if (vote.outcome != uint8(Outcome.Approved)) {
-            // Reject, inconclusive, or failed runner NEVER count as approval.
-            // #14 must provide a bounded, appealable arbiter/fallback path.
             decision.status = ReviewStatus.EscalationRequired;
         } else if (decision.positiveVotes >= reviewerRoster[vote.bountyId].quorum) {
-            uint256 until = block.timestamp + uint256(terms.challengeSeconds);
+            uint256 until = block.timestamp + uint256(_fundingTerms[vote.bountyId].challengeSeconds);
             if (until > type(uint64).max) revert ChallengeTimeOverflow();
             decision.status = ReviewStatus.ChallengeWindow;
             decision.challengeUntil = uint64(until);

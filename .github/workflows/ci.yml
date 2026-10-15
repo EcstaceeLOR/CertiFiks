@@ -1,0 +1,87 @@
+name: CertiFiks continuous integration
+
+on:
+  push:
+    branches: ["main", "feat/**"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node-quality:
+    name: Node workspaces — lint / typecheck / test / build
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Clean reproducible install
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Lint and formatting verification
+        run: npx biome ci .
+      - name: TypeScript checks
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm run test
+      - name: Build every workspace
+        run: npm run build
+
+  historical-python-tests:
+    name: Historical Python model (NOT production security approval)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m unittest discover -s research/reference-model -p 'test_*.py' -v
+
+  solidity-baseline:
+    name: Historical Solidity baseline — compile and smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+      - name: Build source (does not certify security or Portaldot compatibility)
+        working-directory: contracts
+        run: forge build
+      - name: Smoke tests (known design defects remain open in #6)
+        working-directory: contracts
+        run: forge test -vv
+
+  dependency-audit:
+    name: Production dependency vulnerability scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: NPM high/critical production audit
+        run: npm audit --audit-level=high --omit=dev
+
+  secret-scan:
+    name: Secret scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

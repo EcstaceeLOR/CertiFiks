@@ -1,0 +1,59 @@
+name: Portaldot RPC compatibility probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      rpc_url:
+        description: "Candidate public Portaldot websocket RPC (no tokens/secrets)"
+        type: string
+        required: false
+        default: "wss://portaldot.philotheephilix.in"
+  push:
+    paths:
+      - "scripts/probe-portaldot.mjs"
+      - ".github/workflows/portaldot-network-probe.yml"
+  pull_request:
+    paths:
+      - "scripts/probe-portaldot.mjs"
+      - ".github/workflows/portaldot-network-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  syntax-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node --check scripts/probe-portaldot.mjs
+
+  live-read-only-probe:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Read-only RPC compatibility probe
+        id: probe
+        continue-on-error: true
+        env:
+          PORTALDOT_WS_RPC: ${{ inputs.rpc_url }}
+        run: |
+          node scripts/probe-portaldot.mjs > portaldot-rpc-probe.json
+      - name: Upload evidence even if connection fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: portaldot-rpc-evidence
+          path: portaldot-rpc-probe.json
+          retention-days: 30
+      - name: Fail if the network probe is inconclusive
+        if: steps.probe.outcome != 'success'
+        run: |
+          echo 'Read-only RPC probe failed. This is not evidence of Portaldot network downtime; investigate environment and endpoint.'
+          exit 1

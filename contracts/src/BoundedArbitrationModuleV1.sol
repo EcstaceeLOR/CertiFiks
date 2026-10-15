@@ -293,6 +293,12 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
         if (available < roster.quorum) revert InvalidReviewState();
     }
 
+    function _requireReadyForAcceptance(uint256 bountyId, address applicant)
+        internal view override
+    {
+        _requireReadyForAssignment(bountyId, applicant);
+    }
+
     /**
      * A green, independently signed quorum is subject to a real challenge
      * window. Only sponsor or developer can open one. Neither can extend it.

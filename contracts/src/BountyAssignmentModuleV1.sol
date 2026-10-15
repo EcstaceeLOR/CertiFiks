@@ -222,6 +222,11 @@ abstract contract BountyAssignmentModuleV1 is BountyFundingModuleV1 {
         emit OfferTimedOut(bountyId, applicant);
     }
 
+    /** No-op in the abstract assignment-only module. Final custody
+     * composition rechecks safety before developer consent becomes binding.
+     */
+    function _requireReadyForAcceptance(uint256, address) internal view virtual {}
+
     function acceptAssignment(uint256 bountyId) external onlyCorrectChain {
         BountyTerms storage terms = _terms(bountyId);
         Assignment storage assignment = _assignment[bountyId];
@@ -231,6 +236,7 @@ abstract contract BountyAssignmentModuleV1 is BountyFundingModuleV1 {
             revert ApplicationNotPending();
         }
         if (block.timestamp > assignment.offerUntil) revert OfferExpired();
+        _requireReadyForAcceptance(bountyId, msg.sender);
         _requireWorkWindow(terms);
 
         assignment.state = AssignmentState.Accepted;

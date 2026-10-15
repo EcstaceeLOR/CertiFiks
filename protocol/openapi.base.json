@@ -389,6 +389,150 @@
         "description": "Future server-side authenticated GitHub+wallet session; unavailable until #23"
       }
     },
-    "schemas": {}
+    "schemas": {
+      "ManifestV1": null,
+      "CandidateAttemptV1": null,
+      "VerificationReportV1": null,
+      "DisputeCaseV1": null,
+      "ChainEventV1": null,
+      "ErrorV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "1"
+          },
+          "code": {
+            "enum": [
+              "INVALID_SCHEMA",
+              "UNAUTHORIZED",
+              "FORBIDDEN",
+              "WRONG_CHAIN",
+              "STALE_COMMIT",
+              "MANIFEST_MISMATCH",
+              "VERIFIER_CONFLICT",
+              "QUORUM_MISSING",
+              "TEST_INCONCLUSIVE",
+              "ESCROW_UNFUNDED",
+              "CHALLENGE_PENDING",
+              "DISPUTE_IN_PROGRESS",
+              "RATE_LIMITED",
+              "DEPENDENCY_UNAVAILABLE",
+              "UNSUPPORTED_SPEC_VERSION"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          },
+          "requestId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "version",
+          "code",
+          "message",
+          "requestId"
+        ]
+      },
+      "DraftReceiptV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "1"
+          },
+          "bountyId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "manifestDigest": {
+            "type": "string",
+            "pattern": "^0x[a-f0-9]{64}$"
+          },
+          "funded": {
+            "const": false
+          }
+        },
+        "required": [
+          "version",
+          "bountyId",
+          "manifestDigest",
+          "funded"
+        ]
+      },
+      "BountyViewV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "1"
+          },
+          "bountyId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "funded",
+              "assigned",
+              "submitted",
+              "verifying",
+              "review",
+              "disputed",
+              "payable",
+              "settled",
+              "refunded"
+            ]
+          },
+          "manifestDigest": {
+            "type": "string",
+            "pattern": "^0x[a-f0-9]{64}$"
+          },
+          "funded": {
+            "type": "boolean"
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/ManifestV1"
+          }
+        },
+        "required": [
+          "version",
+          "bountyId",
+          "status",
+          "manifestDigest",
+          "funded",
+          "manifest"
+        ]
+      },
+      "JobReceiptV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "1"
+          },
+          "jobId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "state": {
+            "enum": [
+              "queued",
+              "blocked",
+              "inconclusive"
+            ]
+          }
+        },
+        "required": [
+          "version",
+          "jobId",
+          "state"
+        ]
+      }
+    }
   }
 }

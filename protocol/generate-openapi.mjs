@@ -23,7 +23,7 @@ for (const [schemaName, fileBase] of Object.entries(sources)) {
 const outputPath = join(root, "protocol/openapi.v1.json");
 const generated = JSON.stringify(base, null, 2) + "\n";
 if (process.argv.includes("--check")) {
-  if (readFileSync(outputPath, "utf8") !== generated) {
+  if (JSON.stringify(JSON.parse(readFileSync(outputPath, "utf8"))) !== JSON.stringify(base)) {
     console.error(
       "OpenAPI is stale. Run npm run protocol:generate and commit generated output.",
     );

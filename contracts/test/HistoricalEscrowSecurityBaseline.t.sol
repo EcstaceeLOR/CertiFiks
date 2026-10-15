@@ -246,7 +246,7 @@ contract HistoricalEscrowSecurityBaselineTest {
         escrow.refundExpired(id);
         CertiFiksEscrow.Bounty memory b = escrow.bounty(id);
         require(b.status == CertiFiksEscrow.Status.Refunded, "historical exploit no longer reproduced");
-        require(b.paidTo == address(0), "not applicable"); // compiler guard below
+        require(b.reward == 0 && address(escrow).balance == 0, "historical refund did not drain reward");
     }
 
     function testKnownHighRevertingRecipientTrapsApprovedReward() public {

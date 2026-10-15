@@ -28,7 +28,8 @@ const fieldTypes = [
 ] as const;
 
 export const CERTIFIKS_VERIFIER_TYPED_FIELDS = fieldTypes;
-export const CERTIFIKS_VERIFIER_TYPED_PRIMARY_TYPE = "CertiFiksVerifierVote" as const;
+export const CERTIFIKS_VERIFIER_TYPED_PRIMARY_TYPE =
+  "CertiFiksVerifierVote" as const;
 
 export interface VerifierVoteEnvelopeV1 {
   version: "1";

@@ -28,7 +28,9 @@ const ajv = new Ajv({
 const unsignedVote = {
   ...vote,
   $id: "urn:certifiks:protocol:v1:unsigned-verifier-vote",
-  properties: Object.fromEntries(Object.entries(vote.properties).filter(([name]) => name !== "signature")),
+  properties: Object.fromEntries(
+    Object.entries(vote.properties).filter(([name]) => name !== "signature"),
+  ),
   required: vote.required.filter((name) => name !== "signature"),
 };
 

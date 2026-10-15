@@ -90,7 +90,7 @@ contract BoundedArbitrationModuleV1Test {
         (roster[0], roster[1]) = ORG_A < ORG_B ? (ORG_A, ORG_B) : (ORG_B, ORG_A);
     }
 
-    function _fund() internal returns (uint256 bountyId) {
+    function _fundBare() internal returns (uint256 bountyId) {
         BountyFundingModuleV1.FundingRequest memory req =
             BountyFundingModuleV1.FundingRequest({
                 repositoryId: 888,
@@ -113,6 +113,10 @@ contract BoundedArbitrationModuleV1Test {
         bountyId = escrow.testFund{value: 1 ether}(req);
         vm.prank(SPONSOR);
         escrow.registerCommittedReviewerRoster(bountyId, _roster(), 2);
+    }
+
+    function _fund() internal returns (uint256 bountyId) {
+        bountyId = _fundBare();
         vm.prank(SPONSOR);
         escrow.registerDisputePolicy(bountyId, FALLBACK);
         escrow.approveArbitrationPolicy(bountyId);
@@ -598,6 +602,123 @@ contract BoundedArbitrationModuleV1Test {
             "stale attempt still has live dispute");
         require(escrow.getDisputeCase(bounty, 1).finalAward ==
             BoundedArbitrationModuleV1.Award.None, "old refund or payout leaked");
+    }
+
+    function testDeveloperOfferRequiresCompleteRosterAndArbitratorConsent() public {
+        uint256 bounty = _fundBare();
+        vm.prank(DEVELOPER);
+        escrow.applyForBounty(bounty);
+        _failAs(SPONSOR, abi.encodeWithSelector(
+            escrow.offerAssignment.selector, bounty, DEVELOPER
+        ));
+        vm.prank(SPONSOR);
+        escrow.registerDisputePolicy(bounty, FALLBACK);
+        _failAs(SPONSOR, abi.encodeWithSelector(
+            escrow.offerAssignment.selector, bounty, DEVELOPER
+        ));
+        escrow.approveArbitrationPolicy(bounty);
+        _failAs(SPONSOR, abi.encodeWithSelector(
+            escrow.offerAssignment.selector, bounty, DEVELOPER
+        ));
+        vm.prank(ARBITRATOR);
+        escrow.acceptArbitratorRole(bounty);
+        _failAs(SPONSOR, abi.encodeWithSelector(
+            escrow.offerAssignment.selector, bounty, DEVELOPER
+        ));
+        vm.prank(FALLBACK);
+        escrow.acceptArbitratorRole(bounty);
+        vm.prank(SPONSOR);
+        escrow.offerAssignment(bounty, DEVELOPER);
+        require(escrow.getAssignment(bounty).offeredTo == DEVELOPER,
+            "signed recovery policy failed to authorize valid offer");
+    }
+
+    function testGovernanceMayDisableCompromisedPrimaryAndFallbackStillResolves() public {
+        uint256 bounty = _approved();
+        _openChallenge(bounty);
+        _failAs(SPONSOR, abi.encodeWithSelector(
+            escrow.disqualifyArbitrator.selector, bounty, ARBITRATOR,
+            bytes32(uint256(61))
+        ));
+        escrow.disqualifyArbitrator(bounty, ARBITRATOR, bytes32(uint256(61)));
+        _failAs(ARBITRATOR, abi.encodeWithSelector(
+            escrow.ruleOnDispute.selector, bounty, uint64(1),
+            BoundedArbitrationModuleV1.Award.DeveloperReward,
+            bytes32(uint256(62)), bytes32(uint256(63))
+        ));
+        _failAs(address(this), abi.encodeWithSelector(
+            escrow.disqualifyArbitrator.selector, bounty, ARBITRATOR,
+            bytes32(uint256(64))
+        ));
+        vm.warp(escrow.getDisputeCase(bounty, 1).primaryDeadline);
+        vm.prank(DEVELOPER);
+        escrow.advanceDispute(bounty, 1);
+        vm.prank(FALLBACK);
+        escrow.ruleOnDispute(
+            bounty, 1, BoundedArbitrationModuleV1.Award.SponsorRefund,
+            bytes32(uint256(65)), bytes32(uint256(66))
+        );
+        require(escrow.getDisputeCase(bounty, 1).finalAward ==
+            BoundedArbitrationModuleV1.Award.SponsorRefund, "disqualification blocked case liveness");
+    }
+
+    function testBothArbitratorsDisqualifiedStillLeaveBoundedTimeoutPath() public {
+        uint256 bounty = _approved();
+        _openChallenge(bounty);
+        escrow.disqualifyArbitrator(bounty, ARBITRATOR, bytes32(uint256(70)));
+        escrow.disqualifyArbitrator(bounty, FALLBACK, bytes32(uint256(71)));
+        vm.warp(escrow.getDisputeCase(bounty, 1).primaryDeadline);
+        escrow.advanceDispute(bounty, 1);
+        _failAs(FALLBACK, abi.encodeWithSelector(
+            escrow.ruleOnDispute.selector, bounty, uint64(1),
+            BoundedArbitrationModuleV1.Award.SponsorRefund,
+            bytes32(uint256(72)), bytes32(uint256(73))
+        ));
+        vm.warp(escrow.getDisputeCase(bounty, 1).fallbackDeadline);
+        vm.prank(CONTROLLER_A);
+        escrow.advanceDispute(bounty, 1);
+        require(escrow.getDisputeCase(bounty, 1).phase ==
+            BoundedArbitrationModuleV1.CasePhase.Resolved, "both disqualified froze escrow");
+        require(escrow.getDisputeCase(bounty, 1).finalAward ==
+            BoundedArbitrationModuleV1.Award.DeveloperReward, "default reviewer quorum changed");
+        require(address(escrow).balance == escrow.totalReservedAtoms(), "timeout moved assets");
+    }
+
+    function testArbitratorRevocationRequiresGovernanceAndEvidenceDigest() public {
+        uint256 bounty = _fund();
+        _failAs(CONTROLLER_A, abi.encodeWithSelector(
+            escrow.disqualifyArbitrator.selector, bounty, ARBITRATOR,
+            bytes32(uint256(81))
+        ));
+        _failAs(address(this), abi.encodeWithSelector(
+            escrow.disqualifyArbitrator.selector, bounty, ARBITRATOR, bytes32(0)
+        ));
+        _failAs(address(this), abi.encodeWithSelector(
+            escrow.disqualifyArbitrator.selector, bounty, address(0xBAD),
+            bytes32(uint256(81))
+        ));
+        escrow.disqualifyArbitrator(bounty, ARBITRATOR, bytes32(uint256(82)));
+        _failAs(ARBITRATOR, abi.encodeWithSelector(
+            escrow.acceptArbitratorRole.selector, bounty
+        ));
+        vm.prank(DEVELOPER);
+        escrow.applyForBounty(bounty);
+        _failAs(SPONSOR, abi.encodeWithSelector(
+            escrow.offerAssignment.selector, bounty, DEVELOPER
+        ));
+    }
+
+    function testArbitratorWhoJoinsVerifierOrganizationCannotBeAssignedConflictedWork() public {
+        uint256 bounty = _fund();
+        escrow.enrollReviewerOrganization(
+            keccak256("a-new-organization"), address(0xC333), FALLBACK,
+            bytes32(uint256(91)), bytes32(uint256(92)), bytes32(uint256(93))
+        );
+        vm.prank(DEVELOPER);
+        escrow.applyForBounty(bounty);
+        _failAs(SPONSOR, abi.encodeWithSelector(
+            escrow.offerAssignment.selector, bounty, DEVELOPER
+        ));
     }
 
     function testFuzzAttackerCannotArbitrateUnrelatedCase(address attacker) public {

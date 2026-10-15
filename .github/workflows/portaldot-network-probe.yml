@@ -1,0 +1,103 @@
+name: Portaldot RPC compatibility probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      rpc_url:
+        description: "Candidate public Portaldot websocket RPC (no tokens/secrets)"
+        type: string
+        required: false
+        default: "wss://portaldot.philotheephilix.in"
+  push:
+    paths:
+      - "scripts/probe-portaldot*.mjs"
+      - ".github/workflows/portaldot-network-probe.yml"
+  pull_request:
+    paths:
+      - "scripts/probe-portaldot*.mjs"
+      - ".github/workflows/portaldot-network-probe.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  syntax-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: |
+          node --check scripts/probe-portaldot.mjs
+          node --check scripts/probe-portaldot-evm.mjs
+
+  live-read-only-probe:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Read-only RPC compatibility probe
+        id: probe
+        continue-on-error: true
+        env:
+          PORTALDOT_WS_RPC: ${{ inputs.rpc_url }}
+        run: |
+          node scripts/probe-portaldot.mjs > portaldot-rpc-probe.json
+      - name: Upload evidence even if connection fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: portaldot-rpc-evidence
+          path: portaldot-rpc-probe.json
+          retention-days: 30
+      - name: Fail if the network probe is inconclusive
+        if: steps.probe.outcome != 'success'
+        run: |
+          echo 'Read-only RPC probe failed. This is not evidence of Portaldot network downtime; investigate environment and endpoint.'
+          exit 1
+
+  candidate-rpc-diagnostics:
+    # This runs on the exploratory feature branch only. It is advisory;
+    # community-reported and old mainnet nodes are NOT presumed to be V3.
+    if: github.event_name == 'push' && github.ref_name == 'feat/issue-2-portaldot-environment'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: published-mainnet
+            url: wss://mainnet.portaldot.io
+          - label: community-reported
+            url: wss://portaldot.philotheephilix.in
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Query public metadata (no signing)
+        env:
+          PORTALDOT_WS_RPC: ${{ matrix.url }}
+          RPC_TIMEOUT_MS: "2500"
+          OUTCOME_LABEL: ${{ matrix.label }}
+        run: |
+          set +e
+          timeout 50s node scripts/probe-portaldot.mjs > rpc-result.json
+          code=$?
+          if [ ! -s rpc-result.json ]; then
+            printf '{"probe_status":"no_json_evidence","exit_code":%s,"endpoint_label":"%s"}\n' "$code" "$OUTCOME_LABEL" > rpc-result.json
+          fi
+          printf 'Process exit code: %s\n' "$code" >> "$GITHUB_STEP_SUMMARY"
+          echo "Output is evidence of this runner's result only; not approval or a deployment." >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+      - name: Store timestamped metadata result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpc-probe-${{ matrix.label }}
+          path: rpc-result.json
+          retention-days: 14

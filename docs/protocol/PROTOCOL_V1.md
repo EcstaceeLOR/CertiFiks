@@ -12,7 +12,7 @@ Define exactly which GitHub revision, bounty terms, CI image, results, verifier 
 
 ## 2. Versioned schemas and examples
 Authoritative JSON Schema Draft-07 files live in packages/shared/src/schemas/v1:
-- bounty-manifest.schema.json — committed sponsor terms, numeric GitHub repository ID, fixed base commit SHA, trusted acceptance tests, pinned image digest, reward as decimal atomic-unit string, time windows and organizational verifier quorum.
+- bounty-manifest.schema.json — committed sponsor terms, numeric GitHub repository ID, fixed base commit SHA, **GitHub fork / verified-commit / base-branch policy**, trusted acceptance tests, pinned image digest, reward as decimal atomic-unit string, time windows and organizational verifier quorum.
 - candidate-attempt.schema.json — bounty/attempt identities, assigned account, pinned repository/base/head SHAs, manifest digest, submission time.
 - verification-report.schema.json — baseline/candidate results, regression status, image/result digests, signer identity, scheme, signature and expiry.
 - dispute-case.schema.json — challenger/attempt identity, immutable reason/evidence hashes and response/escalation windows.
@@ -30,7 +30,7 @@ SHA256(domain || JCS(manifest)).
 - The shared implementation uses the pinned npm canonicalize package and rejects non-object documents.
 - **Never verify signatures against arbitrary JSON.parse output from unauthenticated raw bytes.** parseCanonicalManifestV1 rejects all raw text not byte-for-byte identical to canonical JCS serialization. That rule catches duplicated keys, noncanonical whitespace and alternate escape encoding.
 - A platform must validate schemas and identity constraints **before** accepting the manifest commitment. The Solidity code stores/verifies bytes32 commitments; it does not parse JSON.
-- Reference canonicalization vector protocol/vectors/manifest-v1.json is a standards-compatible ASCII/I-JSON subset. The Python reference demonstrates this subset only, not general Unicode/floating-point JCS conformance.
+- Reference canonicalization vector protocol/vectors/manifest-v1.json is a standards-compatible ASCII/I-JSON subset. Issue #11 now requires `acceptance.githubPolicy` in that example; its published SHA-256 vector is `0xddb62523e13ee6bc1a60f7921b171cccd3cd62cf1c4af7c9681c27904c47bd44` (updated before any deployment). The Python reference demonstrates this subset only, not general Unicode/floating-point JCS conformance.
 
 ## 4. Attempt attestation digest — all fields required, fixed-width
 On-chain/off-chain attestation signers MUST hash a byte string with the following exact fixed-width field order.

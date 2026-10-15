@@ -721,6 +721,70 @@ contract BoundedArbitrationModuleV1Test {
         ));
     }
 
+    function testAssignmentBlockedWhenCommittedReviewQuorumIsRevoked() public {
+        uint256 bounty = _fund();
+        bytes32[] memory activeReviewers = escrow.getCommittedReviewerIds(bounty);
+        require(activeReviewers.length == 2, "roster members missing");
+        escrow.revokeReviewerOrganization(ORG_B);
+        vm.prank(DEVELOPER);
+        escrow.applyForBounty(bounty);
+        _failAs(SPONSOR, abi.encodeWithSelector(
+            escrow.offerAssignment.selector, bounty, DEVELOPER
+        ));
+        require(escrow.getAssignment(bounty).offeredTo == address(0),
+            "unavailable reviewer quorum got a developer assigned");
+    }
+
+    function testSignerFromCommittedReviewerOrgCannotAlsoBecomeBountyDeveloper() public {
+        uint256 bounty = _fund();
+        vm.prank(signerA);
+        escrow.applyForBounty(bounty);
+        _failAs(SPONSOR, abi.encodeWithSelector(
+            escrow.offerAssignment.selector, bounty, signerA
+        ));
+        vm.prank(CONTROLLER_A);
+        escrow.applyForBounty(bounty);
+        _failAs(SPONSOR, abi.encodeWithSelector(
+            escrow.offerAssignment.selector, bounty, CONTROLLER_A
+        ));
+        // Honest unrelated account remains assignable.
+        vm.prank(DEVELOPER);
+        escrow.applyForBounty(bounty);
+        vm.prank(SPONSOR);
+        escrow.offerAssignment(bounty, DEVELOPER);
+        require(escrow.getAssignment(bounty).offeredTo == DEVELOPER,
+            "honest engineer cannot receive offer");
+    }
+
+    function testCommittedArbitratorsCannotApplyForTheirOwnDisputedBounty() public {
+        uint256 bounty = _fund();
+        vm.prank(ARBITRATOR);
+        escrow.applyForBounty(bounty);
+        _failAs(SPONSOR, abi.encodeWithSelector(
+            escrow.offerAssignment.selector, bounty, ARBITRATOR
+        ));
+        vm.prank(FALLBACK);
+        escrow.applyForBounty(bounty);
+        _failAs(SPONSOR, abi.encodeWithSelector(
+            escrow.offerAssignment.selector, bounty, FALLBACK
+        ));
+    }
+
+    function testHistoricReviewerKeyCannotEvadeConflictByRotation() public {
+        uint256 bounty = _fund();
+        address fresh = vm.addr(777);
+        vm.prank(CONTROLLER_A);
+        escrow.proposeReviewerSigner(ORG_A, fresh);
+        escrow.approveReviewerSignerRotation(ORG_A);
+        require(escrow.walletOrganization(signerA) == ORG_A,
+            "old reviewer identity was erased");
+        vm.prank(signerA);
+        escrow.applyForBounty(bounty);
+        _failAs(SPONSOR, abi.encodeWithSelector(
+            escrow.offerAssignment.selector, bounty, signerA
+        ));
+    }
+
     function testFuzzAttackerCannotArbitrateUnrelatedCase(address attacker) public {
         if (attacker == ARBITRATOR || attacker == FALLBACK || attacker == address(0)) return;
         uint256 bounty = _approved();

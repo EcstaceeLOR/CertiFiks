@@ -83,10 +83,12 @@ abstract contract FairEntitlementModuleV1 is BoundedArbitrationModuleV1 {
 
         // Write the single immutable accounting decision before any future
         // #16 contract is permitted to issue a credit or transfer.
-        _record(
-            bountyId, 0, reason, terms.rewardAtoms, 0,
-            address(0), bytes32(0), bytes32(0)
-        );
+        Entitlement memory draft;
+        draft.reason = reason;
+        draft.recordedAt = uint64(block.timestamp);
+        draft.sponsor = terms.sponsor;
+        draft.sponsorAtoms = terms.rewardAtoms;
+        _commitEntitlement(bountyId, draft);
     }
 
     /**
@@ -148,39 +150,36 @@ abstract contract FairEntitlementModuleV1 is BoundedArbitrationModuleV1 {
         }
         if (reasonDigest == bytes32(0)) revert InvalidEntitlementDecision();
 
-        _record(
-            bountyId, attemptId, reason, sponsorAtoms, developerAtoms,
-            _assignment[bountyId].developer,
-            _attempts[bountyId][attemptId].attemptDigest, reasonDigest
-        );
+        Entitlement memory draft;
+        draft.reason = reason;
+        draft.sourceAttemptId = attemptId;
+        draft.recordedAt = uint64(block.timestamp);
+        draft.sponsor = terms.sponsor;
+        draft.developer = _assignment[bountyId].developer;
+        draft.sponsorAtoms = sponsorAtoms;
+        draft.developerAtoms = developerAtoms;
+        draft.sourceAttemptDigest = _attempts[bountyId][attemptId].attemptDigest;
+        draft.decisionReasonDigest = reasonDigest;
+        _commitEntitlement(bountyId, draft);
     }
 
-    function _record(
-        uint256 bountyId, uint64 attemptId, Reason reason,
-        uint256 sponsorAtoms, uint256 developerAtoms, address developer,
-        bytes32 attemptDigest, bytes32 reasonDigest
-    ) internal {
+    function _commitEntitlement(uint256 bountyId, Entitlement memory draft) internal {
         BountyTerms storage terms = _terms(bountyId);
         if (
+            draft.reason == Reason.None ||
             _entitlements[bountyId].reason != Reason.None ||
-            sponsorAtoms + developerAtoms != terms.rewardAtoms ||
-            (attemptId != 0 && (developer == address(0) || developer == terms.sponsor)) ||
+            draft.sponsor != terms.sponsor ||
+            draft.sponsorAtoms + draft.developerAtoms != terms.rewardAtoms ||
+            (draft.sourceAttemptId != 0 &&
+                (draft.developer == address(0) || draft.developer == terms.sponsor)) ||
             address(this).balance < totalReservedAtoms
         ) revert AccountingNotBacked();
-        _entitlements[bountyId] = Entitlement({
-            reason: reason,
-            sourceAttemptId: attemptId,
-            recordedAt: uint64(block.timestamp),
-            sponsor: terms.sponsor,
-            developer: developer,
-            sponsorAtoms: sponsorAtoms,
-            developerAtoms: developerAtoms,
-            sourceAttemptDigest: attemptDigest,
-            decisionReasonDigest: reasonDigest
-        });
+        _entitlements[bountyId] = draft;
         emit EntitlementRecorded(
-            bountyId, attemptId, reason, terms.sponsor, developer,
-            sponsorAtoms, developerAtoms, attemptDigest, reasonDigest
+            bountyId, draft.sourceAttemptId, draft.reason,
+            draft.sponsor, draft.developer,
+            draft.sponsorAtoms, draft.developerAtoms,
+            draft.sourceAttemptDigest, draft.decisionReasonDigest
         );
     }
 

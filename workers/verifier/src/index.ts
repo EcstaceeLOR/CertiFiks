@@ -76,7 +76,7 @@ export async function runUntrustedCode(request: VerifierRunRequest): Promise<Ver
     stdout = result.stdout;
     stderr = result.stderr;
   } catch (error) {
-    const e = error as NodeJS.ErrnoException & { code?: number | string; stdout?: string; stderr?: string; killed?: boolean };
+    const e = error as NodeJS.ErrnoException & { code?: number | string; stdout?: string; stderr?: string; killed?: boolean; signal?: string };
     stdout = e.stdout ?? "";
     stderr = e.stderr ?? "";
     if (e.killed || e.code === "ETIMEDOUT" || e.signal === "SIGTERM") status = "timed_out";

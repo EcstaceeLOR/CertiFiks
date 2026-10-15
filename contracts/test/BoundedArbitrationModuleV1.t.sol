@@ -6,6 +6,7 @@ import {BoundedArbitrationModuleV1} from "../src/BoundedArbitrationModuleV1.sol"
 import {VerifierRegistryModuleV1} from "../src/VerifierRegistryModuleV1.sol";
 import {BountyFundingModuleV1} from "../src/BountyFundingModuleV1.sol";
 import {BountySubmissionModuleV1} from "../src/BountySubmissionModuleV1.sol";
+import {BountyAssignmentModuleV1} from "../src/BountyAssignmentModuleV1.sol";
 
 interface VmSignedReport {
     function prank(address who) external;
@@ -796,7 +797,7 @@ contract BoundedArbitrationModuleV1Test {
             escrow.acceptAssignment.selector, bounty
         ));
         require(escrow.getAssignment(bounty).state ==
-            BoundedArbitrationModuleV1.AssignmentState.Offered,
+            BountyAssignmentModuleV1.AssignmentState.Offered,
             "failed acceptance changed committed assignment");
     }
 

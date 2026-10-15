@@ -71,6 +71,30 @@ contract CreditAttackHandlerV1 {
         rejectedReplayAccruals++;
     }
 
+    // The source escrow must reject a payout if execution is replayed on a
+    // different chain, even for the legitimate beneficiary.
+    function wrongChainWithdrawal(uint8 bountySelector, uint96 amountSeed) external {
+        uint256 bounty = ids[uint256(bountySelector) % 3];
+        uint256 claim = escrow.claimableByBounty(bounty, sponsor);
+        uint256 amount = claim == 0 ? 1 : (uint256(amountSeed) % claim) + 1;
+        vm.chainId(31338);
+        vm.prank(sponsor);
+        (bool ok,) = address(escrow).call(
+            abi.encodeWithSelector(escrow.withdrawBountyCredit.selector, bounty, payable(sponsor), amount)
+        );
+        vm.chainId(31337);
+        require(!ok, "cross-chain payout accepted");
+    }
+
+    // Attacker donations are not new escrow liabilities and cannot mint
+    // claimable credits. This tests unexpected native balance changes.
+    function forceNativeSurplus(uint96 surplusSeed) external {
+        uint256 fundedBalance = escrow.totalReservedAtoms();
+        uint256 extra = uint256(surplusSeed) % 1 ether;
+        vm.deal(address(escrow), fundedBalance + extra);
+        require(escrow.totalClaimableCreditsAtoms() <= fundedBalance, "surplus became credit");
+    }
+
     function attemptCancel(uint8 bountySelector, bool impersonateSponsor) external {
         uint256 bounty = ids[uint256(bountySelector) % 3];
         // Cancellation must not re-open or duplicate already cancelled/refunded bounties.

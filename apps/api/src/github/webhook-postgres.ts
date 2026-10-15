@@ -31,6 +31,7 @@ export class PostgresWebhookJournal {
       },
       body: JSON.stringify({
         p_delivery_id: event.deliveryId,
+        p_body_sha256: event.bodySha256,
         p_event_type: event.eventType,
         p_action: event.action,
         p_installation_id: event.installationId,

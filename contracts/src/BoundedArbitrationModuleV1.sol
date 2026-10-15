@@ -52,9 +52,14 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
         uint64 primaryDeadline;
         uint64 fallbackDeadline;
         uint64 appealUntil;
+        uint64 responseUntil;
+        uint64 appealResponseUntil;
         bytes32 attemptDigest;
         bytes32 openingReasonDigest;
         bytes32 openingEvidenceDigest;
+        bytes32 sponsorResponseDigest;
+        bytes32 developerResponseDigest;
+        bytes32 appealResponseDigest;
         bytes32 primaryReasonDigest;
         bytes32 primaryEvidenceDigest;
         bytes32 fallbackReasonDigest;
@@ -83,6 +88,9 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
     error AppealNotPermitted();
     error DisputeDeadlineOverflow();
     error ArbitratorAlreadyDisqualified();
+    error EvidenceResponseNotPermitted();
+    error EvidenceResponseAlreadyFiled();
+    error EvidenceResponseWindowActive();
 
     event DisputePolicyRegistered(
         uint256 indexed bountyId, address indexed primaryArbitrator,
@@ -95,6 +103,10 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
         uint256 indexed bountyId, uint64 indexed attemptId, address indexed challenger,
         bytes32 attemptDigest, bytes32 reasonDigest, bytes32 evidenceDigest,
         uint64 primaryDeadline, uint64 fallbackDeadline
+    );
+    event ArbitrationResponseRecorded(
+        uint256 indexed bountyId, uint64 indexed attemptId, address indexed respondent,
+        bytes32 evidenceDigest, bool appealResponse
     );
     event ArbitrationRuling(
         uint256 indexed bountyId, uint64 indexed attemptId, address indexed arbitrator,
@@ -369,11 +381,74 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
         caseData.fallbackDeadline = uint64(fallbackLimit);
         caseData.openingReasonDigest = reasonDigest;
         caseData.openingEvidenceDigest = evidenceDigest;
+        // One bounded opportunity for the counterparty to respond before
+        // the primary rules. It cannot extend funded primary/fallback limits.
+        uint256 grace = uint256(terms.arbitrationSeconds) / 3;
+        if (grace > 1 hours) grace = 1 hours;
+        uint256 responseUntil = block.timestamp + grace;
+        if (responseUntil > primaryLimit) responseUntil = primaryLimit;
+        caseData.responseUntil = uint64(responseUntil);
         emit ArbitrationOpened(
             bountyId, attemptId, challenger, caseData.attemptDigest,
             reasonDigest, evidenceDigest, caseData.primaryDeadline,
             caseData.fallbackDeadline
         );
+    }
+
+    /**
+     * @notice Either party can put independently addressable response
+     * evidence on-chain before the ruling. An opening-party digest is not a
+     * response; the other side has a minimum grace period or may respond
+     * sooner. One response per party is allowed; no shifting deadlines.
+     */
+    function respondToDispute(uint256 bountyId, uint64 attemptId, bytes32 evidenceDigest)
+        external onlyCorrectChain
+    {
+        _currentAttempt(bountyId, attemptId);
+        if (evidenceDigest == bytes32(0)) revert InvalidCaseEvidence();
+        if (!_party(bountyId, msg.sender)) revert UnauthorizedChallenger();
+        DisputeCase storage caseData = _cases[bountyId][attemptId];
+        if (caseData.phase != CasePhase.PrimaryReview &&
+            caseData.phase != CasePhase.FallbackReview) {
+            revert EvidenceResponseNotPermitted();
+        }
+        uint256 deadline = caseData.phase == CasePhase.PrimaryReview
+            ? caseData.primaryDeadline : caseData.fallbackDeadline;
+        if (block.timestamp >= deadline) revert ArbitrationDeadlineExpired();
+        if (msg.sender == _fundingTerms[bountyId].sponsor) {
+            if (caseData.sponsorResponseDigest != bytes32(0)) {
+                revert EvidenceResponseAlreadyFiled();
+            }
+            caseData.sponsorResponseDigest = evidenceDigest;
+        } else {
+            if (caseData.developerResponseDigest != bytes32(0)) {
+                revert EvidenceResponseAlreadyFiled();
+            }
+            caseData.developerResponseDigest = evidenceDigest;
+        }
+        emit ArbitrationResponseRecorded(bountyId, attemptId, msg.sender, evidenceDigest, false);
+    }
+
+    /**
+     * @notice The winner of a primary decision may answer the losing party's
+     * appeal with a single pinned digest before fallback judgment.
+     */
+    function respondToAppeal(uint256 bountyId, uint64 attemptId, bytes32 evidenceDigest)
+        external onlyCorrectChain
+    {
+        _currentAttempt(bountyId, attemptId);
+        if (evidenceDigest == bytes32(0)) revert InvalidCaseEvidence();
+        DisputeCase storage caseData = _cases[bountyId][attemptId];
+        if (caseData.phase != CasePhase.AppealReview) revert EvidenceResponseNotPermitted();
+        if (block.timestamp >= caseData.fallbackDeadline) revert ArbitrationDeadlineExpired();
+        address originalWinner = caseData.primaryAward == Award.DeveloperReward
+            ? _assignment[bountyId].developer : _fundingTerms[bountyId].sponsor;
+        if (msg.sender != originalWinner) revert UnauthorizedChallenger();
+        if (caseData.appealResponseDigest != bytes32(0)) {
+            revert EvidenceResponseAlreadyFiled();
+        }
+        caseData.appealResponseDigest = evidenceDigest;
+        emit ArbitrationResponseRecorded(bountyId, attemptId, msg.sender, evidenceDigest, true);
     }
 
     /**
@@ -412,6 +487,18 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
             fallbackReview && block.timestamp >= caseData.fallbackDeadline) {
             revert ArbitrationDeadlineExpired();
         }
+        // Neither an early primary nor a quick appeal may deprive the
+        // opposing party of its precommitted response opportunity.
+        if (primary && block.timestamp < caseData.responseUntil &&
+            caseData.challenger == _fundingTerms[bountyId].sponsor &&
+            caseData.developerResponseDigest == bytes32(0) ||
+            primary && block.timestamp < caseData.responseUntil &&
+            caseData.challenger == _assignment[bountyId].developer &&
+            caseData.sponsorResponseDigest == bytes32(0) ||
+            fallbackReview && phase == CasePhase.AppealReview &&
+            block.timestamp < caseData.appealResponseUntil &&
+            caseData.appealResponseDigest == bytes32(0)
+        ) revert EvidenceResponseWindowActive();
         if (primary) {
             caseData.primaryAward = award;
             caseData.primaryReasonDigest = reasonDigest;
@@ -462,6 +549,13 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
         caseData.appealReasonDigest = reasonDigest;
         caseData.appealEvidenceDigest = evidenceDigest;
         caseData.phase = CasePhase.AppealReview;
+        uint256 appealGrace = uint256(_fundingTerms[bountyId].arbitrationSeconds) / 3;
+        if (appealGrace > 1 hours) appealGrace = 1 hours;
+        uint256 responseUntil = block.timestamp + appealGrace;
+        if (responseUntil > caseData.fallbackDeadline) {
+            responseUntil = caseData.fallbackDeadline;
+        }
+        caseData.appealResponseUntil = uint64(responseUntil);
         emit ArbitrationAppealed(
             bountyId, attemptId, msg.sender, reasonDigest, evidenceDigest
         );

@@ -42,6 +42,7 @@ abstract contract BountySubmissionModuleV1 is BountyAssignmentModuleV1 {
     error EmptyEvidenceDigest();
     error RepositoryIdentityMismatch();
     error BaselineIdentityMismatch();
+    error ManifestIdentityMismatch();
     error InvalidManifestVersion();
     error NoSubmission();
     error UnknownAttempt();
@@ -117,6 +118,7 @@ abstract contract BountySubmissionModuleV1 is BountyAssignmentModuleV1 {
         BountyTerms storage terms = _terms(bountyId);
         if (candidate.repositoryId != terms.repositoryId) revert RepositoryIdentityMismatch();
         if (candidate.baseGitSha != terms.baselineGitSha) revert BaselineIdentityMismatch();
+        if (candidate.manifestDigest != terms.manifestDigest) revert ManifestIdentityMismatch();
         if (candidate.manifestVersion != terms.version || candidate.manifestVersion != ATTEMPT_VERSION) {
             revert InvalidManifestVersion();
         }

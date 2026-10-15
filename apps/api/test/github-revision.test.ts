@@ -20,6 +20,7 @@ const policy: PinnedRevisionPolicyV1 = {
   imageDigest: "0x" + "22".repeat(32),
   allowForkPullRequests: true,
   requireVerifiedCommitSignature: true,
+  baseBranch: "main",
 };
 
 const access: InstalledRepositoryPermissionsV1 = {
@@ -38,7 +39,7 @@ const snapshot: GitHubSnapshotV1 = {
   pull: {
     number: 18,
     state: "open",
-    base: { sha: "a".repeat(40), repo: { id: 314159 } },
+    base: { sha: "a".repeat(40), ref: "main", repo: { id: 314159 } },
     head: { sha: "b".repeat(40), repo: { id: 161803 } },
     user: { id: 424242 },
   },
@@ -62,6 +63,7 @@ test("exact authenticated snapshot produces repeatable evidence digest", () => {
   const receipt = verifyGitHubRevisionSnapshotV1(policy, access, snapshot);
   assert.equal(receipt.pullNumber, 18);
   assert.equal(receipt.repositoryId, 314159);
+  assert.equal(receipt.baseBranch, "main");
   assert.equal(receipt.fork, true);
   assert.equal(receipt.commitSignatureVerified, true);
   assert.match(receipt.snapshotDigest, /^0x[a-f0-9]{64}$/);
@@ -117,6 +119,19 @@ test("stale force-push or rebased baseline cannot substitute committed revision"
   fails(
     () => verifyGitHubRevisionSnapshotV1(policy, access, rebased),
     "STALE_COMMIT",
+  );
+});
+
+test("PR retargeting to another base branch is rejected even if SHAs match", () => {
+  const retargeted = deep(snapshot);
+  retargeted.pull.base.ref = "dev";
+  fails(
+    () => verifyGitHubRevisionSnapshotV1(policy, access, retargeted),
+    "STALE_COMMIT",
+  );
+  fails(
+    () => verifyGitHubRevisionSnapshotV1({ ...policy, baseBranch: "../secrets" }, access, snapshot),
+    "INVALID_SCHEMA",
   );
 });
 

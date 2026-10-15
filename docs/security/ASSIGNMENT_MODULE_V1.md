@@ -14,7 +14,7 @@
 
 | Action | Eligible actor | Guard / behavior |
 |---|---|---|
-| Apply | Any non-sponsor wallet with no prior application to this bounty | Funded known bounty, exact chain ID, state Open, at least 1h remaining, max 32 pending |
+| Apply | Any non-sponsor wallet with no prior application to this bounty | Funded known bounty, exact chain ID, state Open **or Offered**, at least 1h remaining, max 32 pending |
 | Withdraw pending or offered application | Exact wallet that applied | Immediately removes pending status, freeing capacity and cancelling its pending offer if present; cannot reapply with same wallet |
 | Reject pending or offered application | Funding sponsor | Removes pending status, prevents reapplication with that wallet; does not change acceptance terms |
 | Select contributor / make offer | Funding sponsor | Applicant status Applied, bounty Open and enough time to accept/work; at most one open offer |
@@ -24,7 +24,7 @@
 | Resign accepted assignment | Exact accepted contributor | Only **before** submission; releases active slot, leaving original terms immutable |
 | Cancel unassigned bounty | Funding sponsor | Open or Offered only; flags CancelledPendingRefund, **does not move or allocate funds** |
 | Mark no-submission expiry | Anyone | Only after contractual submission deadline and if no timely submission has been locked; flags ExpiredPendingRefund, **no transfer** |
-| Lock a timely submitted candidate | Future trusted GitHub submission module (#11) | Internal-only; accepted contributor, correct chain, before deadline, one transition maximum |
+| Lock a timely submitted candidate | Future trusted GitHub submission module (#11) | Internal-only; caller MUST be the accepted wallet (`msg.sender`), correct chain, before deadline, one transition maximum |
 | Change funded reward, manifest or deadline | **No one** | Not exposed. Must terminate/refund under future safe contract rules and create a **new bounty** |
 
 ### State transitions
@@ -52,7 +52,7 @@ stateDiagram-v2
 ## 3. Consent, limits and fairness
 
 1. **Two-party consent:** A sponsor cannot nominate a stranger who never applied; sponsor makes the offer, the selected developer separately submits a wallet-signed acceptance. Sponsor cannot later swap that accepted wallet unilaterally.
-2. **Bounded exclusive work:** One accepted developer per bounty. Other applicants remain pending but cannot submit. Former developer loses the right after voluntary resignation. A timely locked submission stops reassignment, cancellation and no-submission expiry.
+2. **Bounded exclusive work:** One accepted developer per bounty. Other applicants can apply while one offer is pending, but cannot submit. Former developer loses the right after voluntary resignation. A timely locked submission stops reassignment, cancellation and no-submission expiry.
 3. **Offer timing:** Fixed max offer lifetime is 24h, capped to leave at least 1h before the funded submission deadline. Expired offers need explicit state cleanup by anyone. A sponsor may revoke before acceptance, not after.
 4. **No replay of opt-ins:** At most one application per wallet and bounty. Accepted/withdrawn/rejected wallets cannot reapply under a different state. Rejected/withdrawn statuses cannot become Accepted by an old offer.
 5. **Spam safety (partial):** Maximum 32 **active pending** applications/bounty with a one-application-per-wallet rule. Sponsor can reject abusive applications to free slots. This is **not Sybil resistance**; an attacker can submit across wallets and impose gas/availability costs. #23/#24 must enforce off-chain account eligibility, rate limits, bans, and private repo policies; organization and verifier-role conflicts remain future requirements of #12.
@@ -62,7 +62,7 @@ stateDiagram-v2
 
 ## 4. Tests and evidence
 
-Foundry suite covers honest apply→offer→accept→submit authorization, double-selection denial, sponsor self-application rejection, spoofed accept, duplicate application and acceptance, sponsor rejection/withdrawal, capacity overflow and recovery, offer revocation/expiry/replay, minimum work window, voluntary pre-submission resignation and reassignment, cancel-before-accept and no-cancel-after-accept, missed deadline and no-submission expiry, protection of timely submitted work, wrong network, separation of two bounties, conservation of locked assets, and fuzzing unselected wallet rejection.
+Foundry suite covers honest apply→offer→accept→submit authorization, concurrent applications while an offer awaits response, double-selection denial, sponsor self-application rejection, spoofed accept, duplicate application and acceptance, sponsor rejection/withdrawal, capacity overflow and recovery, offer revocation/expiry/replay, minimum work window, voluntary pre-submission resignation and reassignment, cancel-before-accept and no-cancel-after-accept, missed deadline and no-submission expiry, protection of timely submitted work, wrong network, separation of two bounties, conservation of locked assets, and fuzzing unselected wallet rejection.
 
 Run (from repo root): `cd contracts && forge clean && forge build && forge test -vv`. The test-only `simulatePinnedSubmission` is a **test hook**, not authentic GitHub verification. #11 must bind and authenticate exact GitHub PR, repository ID, baseline/head SHA and image digest.
 

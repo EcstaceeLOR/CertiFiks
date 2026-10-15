@@ -43,15 +43,17 @@ function validateCommand(command: string[]): void {
   if (
     command.some(
       (part) =>
-        typeof part !== "string" ||
-        part.length > 4096 ||
-        part.includes("\0"),
+        typeof part !== "string" || part.length > 4096 || part.includes("\0"),
     )
   ) {
     throw new Error("SANDBOX_ARGUMENT_INVALID");
   }
   // No shell, eval, or implicit command parsing. Test images should expose a fixed entrypoint.
-  if (["sh", "bash", "zsh", "cmd", "powershell", "pwsh"].includes(command[0].toLowerCase())) {
+  if (
+    ["sh", "bash", "zsh", "cmd", "powershell", "pwsh"].includes(
+      command[0].toLowerCase(),
+    )
+  ) {
     throw new Error("SANDBOX_SHELL_ENTRYPOINT_FORBIDDEN");
   }
 }

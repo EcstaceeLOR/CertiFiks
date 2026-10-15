@@ -132,6 +132,8 @@ abstract contract BountySubmissionModuleV1 is BountyAssignmentModuleV1 {
 
     function _recordAttempt(uint256 bountyId, uint64 attemptId, Candidate calldata candidate) internal {
         BountyTerms storage terms = _terms(bountyId);
+        // Strict ABI encoding includes every Candidate field, chain, contract,
+        // bounty, attempt and wallet. This is a claim digest, not verified GitHub proof.
         bytes32 digest = sha256(
             abi.encode(
                 ATTEMPT_DOMAIN,
@@ -140,14 +142,7 @@ abstract contract BountySubmissionModuleV1 is BountyAssignmentModuleV1 {
                 bountyId,
                 attemptId,
                 msg.sender,
-                candidate.repositoryId,
-                candidate.pullNumber,
-                candidate.baseGitSha,
-                candidate.headGitSha,
-                terms.manifestDigest,
-                candidate.manifestVersion,
-                candidate.imageDigest,
-                candidate.evidenceDigest
+                candidate
             )
         );
         Candidate memory immutableCandidate = Candidate({

@@ -785,6 +785,51 @@ contract BoundedArbitrationModuleV1Test {
         ));
     }
 
+    function testReviewerRevokedAfterOfferBlocksDeveloperAcceptance() public {
+        uint256 bounty = _fund();
+        vm.prank(DEVELOPER);
+        escrow.applyForBounty(bounty);
+        vm.prank(SPONSOR);
+        escrow.offerAssignment(bounty, DEVELOPER);
+        escrow.revokeReviewerOrganization(ORG_B);
+        _failAs(DEVELOPER, abi.encodeWithSelector(
+            escrow.acceptAssignment.selector, bounty
+        ));
+        require(escrow.getAssignment(bounty).state ==
+            BoundedArbitrationModuleV1.AssignmentState.Offered,
+            "failed acceptance changed committed assignment");
+    }
+
+    function testArbitratorDisqualifiedAfterOfferBlocksDeveloperAcceptance() public {
+        uint256 bounty = _fund();
+        vm.prank(DEVELOPER);
+        escrow.applyForBounty(bounty);
+        vm.prank(SPONSOR);
+        escrow.offerAssignment(bounty, DEVELOPER);
+        escrow.disqualifyArbitrator(bounty, ARBITRATOR, bytes32(uint256(123)));
+        _failAs(DEVELOPER, abi.encodeWithSelector(
+            escrow.acceptAssignment.selector, bounty
+        ));
+        require(escrow.getAssignment(bounty).developer == address(0),
+            "developer accepted after lost fallback protection");
+    }
+
+    function testApplicantWhoBecomesReviewerAfterOfferCannotAcceptSameBounty() public {
+        uint256 bounty = _fund();
+        vm.prank(DEVELOPER);
+        escrow.applyForBounty(bounty);
+        vm.prank(SPONSOR);
+        escrow.offerAssignment(bounty, DEVELOPER);
+        vm.prank(CONTROLLER_A);
+        escrow.proposeReviewerSigner(ORG_A, DEVELOPER);
+        escrow.approveReviewerSignerRotation(ORG_A);
+        _failAs(DEVELOPER, abi.encodeWithSelector(
+            escrow.acceptAssignment.selector, bounty
+        ));
+        require(escrow.getAssignment(bounty).offeredTo == DEVELOPER,
+            "failed conflicted acceptance destroyed pending offer");
+    }
+
     function testFuzzAttackerCannotArbitrateUnrelatedCase(address attacker) public {
         if (attacker == ARBITRATOR || attacker == FALLBACK || attacker == address(0)) return;
         uint256 bounty = _approved();

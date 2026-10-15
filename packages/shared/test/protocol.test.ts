@@ -137,6 +137,21 @@ test("funded GitHub signature, fork and base-branch rules must be explicit", () 
   assert.notEqual(digestManifestV1(retargeted), digestManifestV1(manifest));
 });
 
+test("candidate v1 requires exact PR number, image and off-chain evidence digests", () => {
+  const fixture = json("examples/v1/candidate-attempt.json");
+  validateProtocolDocument("attempt", fixture);
+  for (const field of ["pullNumber", "imageDigest", "evidenceDigest"]) {
+    const changed = structuredClone(fixture);
+    delete changed[field];
+    assert.throws(
+      () => validateProtocolDocument("attempt", changed),
+      SchemaValidationError,
+    );
+  }
+  const moved = { ...fixture, pullNumber: "0" };
+  assert.throws(() => validateProtocolDocument("attempt", moved), SchemaValidationError);
+});
+
 test("only canonical raw manifest JSON text is accepted for signed replay", () => {
   const fixture = json("vectors/manifest-v1.json");
   // Fixture contains only I-JSON strings, integers and arrays, making JS/Python JCS identical.

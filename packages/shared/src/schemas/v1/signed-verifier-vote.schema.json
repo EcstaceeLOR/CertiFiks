@@ -57,12 +57,7 @@
     },
     "outcome": {
       "type": "integer",
-      "enum": [
-        1,
-        2,
-        3,
-        4
-      ]
+      "enum": [1, 2, 3, 4]
     },
     "baselineFailed": {
       "type": "boolean"
@@ -116,9 +111,7 @@
             "const": 1
           }
         },
-        "required": [
-          "outcome"
-        ]
+        "required": ["outcome"]
       },
       "then": {
         "type": "object",

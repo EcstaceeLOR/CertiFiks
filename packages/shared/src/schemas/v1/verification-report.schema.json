@@ -34,34 +34,52 @@
       "additionalProperties": false,
       "properties": {
         "status": {
-          "enum": ["expected_failure", "unexpected_pass", "inconclusive"]
+          "enum": [
+            "expected_failure",
+            "unexpected_pass",
+            "inconclusive"
+          ]
         },
         "evidenceDigest": {
           "type": "string",
           "pattern": "^0x[a-f0-9]{64}$"
         }
       },
-      "required": ["status", "evidenceDigest"]
+      "required": [
+        "status",
+        "evidenceDigest"
+      ]
     },
     "candidate": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "status": {
-          "enum": ["passed", "failed", "inconclusive"]
+          "enum": [
+            "passed",
+            "failed",
+            "inconclusive"
+          ]
         },
         "evidenceDigest": {
           "type": "string",
           "pattern": "^0x[a-f0-9]{64}$"
         }
       },
-      "required": ["status", "evidenceDigest"]
+      "required": [
+        "status",
+        "evidenceDigest"
+      ]
     },
     "regressionsPassed": {
       "type": "boolean"
     },
     "verdict": {
-      "enum": ["approved", "rejected", "inconclusive"]
+      "enum": [
+        "approved",
+        "rejected",
+        "inconclusive"
+      ]
     },
     "signerOrganization": {
       "type": "string",
@@ -73,11 +91,14 @@
       "maxLength": 256
     },
     "signatureScheme": {
-      "enum": ["secp256k1", "ed25519"]
+      "enum": [
+        "secp256k1",
+        "ed25519"
+      ]
     },
     "signature": {
       "type": "string",
-      "pattern": "^0x[a-f0-9]{128,130}$"
+      "pattern": "^0x(?:[a-f0-9]{128}|[a-f0-9]{130})$"
     },
     "expiresAtUnix": {
       "type": "string",
@@ -107,16 +128,21 @@
   "allOf": [
     {
       "if": {
+        "type": "object",
         "properties": {
           "verdict": {
             "const": "approved"
           }
         },
-        "required": ["verdict"]
+        "required": [
+          "verdict"
+        ]
       },
       "then": {
+        "type": "object",
         "properties": {
           "baseline": {
+            "type": "object",
             "properties": {
               "status": {
                 "const": "expected_failure"
@@ -124,6 +150,7 @@
             }
           },
           "candidate": {
+            "type": "object",
             "properties": {
               "status": {
                 "const": "passed"

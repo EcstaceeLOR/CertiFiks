@@ -159,8 +159,11 @@ contract EscrowStatefulInvariantTest {
         vm.deal(SPONSOR, 10 ether);
         escrow = new PullHarnessV1(CHAIN, address(this));
         for (uint256 i = 0; i < 3; ++i) {
+            // Compute SHA-256 precompile-backed policy commitments BEFORE prank:
+            // sha256() makes an external precompile call and would consume vm.prank.
+            BountyFundingModuleV1.FundingRequest memory request = _policy();
             vm.prank(SPONSOR);
-            ids[i] = escrow.testFund{value: (i + 1) * 1 ether}(_policy());
+            ids[i] = escrow.testFund{value: (i + 1) * 1 ether}(request);
             if (i < 2) {
                 vm.prank(SPONSOR);
                 escrow.cancelUnassignedBounty(ids[i]);

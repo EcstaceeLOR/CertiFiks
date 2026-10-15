@@ -29,6 +29,8 @@ The stateful handler performs adversarial sequences of attempted withdrawals (le
 | --- | --- | --- |
 | Repeated payout, partial withdrawal, wrong beneficiary | Stateful handler and #16 unit tests | Synthetic actors |
 | Repeated credit accrual | Stateful handler | Already finalized fixtures |
+| Wrong-chain beneficiary payout | Stateful handler with chain ID mutation | Local EVM identity only |
+| Unexpected ETH deposited into escrow | Stateful balance mutation and liability checks | No real asset transfers |
 | Cancellation replay and stranger cancellation | Stateful handler | No randomized assignment progression |
 | Failing recipient / callback reentrancy | #16 direct regression tests | Not statefully mixed with arbitrary arbitration |
 | Signed verdict replay, chain separation and forged approvals | #13 direct tests | No external signer infrastructure |

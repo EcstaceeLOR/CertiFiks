@@ -445,7 +445,7 @@ contract BoundedArbitrationModuleV1Test {
         require(address(escrow).balance == 1 ether, "timeout paid funds directly");
     }
 
-    function testBothArbitratorsSilentAfterMissingQuorumDefaultToRefund() public {
+    function testBothArbitratorsSilentAfterMissingQuorumProtectsBothParties() public {
         uint256 bounty = _ready();
         _submit(_vote(bounty, ORG_A, 1), KEY_A);
         uint256 deadline = escrow.getPinnedAttempt(bounty, 1).submittedAt +
@@ -463,8 +463,8 @@ contract BoundedArbitrationModuleV1Test {
         vm.prank(CONTROLLER_B);
         escrow.advanceDispute(bounty, 1);
         require(escrow.getDisputeCase(bounty, 1).finalAward ==
-            BoundedArbitrationModuleV1.Award.SponsorRefund,
-            "unverified work was counted as a verified fix");
+            BoundedArbitrationModuleV1.Award.SharedResolution,
+            "verifier outage unfairly allocated the entire reward to either side");
     }
 
     function testDissentDoesNotAutomaticallyMakeContributorPayable() public {

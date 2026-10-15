@@ -193,7 +193,10 @@ test("EIP712 reviewer votes reject forged approvals and incomplete signatures", 
     { ...receipt, chainId: "0" },
     { ...receipt, signatureScheme: "ed25519" },
   ]) {
-    assert.throws(() => validateProtocolDocument("vote", change), SchemaValidationError);
+    assert.throws(
+      () => validateProtocolDocument("vote", change),
+      SchemaValidationError,
+    );
   }
   for (const negative of [2, 3, 4]) {
     validateProtocolDocument("vote", {

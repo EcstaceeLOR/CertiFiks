@@ -177,12 +177,12 @@ abstract contract BountyAssignmentModuleV1 is BountyFundingModuleV1 {
      * demand complete custody guarantees. The composed arbitration module
      * must refuse offering work without an agreed independent recovery path.
      */
-    function _requireReadyForAssignment(uint256) internal view virtual {}
+    function _requireReadyForAssignment(uint256, address) internal view virtual {}
 
     function offerAssignment(uint256 bountyId, address applicant) external onlyCorrectChain {
         BountyTerms storage terms = _onlySponsor(bountyId);
         _requireOpen(bountyId);
-        _requireReadyForAssignment(bountyId);
+        _requireReadyForAssignment(bountyId, applicant);
         _requireWorkWindow(terms);
         if (applicant == terms.sponsor || applicant == address(0)) revert InvalidApplicant();
         if (_application[bountyId][applicant] != ApplicationState.Applied) {

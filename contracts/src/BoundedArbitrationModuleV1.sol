@@ -256,10 +256,11 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
             who == _assignment[bountyId].developer;
     }
 
-    function _requireReadyForAssignment(uint256 bountyId)
+    function _requireReadyForAssignment(uint256 bountyId, address applicant)
         internal view override
     {
-        if (!reviewerRoster[bountyId].configured) revert InvalidDisputePolicy();
+        ReviewerRoster storage roster = reviewerRoster[bountyId];
+        if (!roster.configured) revert InvalidDisputePolicy();
         DisputePolicy storage policy = _disputePolicy[bountyId];
         if (
             !policy.configured || !policy.governanceApproved ||
@@ -270,6 +271,26 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
             _isConflictedArbitrator(bountyId, policy.fallbackArbitrator)) {
             revert ArbitratorConflict();
         }
+        if (
+            applicant == _fundingTerms[bountyId].primaryArbitrator ||
+            applicant == policy.fallbackArbitrator ||
+            isCommittedReviewer[bountyId][walletOrganization[applicant]]
+        ) revert ConflictingBountyRole();
+
+        // A committed list with unavailable organizations is not a usable
+        // independent verifier quorum. An enrolled but inactive/revoked org
+        // cannot be counted. This is still not a promise it will respond.
+        uint256 available = 0;
+        bytes32[] storage ids = _committedRosterMembers[bountyId];
+        for (uint256 i = 0; i < ids.length; i++) {
+            ReviewerOrganization storage org = _org[ids[i]];
+            if (!org.active || org.revokedPermanently) continue;
+            // Both current and historical org wallets are excluded from
+            // sponsor and arbiter roles via the shared conflict validator.
+            _requireNoRoleConflict(bountyId, ids[i]);
+            available += 1;
+        }
+        if (available < roster.quorum) revert InvalidReviewState();
     }
 
     /**

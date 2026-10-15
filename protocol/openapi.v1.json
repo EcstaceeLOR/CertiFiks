@@ -1,0 +1,1009 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CertiFiks Protocol API (specification only)",
+    "version": "1.0.0",
+    "description": "These typed routes are NOT implemented yet. Actual rollout is #23–#28; on-chain custody is controlled by the qualifying contract, not this API. Never infer funding, verification or payout solely from an API response."
+  },
+  "x-certifiks-implementation-status": "schema-only",
+  "x-certifiks-signature-model": "permissioned reviewer organizations; formal scheme selected in #13",
+  "paths": {
+    "/v1/bounties": {
+      "post": {
+        "operationId": "createBountyDraftV1",
+        "summary": "Specify immutable unfunded bounty draft (not funding)",
+        "security": [
+          {
+            "WalletSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManifestV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Draft committed off-chain; chain funding is a separate wallet transaction",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftReceiptV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          }
+        },
+        "x-certifiks-status": "not-implemented"
+      }
+    },
+    "/v1/bounties/{bountyId}": {
+      "get": {
+        "operationId": "getBountyV1",
+        "summary": "Query a bounty and its reconciled contract funding state",
+        "parameters": [
+          {
+            "name": "bountyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reconciled read; not a synthetic funded status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BountyViewV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          }
+        },
+        "x-certifiks-status": "not-implemented"
+      }
+    },
+    "/v1/bounties/{bountyId}/attempts": {
+      "post": {
+        "operationId": "submitAttemptV1",
+        "summary": "Submit authenticated pinned GitHub revision",
+        "parameters": [
+          {
+            "name": "bountyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "WalletSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CandidateAttemptV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted for safe verification, not approved for payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobReceiptV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          }
+        },
+        "x-certifiks-status": "not-implemented"
+      }
+    },
+    "/v1/attempts/{attemptId}/report": {
+      "get": {
+        "operationId": "getVerificationReportV1",
+        "summary": "Fetch signed verification evidence",
+        "parameters": [
+          {
+            "name": "attemptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "WalletSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized report with signed evidence",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationReportV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          }
+        },
+        "x-certifiks-status": "not-implemented"
+      }
+    },
+    "/v1/bounties/{bountyId}/disputes": {
+      "post": {
+        "operationId": "openDisputeV1",
+        "summary": "Open timely authenticated evidence-backed challenge",
+        "parameters": [
+          {
+            "name": "bountyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "WalletSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisputeCaseV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Challenge submitted to bounded adjudication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeCaseV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          }
+        },
+        "x-certifiks-status": "not-implemented"
+      }
+    },
+    "/v1/events": {
+      "get": {
+        "operationId": "listChainEventsV1",
+        "summary": "Read finalized/reconciling chain event envelope",
+        "parameters": [
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Events from chain-aware indexer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChainEventV1"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-certifiks-status": "not-implemented"
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "WalletSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "certifiks_session",
+        "description": "Future server-side authenticated GitHub+wallet session; unavailable until #23"
+      }
+    },
+    "schemas": {
+      "ManifestV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "1"
+          },
+          "repository": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]*$"
+              },
+              "owner": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              }
+            },
+            "required": ["id", "owner", "name"]
+          },
+          "baseCommitSha": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{40}$"
+          },
+          "acceptance": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "baselineTest": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 256
+              },
+              "expectedFailureFingerprint": {
+                "type": "string",
+                "pattern": "^0x[a-f0-9]{64}$"
+              },
+              "candidateTest": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 256
+              },
+              "regressionTests": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 256
+                },
+                "minItems": 1,
+                "maxItems": 50,
+                "uniqueItems": true
+              },
+              "imageDigest": {
+                "type": "string",
+                "pattern": "^0x[a-f0-9]{64}$"
+              },
+              "runnerPolicy": {
+                "const": "offline-v1"
+              }
+            },
+            "required": [
+              "baselineTest",
+              "expectedFailureFingerprint",
+              "candidateTest",
+              "regressionTests",
+              "imageDigest",
+              "runnerPolicy"
+            ]
+          },
+          "reward": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "asset": {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9]{1,15}$"
+              },
+              "amountAtoms": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]*$"
+              }
+            },
+            "required": ["asset", "amountAtoms"]
+          },
+          "deadlines": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "submissionUnix": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]{0,15}$"
+              },
+              "verificationTimeoutSeconds": {
+                "type": "integer",
+                "minimum": 600,
+                "maximum": 2592000
+              },
+              "challengeSeconds": {
+                "type": "integer",
+                "minimum": 600,
+                "maximum": 2592000
+              },
+              "arbitrationTimeoutSeconds": {
+                "type": "integer",
+                "minimum": 600,
+                "maximum": 2592000
+              }
+            },
+            "required": [
+              "submissionUnix",
+              "verificationTimeoutSeconds",
+              "challengeSeconds",
+              "arbitrationTimeoutSeconds"
+            ]
+          },
+          "review": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "verifierOrganizations": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9][a-z0-9-]{2,63}$"
+                },
+                "minItems": 2,
+                "maxItems": 5,
+                "uniqueItems": true
+              },
+              "quorum": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 5
+              },
+              "fallbackPolicyId": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]{2,63}$"
+              }
+            },
+            "required": ["verifierOrganizations", "quorum", "fallbackPolicyId"]
+          }
+        },
+        "required": [
+          "version",
+          "repository",
+          "baseCommitSha",
+          "acceptance",
+          "reward",
+          "deadlines",
+          "review"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$id": "urn:certifiks:protocol:v1:bounty-manifest"
+      },
+      "CandidateAttemptV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "1"
+          },
+          "bountyId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "attemptId": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$"
+          },
+          "repositoryId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "baseCommitSha": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{40}$"
+          },
+          "headCommitSha": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{40}$"
+          },
+          "manifestDigest": {
+            "type": "string",
+            "pattern": "^0x[a-f0-9]{64}$"
+          },
+          "submittedAtUnix": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,15}$"
+          },
+          "developerAccount": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "version",
+          "bountyId",
+          "attemptId",
+          "repositoryId",
+          "baseCommitSha",
+          "headCommitSha",
+          "manifestDigest",
+          "submittedAtUnix",
+          "developerAccount"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$id": "urn:certifiks:protocol:v1:candidate-attempt"
+      },
+      "VerificationReportV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "1"
+          },
+          "bountyId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "attemptId": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$"
+          },
+          "manifestDigest": {
+            "type": "string",
+            "pattern": "^0x[a-f0-9]{64}$"
+          },
+          "attemptDigest": {
+            "type": "string",
+            "pattern": "^0x[a-f0-9]{64}$"
+          },
+          "reportDigest": {
+            "type": "string",
+            "pattern": "^0x[a-f0-9]{64}$"
+          },
+          "imageDigest": {
+            "type": "string",
+            "pattern": "^0x[a-f0-9]{64}$"
+          },
+          "baseline": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "status": {
+                "enum": ["expected_failure", "unexpected_pass", "inconclusive"]
+              },
+              "evidenceDigest": {
+                "type": "string",
+                "pattern": "^0x[a-f0-9]{64}$"
+              }
+            },
+            "required": ["status", "evidenceDigest"]
+          },
+          "candidate": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "status": {
+                "enum": ["passed", "failed", "inconclusive"]
+              },
+              "evidenceDigest": {
+                "type": "string",
+                "pattern": "^0x[a-f0-9]{64}$"
+              }
+            },
+            "required": ["status", "evidenceDigest"]
+          },
+          "regressionsPassed": {
+            "type": "boolean"
+          },
+          "verdict": {
+            "enum": ["approved", "rejected", "inconclusive"]
+          },
+          "signerOrganization": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{2,63}$"
+          },
+          "signerAccount": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 256
+          },
+          "signatureScheme": {
+            "enum": ["secp256k1", "ed25519"]
+          },
+          "signature": {
+            "type": "string",
+            "pattern": "^0x(?:[a-f0-9]{128}|[a-f0-9]{130})$"
+          },
+          "expiresAtUnix": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,15}$"
+          }
+        },
+        "required": [
+          "version",
+          "bountyId",
+          "attemptId",
+          "manifestDigest",
+          "attemptDigest",
+          "reportDigest",
+          "imageDigest",
+          "baseline",
+          "candidate",
+          "regressionsPassed",
+          "verdict",
+          "signerOrganization",
+          "signerAccount",
+          "signatureScheme",
+          "signature",
+          "expiresAtUnix"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$id": "urn:certifiks:protocol:v1:verification-report",
+        "allOf": [
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "verdict": {
+                  "const": "approved"
+                }
+              },
+              "required": ["verdict"]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "baseline": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "const": "expected_failure"
+                    }
+                  }
+                },
+                "candidate": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "const": "passed"
+                    }
+                  }
+                },
+                "regressionsPassed": {
+                  "const": true
+                }
+              }
+            }
+          }
+        ]
+      },
+      "DisputeCaseV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "1"
+          },
+          "bountyId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "attemptId": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$"
+          },
+          "openedBy": {
+            "enum": ["sponsor", "developer"]
+          },
+          "reasonDigest": {
+            "type": "string",
+            "pattern": "^0x[a-f0-9]{64}$"
+          },
+          "evidenceDigest": {
+            "type": "string",
+            "pattern": "^0x[a-f0-9]{64}$"
+          },
+          "openedAtUnix": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,15}$"
+          },
+          "responseDeadlineUnix": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,15}$"
+          },
+          "escalationDeadlineUnix": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{0,15}$"
+          },
+          "status": {
+            "enum": [
+              "opened",
+              "awaiting_response",
+              "arbitrating",
+              "escalated",
+              "resolved_developer",
+              "resolved_sponsor"
+            ]
+          }
+        },
+        "required": [
+          "version",
+          "bountyId",
+          "attemptId",
+          "openedBy",
+          "reasonDigest",
+          "evidenceDigest",
+          "openedAtUnix",
+          "responseDeadlineUnix",
+          "escalationDeadlineUnix",
+          "status"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$id": "urn:certifiks:protocol:v1:dispute-case"
+      },
+      "ChainEventV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "1"
+          },
+          "kind": {
+            "enum": [
+              "BountyFunded",
+              "DeveloperAssigned",
+              "FixSubmitted",
+              "VerificationCommitted",
+              "ReviewStarted",
+              "ChallengeOpened",
+              "DisputeResolved",
+              "CreditAllocated",
+              "WithdrawalCompleted",
+              "RefundCompleted"
+            ]
+          },
+          "chainGenesis": {
+            "type": "string",
+            "pattern": "^0x[a-f0-9]{64}$"
+          },
+          "contractLocatorHash": {
+            "type": "string",
+            "pattern": "^0x[a-f0-9]{64}$"
+          },
+          "transactionHash": {
+            "type": "string",
+            "pattern": "^0x[a-f0-9]{64}$"
+          },
+          "blockHeight": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$"
+          },
+          "logIndex": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "finalized": {
+            "type": "boolean"
+          },
+          "bountyId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "payload": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "version",
+          "kind",
+          "chainGenesis",
+          "contractLocatorHash",
+          "transactionHash",
+          "blockHeight",
+          "logIndex",
+          "finalized",
+          "bountyId",
+          "payload"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$id": "urn:certifiks:protocol:v1:chain-event"
+      },
+      "ErrorV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "1"
+          },
+          "code": {
+            "enum": [
+              "INVALID_SCHEMA",
+              "UNAUTHORIZED",
+              "FORBIDDEN",
+              "WRONG_CHAIN",
+              "STALE_COMMIT",
+              "MANIFEST_MISMATCH",
+              "VERIFIER_CONFLICT",
+              "QUORUM_MISSING",
+              "TEST_INCONCLUSIVE",
+              "ESCROW_UNFUNDED",
+              "CHALLENGE_PENDING",
+              "DISPUTE_IN_PROGRESS",
+              "RATE_LIMITED",
+              "DEPENDENCY_UNAVAILABLE",
+              "UNSUPPORTED_SPEC_VERSION"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1
+          },
+          "requestId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["version", "code", "message", "requestId"]
+      },
+      "DraftReceiptV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "1"
+          },
+          "bountyId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "manifestDigest": {
+            "type": "string",
+            "pattern": "^0x[a-f0-9]{64}$"
+          },
+          "funded": {
+            "const": false
+          }
+        },
+        "required": ["version", "bountyId", "manifestDigest", "funded"]
+      },
+      "BountyViewV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "1"
+          },
+          "bountyId": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "funded",
+              "assigned",
+              "submitted",
+              "verifying",
+              "review",
+              "disputed",
+              "payable",
+              "settled",
+              "refunded"
+            ]
+          },
+          "manifestDigest": {
+            "type": "string",
+            "pattern": "^0x[a-f0-9]{64}$"
+          },
+          "funded": {
+            "type": "boolean"
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/ManifestV1"
+          }
+        },
+        "required": [
+          "version",
+          "bountyId",
+          "status",
+          "manifestDigest",
+          "funded",
+          "manifest"
+        ]
+      },
+      "JobReceiptV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": "1"
+          },
+          "jobId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "state": {
+            "enum": ["queued", "blocked", "inconclusive"]
+          }
+        },
+        "required": ["version", "jobId", "state"]
+      }
+    }
+  }
+}

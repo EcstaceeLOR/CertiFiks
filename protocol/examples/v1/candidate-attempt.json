@@ -1,0 +1,11 @@
+{
+  "version": "1",
+  "bountyId": "17",
+  "attemptId": "2",
+  "repositoryId": "123456",
+  "baseCommitSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "headCommitSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "manifestDigest": "0x3333333333333333333333333333333333333333333333333333333333333333",
+  "submittedAtUnix": "1775000000",
+  "developerAccount": "eip155:evm:0xabcde"
+}

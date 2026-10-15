@@ -1,0 +1,163 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "const": "1"
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*$"
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
+      },
+      "required": ["id", "owner", "name"]
+    },
+    "baseCommitSha": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "acceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "baselineTest": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 256
+        },
+        "expectedFailureFingerprint": {
+          "type": "string",
+          "pattern": "^0x[a-f0-9]{64}$"
+        },
+        "candidateTest": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 256
+        },
+        "regressionTests": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 256
+          },
+          "minItems": 1,
+          "maxItems": 50,
+          "uniqueItems": true
+        },
+        "imageDigest": {
+          "type": "string",
+          "pattern": "^0x[a-f0-9]{64}$"
+        },
+        "runnerPolicy": {
+          "const": "offline-v1"
+        }
+      },
+      "required": [
+        "baselineTest",
+        "expectedFailureFingerprint",
+        "candidateTest",
+        "regressionTests",
+        "imageDigest",
+        "runnerPolicy"
+      ]
+    },
+    "reward": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "asset": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9]{1,15}$"
+        },
+        "amountAtoms": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*$"
+        }
+      },
+      "required": ["asset", "amountAtoms"]
+    },
+    "deadlines": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "submissionUnix": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]{0,15}$"
+        },
+        "verificationTimeoutSeconds": {
+          "type": "integer",
+          "minimum": 600,
+          "maximum": 2592000
+        },
+        "challengeSeconds": {
+          "type": "integer",
+          "minimum": 600,
+          "maximum": 2592000
+        },
+        "arbitrationTimeoutSeconds": {
+          "type": "integer",
+          "minimum": 600,
+          "maximum": 2592000
+        }
+      },
+      "required": [
+        "submissionUnix",
+        "verificationTimeoutSeconds",
+        "challengeSeconds",
+        "arbitrationTimeoutSeconds"
+      ]
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "verifierOrganizations": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]{2,63}$"
+          },
+          "minItems": 2,
+          "maxItems": 5,
+          "uniqueItems": true
+        },
+        "quorum": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 5
+        },
+        "fallbackPolicyId": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{2,63}$"
+        }
+      },
+      "required": ["verifierOrganizations", "quorum", "fallbackPolicyId"]
+    }
+  },
+  "required": [
+    "version",
+    "repository",
+    "baseCommitSha",
+    "acceptance",
+    "reward",
+    "deadlines",
+    "review"
+  ],
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "urn:certifiks:protocol:v1:bounty-manifest"
+}

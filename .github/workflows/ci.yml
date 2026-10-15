@@ -30,6 +30,8 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Lint and formatting verification
         run: npx biome ci .
+      - name: Verify protocol OpenAPI/types are generated and checked in
+        run: npm run protocol:check
       - name: TypeScript checks
         run: npm run typecheck
       - name: Unit tests
@@ -46,6 +48,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m unittest discover -s research/reference-model -p 'test_*.py' -v
+      - name: Cross-language protocol hash vectors
+        run: python research/reference-model/protocol_hash_reference.py
 
   solidity-baseline:
     name: Historical Solidity baseline — compile and smoke test

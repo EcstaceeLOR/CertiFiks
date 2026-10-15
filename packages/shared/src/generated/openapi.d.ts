@@ -160,6 +160,9 @@ export interface components {
       manifestDigest: string;
       submittedAtUnix: string;
       developerAccount: string;
+      pullNumber: string;
+      imageDigest: string;
+      evidenceDigest: string;
     };
     VerificationReportV1: {
       /** @constant */

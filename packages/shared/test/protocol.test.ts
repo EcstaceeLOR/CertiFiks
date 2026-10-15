@@ -149,7 +149,10 @@ test("candidate v1 requires exact PR number, image and off-chain evidence digest
     );
   }
   const moved = { ...fixture, pullNumber: "0" };
-  assert.throws(() => validateProtocolDocument("attempt", moved), SchemaValidationError);
+  assert.throws(
+    () => validateProtocolDocument("attempt", moved),
+    SchemaValidationError,
+  );
 });
 
 test("only canonical raw manifest JSON text is accepted for signed replay", () => {

@@ -225,8 +225,9 @@ abstract contract BoundedDisputeModuleV1 is SignedVerifierDecisionModuleV1 {
      * deadline begins at the original recorded decision, not the call time.
      * A caller cannot postpone a disputed case by refusing to open it.
      */
-    function materializeEscalatedReview(uint256 bountyId) external onlyCorrectChain {
-        uint64 attemptId = _activeLatestAttempt(bountyId);
+    function _onEscalatedReview(uint256 bountyId, uint64 attemptId)
+        internal override
+    {
         ReviewDecision storage decision = _decisions[bountyId][attemptId];
         CaseCause cause;
         bytes32 reason;
@@ -244,6 +245,25 @@ abstract contract BoundedDisputeModuleV1 is SignedVerifierDecisionModuleV1 {
         _openDispute(bountyId, attemptId, cause, reason, decision.decidedAt);
     }
 
+    /**
+     * Compatibility/readiness method. For this derived #14 contract cases
+     * are already opened AT the verifier transition, not by the caller.
+     * Replaying materialization never changes a clock or a reason digest.
+     */
+    function materializeEscalatedReview(uint256 bountyId) external onlyCorrectChain {
+        uint64 attemptId = _activeLatestAttempt(bountyId);
+        ReviewStatus status = _decisions[bountyId][attemptId].status;
+        if (
+            status != ReviewStatus.EscalationRequired &&
+            status != ReviewStatus.TimedOut
+        ) revert InvalidDisputeCause();
+        if (_disputeCases[bountyId][attemptId].state == CaseState.None) {
+            // Compatible with older #13 deployments, but in this derived
+            // version the _onEscalatedReview hook creates it atomically.
+            _onEscalatedReview(bountyId, attemptId);
+        }
+    }
+
     function _openDispute(
         uint256 bountyId, uint64 attemptId, CaseCause cause,
         bytes32 reason, uint64 effectiveStart
@@ -251,7 +271,9 @@ abstract contract BoundedDisputeModuleV1 is SignedVerifierDecisionModuleV1 {
         if (_disputeCases[bountyId][attemptId].state != CaseState.None) {
             revert DisputeAlreadyOpened();
         }
-        _requireIndependentArbiters(bountyId);
+        // The case MUST open even if a later conflict is discovered:
+        // conflicts block judicial votes, not the clock or timeout recovery.
+        if (!_disputePolicies[bountyId].configured) revert DisputePolicyNotConfigured();
         DisputeCase storage record = _disputeCases[bountyId][attemptId];
         uint64 cutoff = _time64(
             uint256(effectiveStart) + uint256(_fundingTerms[bountyId].arbitrationSeconds)

@@ -239,6 +239,9 @@ abstract contract SignedVerifierDecisionModuleV1 is VerifierRegistryModuleV1 {
                 decision.recordedVotes, decision.positiveVotes,
                 digest, decision.challengeUntil
             );
+            if (decision.status == ReviewStatus.EscalationRequired) {
+                _onEscalatedReview(vote.bountyId, vote.attemptId);
+            }
         }
         // Nothing here can transfer ETH, mint credit or finalize a payout.
     }
@@ -266,7 +269,11 @@ abstract contract SignedVerifierDecisionModuleV1 is VerifierRegistryModuleV1 {
             bountyId, attemptId, ReviewStatus.TimedOut,
             decision.recordedVotes, decision.positiveVotes, bytes32(0), 0
         );
+        _onEscalatedReview(bountyId, attemptId);
     }
+
+    /** Overridden by #14 to materialize an appealable case in the SAME tx. */
+    function _onEscalatedReview(uint256, uint64) internal virtual {}
 
     function readRecordedVerdict(uint256 bountyId, uint64 attemptId, bytes32 organizationId)
         external view returns (RecordedVerdict memory)

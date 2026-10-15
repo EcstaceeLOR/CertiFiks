@@ -28,6 +28,7 @@ abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
         uint64 acceptedJobCount;
         uint64 declaredEvidenceCount;
         bool active;
+        bool revokedPermanently;
         bool everRegistered;
     }
 
@@ -52,6 +53,7 @@ abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
     error NotOrganizationController();
     error OrganizationInactive();
     error OrganizationAlreadyActive();
+    error OrganizationPermanentlyRevoked();
     error ConflictingBountyRole();
     error InvalidReviewState();
     error DuplicateReviewerJob();
@@ -153,6 +155,7 @@ abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
         ReviewerOrganization storage organization = _registered(organizationId);
         if (organization.controller != msg.sender) revert NotOrganizationController();
         if (organization.active) revert OrganizationAlreadyActive();
+        if (organization.revokedPermanently) revert OrganizationPermanentlyRevoked();
         organization.active = true;
         emit ReviewerOrganizationActivated(organizationId, organization.signerEpoch);
     }
@@ -162,6 +165,7 @@ abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
     {
         ReviewerOrganization storage organization = _active(organizationId);
         organization.active = false;
+        organization.revokedPermanently = true;
         organization.proposedSigner = address(0);
         emit ReviewerOrganizationRevoked(organizationId, organization.signerEpoch);
         // Do NOT delete historic job snapshots or past declarations.
@@ -262,7 +266,7 @@ abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
         _requireNoRoleConflict(bountyId, organizationId);
         uint256 deadline = uint256(_attempts[bountyId][attemptId].submittedAt) +
             uint256(_terms(bountyId).verificationSeconds);
-        if (block.timestamp >= deadline) revert ReviewerJobExpired();
+        if (block.timestamp >= deadline || deadline > type(uint64).max) revert ReviewerJobExpired();
 
         job.organizationId = organizationId;
         job.attemptId = attemptId;

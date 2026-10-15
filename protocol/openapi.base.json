@@ -1,0 +1,394 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CertiFiks Protocol API (specification only)",
+    "version": "1.0.0",
+    "description": "These typed routes are NOT implemented yet. Actual rollout is #23–#28; on-chain custody is controlled by the qualifying contract, not this API. Never infer funding, verification or payout solely from an API response."
+  },
+  "x-certifiks-implementation-status": "schema-only",
+  "x-certifiks-signature-model": "permissioned reviewer organizations; formal scheme selected in #13",
+  "paths": {
+    "/v1/bounties": {
+      "post": {
+        "operationId": "createBountyDraftV1",
+        "summary": "Specify immutable unfunded bounty draft (not funding)",
+        "security": [
+          {
+            "WalletSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManifestV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Draft committed off-chain; chain funding is a separate wallet transaction",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DraftReceiptV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          }
+        },
+        "x-certifiks-status": "not-implemented"
+      }
+    },
+    "/v1/bounties/{bountyId}": {
+      "get": {
+        "operationId": "getBountyV1",
+        "summary": "Query a bounty and its reconciled contract funding state",
+        "parameters": [
+          {
+            "name": "bountyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reconciled read; not a synthetic funded status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BountyViewV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          }
+        },
+        "x-certifiks-status": "not-implemented"
+      }
+    },
+    "/v1/bounties/{bountyId}/attempts": {
+      "post": {
+        "operationId": "submitAttemptV1",
+        "summary": "Submit authenticated pinned GitHub revision",
+        "parameters": [
+          {
+            "name": "bountyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "WalletSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CandidateAttemptV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted for safe verification, not approved for payment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobReceiptV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          }
+        },
+        "x-certifiks-status": "not-implemented"
+      }
+    },
+    "/v1/attempts/{attemptId}/report": {
+      "get": {
+        "operationId": "getVerificationReportV1",
+        "summary": "Fetch signed verification evidence",
+        "parameters": [
+          {
+            "name": "attemptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "WalletSession": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized report with signed evidence",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationReportV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          }
+        },
+        "x-certifiks-status": "not-implemented"
+      }
+    },
+    "/v1/bounties/{bountyId}/disputes": {
+      "post": {
+        "operationId": "openDisputeV1",
+        "summary": "Open timely authenticated evidence-backed challenge",
+        "parameters": [
+          {
+            "name": "bountyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[1-9][0-9]*$"
+            }
+          }
+        ],
+        "security": [
+          {
+            "WalletSession": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisputeCaseV1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Challenge submitted to bounded adjudication",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeCaseV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflicting state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          }
+        },
+        "x-certifiks-status": "not-implemented"
+      }
+    },
+    "/v1/events": {
+      "get": {
+        "operationId": "listChainEventsV1",
+        "summary": "Read finalized/reconciling chain event envelope",
+        "parameters": [
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Events from chain-aware indexer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChainEventV1"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-certifiks-status": "not-implemented"
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "WalletSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "certifiks_session",
+        "description": "Future server-side authenticated GitHub+wallet session; unavailable until #23"
+      }
+    },
+    "schemas": {}
+  }
+}

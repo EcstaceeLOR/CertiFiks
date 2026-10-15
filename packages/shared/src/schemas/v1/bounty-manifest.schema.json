@@ -170,5 +170,5 @@
     "review"
   ],
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://certifiks.dev/schemas/v1/bounty-manifest.schema.json"
+  "$id": "urn:certifiks:protocol:v1:bounty-manifest"
 }

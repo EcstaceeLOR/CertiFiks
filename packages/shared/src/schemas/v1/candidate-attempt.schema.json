@@ -51,5 +51,5 @@
     "developerAccount"
   ],
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://certifiks.dev/schemas/v1/candidate-attempt.schema.json"
+  "$id": "urn:certifiks:protocol:v1:candidate-attempt"
 }

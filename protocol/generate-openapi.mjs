@@ -10,6 +10,7 @@ const sources = {
   ManifestV1: "bounty-manifest",
   CandidateAttemptV1: "candidate-attempt",
   VerificationReportV1: "verification-report",
+  SignedVerifierVoteV1: "signed-verifier-vote",
   DisputeCaseV1: "dispute-case",
   ChainEventV1: "chain-event",
 };

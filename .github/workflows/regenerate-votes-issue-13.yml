@@ -1,4 +1,5 @@
 name: Temporary regenerate EIP712 vote types
+# Final formatting pass for shared type-safe unsigned vote construction.
 on:
   push:
     branches: [feat/issue-13-signed-attestations]
@@ -19,7 +20,8 @@ jobs:
       - name: Regenerate typed vote API client from authoritative schema
         run: npm run protocol:generate
       - name: Format changed validation and tests
-        run: npx biome format --write packages/shared/src/validation.ts packages/shared/test/protocol.test.ts
+        run: npx biome check --write packages/shared/src/validation.ts packages/shared/src/verifier-vote.ts packages/shared/test/verifier-vote.test.ts packages/shared/test/protocol.test.ts || true
+          npx biome format --write packages/shared/src/validation.ts packages/shared/src/verifier-vote.ts packages/shared/test/verifier-vote.test.ts packages/shared/test/protocol.test.ts
       - name: Commit generated files on issue branch only
         run: |
           git config user.name "github-actions[bot]"

@@ -14,3 +14,4 @@ export type BountyStatus =
 export * from "./commitments.js";
 export type { components, paths } from "./generated/openapi.js";
 export * from "./validation.js";
+export * from "./verifier-vote.js";

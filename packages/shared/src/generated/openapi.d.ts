@@ -296,6 +296,31 @@ export interface components {
       /** @enum {unknown} */
       state: "queued" | "blocked" | "inconclusive";
     };
+    SignedVerifierVoteV1: {
+      /** @constant */
+      version: "1";
+      chainId: string;
+      verifyingContract: string;
+      bountyId: string;
+      attemptId: string;
+      organizationId: string;
+      signerEpoch: string;
+      attemptDigest: string;
+      manifestDigest: string;
+      verifierPolicyDigest: string;
+      headGitSha: string;
+      reportDigest: string;
+      imageDigest: string;
+      /** @enum {integer} */
+      outcome: 1 | 2 | 3 | 4;
+      baselineFailed: boolean;
+      candidatePassed: boolean;
+      regressionsPassed: boolean;
+      expiresAt: string;
+      /** @constant */
+      signatureScheme: "eip712-secp256k1";
+      signature: string;
+    } & unknown;
   };
   responses: never;
   parameters: never;

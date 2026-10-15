@@ -22,7 +22,7 @@ contract AssignmentHarnessV1 is BountyAssignmentModuleV1 {
     // The real #11 submitter MUST validate pinned GitHub identity / head SHA.
     // This hook exists ONLY to characterize the authorization transition.
     function simulatePinnedSubmission(uint256 bountyId) external {
-        _lockTimelySubmission(bountyId, msg.sender);
+        _lockTimelySubmission(bountyId);
     }
 }
 
@@ -143,6 +143,22 @@ contract BountyAssignmentModuleV1Test {
         _accept(id, DEV_A);
         _rejectAs(DEV_A, abi.encodeWithSelector(escrow.acceptAssignment.selector, id));
         _rejectAs(DEV_B, abi.encodeWithSelector(escrow.simulatePinnedSubmission.selector, id));
+    }
+
+    function testNewApplicantsCanJoinDuringAnOutstandingOffer() public {
+        uint256 id = _fund();
+        _apply(id, DEV_A);
+        _offer(id, DEV_A);
+        // Discoverability must not freeze while one applicant deliberates.
+        _apply(id, DEV_B);
+        require(escrow.getAssignment(id).pendingApplicants == 2, "applications were frozen");
+        _rejectAs(SPONSOR, abi.encodeWithSelector(escrow.offerAssignment.selector, id, DEV_B));
+        vm.prank(SPONSOR);
+        escrow.revokeOffer(id);
+        _offer(id, DEV_B);
+        _accept(id, DEV_B);
+        require(escrow.canSubmit(id, DEV_B), "new applicant cannot accept");
+        require(!escrow.canSubmit(id, DEV_A), "old offer leaked authorization");
     }
 
     function testSponsorCannotAssignNonApplicantOrOverrideActiveOffer() public {

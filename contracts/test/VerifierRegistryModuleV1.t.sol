@@ -407,16 +407,16 @@ contract VerifierRegistryModuleV1Test {
     function testSponsorCannotChangePrecommittedRosterOrQuorum() public {
         uint256 bounty = _fund();
         bytes32[] memory roster = _sortedRoster(ORG1, ORG2);
-        require(escrow.reviewerRoster(bounty).configured, "policy unregistered");
-        require(escrow.reviewerRoster(bounty).quorum == 2, "unexpected quorum");
-        bytes32 savedDigest = escrow.reviewerRoster(bounty).policyDigest;
+        require(escrow.getReviewerRoster(bounty).configured, "policy unregistered");
+        require(escrow.getReviewerRoster(bounty).quorum == 2, "unexpected quorum");
+        bytes32 savedDigest = escrow.getReviewerRoster(bounty).policyDigest;
         _revertAs(ATTACKER, abi.encodeWithSelector(
             escrow.registerCommittedReviewerRoster.selector, bounty, roster, uint8(2)
         ));
         _revertAs(SPONSOR, abi.encodeWithSelector(
             escrow.registerCommittedReviewerRoster.selector, bounty, roster, uint8(2)
         ));
-        require(escrow.reviewerRoster(bounty).policyDigest == savedDigest, "policy rewritten");
+        require(escrow.getReviewerRoster(bounty).policyDigest == savedDigest, "policy rewritten");
     }
 
     function testGovernanceCannotAssignApprovedOrgOutsideFundedRoster() public {
@@ -464,10 +464,10 @@ contract VerifierRegistryModuleV1Test {
         _revertAs(SPONSOR, abi.encodeWithSelector(
             escrow.registerCommittedReviewerRoster.selector, bounty, approved, uint8(1)
         ));
-        require(!escrow.reviewerRoster(bounty).configured, "mismatched policy activated");
+        require(!escrow.getReviewerRoster(bounty).configured, "mismatched policy activated");
         vm.prank(SPONSOR);
         escrow.registerCommittedReviewerRoster(bounty, approved, 2);
-        require(escrow.reviewerRoster(bounty).configured, "correct policy blocked");
+        require(escrow.getReviewerRoster(bounty).configured, "correct policy blocked");
     }
 
     function testSignerCannotBeClaimedByMultipleOrgControllers() public {

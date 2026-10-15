@@ -28,9 +28,10 @@
       "note": "Seven commits on main since Oct 14 as observed Oct 15, but working core is still missing."
     },
     "architecture_diagram": {
-      "state": "missing",
+      "state": "verified",
+      "evidence": "https://github.com/EcstaceeLOR/CertiFiks/blob/feat/issue-8-submission-evidence/docs/architecture/COMPETITION_ARCHITECTURE.md",
       "owner": "#8",
-      "note": "Diagram drafted in issue #8 PR; mark verified only after merged on main."
+      "note": "Genuine published Mermaid architecture document on the PR branch; most depicted components are explicitly unimplemented, not a working flow."
     },
     "working_core_flow": {
       "state": "missing",

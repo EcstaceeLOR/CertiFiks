@@ -1,0 +1,29 @@
+name: Format Issue 22 Evidence Sources
+on:
+  push:
+    branches:
+      - feat/issue-22-signed-evidence-v1
+permissions:
+  contents: write
+jobs:
+  format:
+    if: ${{ !contains(github.event.head_commit.message, '[format-ci]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npx biome check --write packages/shared/src/evidence-report.ts packages/shared/src/index.ts packages/shared/test/evidence-report.test.ts scripts/verify-evidence.mjs
+      - name: Commit format-only changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add packages/shared/src/evidence-report.ts packages/shared/src/index.ts packages/shared/test/evidence-report.test.ts scripts/verify-evidence.mjs
+          if ! git diff --cached --quiet; then
+            git commit -m "style(#22): normalized evidence implementation [format-ci]"
+            git push origin HEAD:feat/issue-22-signed-evidence-v1
+          fi

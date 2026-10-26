@@ -1058,7 +1058,9 @@ h2 em {
   border-radius: var(--radius);
   background: var(--panel);
 }
-.dashboard-search > div { flex: 1 1 165px; }
+.dashboard-search > div {
+  flex: 1 1 165px;
+}
 .dashboard-search label {
   display: block;
   font-size: 12px;
@@ -1066,7 +1068,8 @@ h2 em {
   color: var(--muted);
   margin-bottom: 10px;
 }
-.dashboard-search input, .dashboard-search select {
+.dashboard-search input,
+.dashboard-search select {
   width: 100%;
   min-height: 48px;
   border: 1px solid var(--line);
@@ -1082,7 +1085,9 @@ h2 em {
   align-items: center;
   margin-bottom: 24px;
 }
-.dashboard-views .mono { color: var(--quiet); }
+.dashboard-views .mono {
+  color: var(--quiet);
+}
 .dashboard-views a {
   border: 1px solid var(--line);
   border-radius: 40px;
@@ -1092,8 +1097,13 @@ h2 em {
   text-decoration: none;
   color: var(--ink);
 }
-.dashboard-views a:hover { border-color: var(--accent); color: var(--accent); }
-.dashboard-results { margin-top: 24px; }
+.dashboard-views a:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.dashboard-results {
+  margin-top: 24px;
+}
 .dashboard-pagination {
   display: flex;
   align-items: center;
@@ -1106,7 +1116,11 @@ h2 em {
   font-size: 13px;
   color: var(--muted);
 }
-.dashboard-pagination a { color: var(--accent); font-weight: 700; text-underline-offset: 4px; }
+.dashboard-pagination a {
+  color: var(--accent);
+  font-weight: 700;
+  text-underline-offset: 4px;
+}
 .public-record-list {
   display: grid;
   grid-template-columns: minmax(180px, 0.55fr) minmax(0, 1fr);
@@ -1114,13 +1128,29 @@ h2 em {
   overflow-wrap: anywhere;
   margin-block: 28px;
 }
-.public-record-list dt { color: var(--muted); font-size: 13px; }
-.public-record-list dd { margin: 0; font: 600 14px ui-monospace, monospace; }
+.public-record-list dt {
+  color: var(--muted);
+  font-size: 13px;
+}
+.public-record-list dd {
+  margin: 0;
+  font:
+    600 14px ui-monospace,
+    monospace;
+}
 @media (max-width: 640px) {
-  .dashboard-search { padding: 17px; }
-  .dashboard-search > div, .dashboard-search > button, .dashboard-search > a {
+  .dashboard-search {
+    padding: 17px;
+  }
+  .dashboard-search > div,
+  .dashboard-search > button,
+  .dashboard-search > a {
     flex: 1 1 100%;
   }
-  .public-record-list { grid-template-columns: 1fr; }
-  .dashboard-pagination { justify-content: flex-start; }
+  .public-record-list {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-pagination {
+    justify-content: flex-start;
+  }
 }

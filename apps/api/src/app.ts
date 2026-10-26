@@ -128,7 +128,8 @@ export function buildApp(config: AppConfiguration = {}) {
     const repositoryFullName = query.repo;
     const sort = query.sort ?? "newest";
     if (
-      (typeof sort !== "string" || !(sort in PUBLIC_HISTORY_SORTS)) ||
+      typeof sort !== "string" ||
+      !(sort in PUBLIC_HISTORY_SORTS) ||
       (state !== undefined &&
         (typeof state !== "string" || !PUBLIC_BOUNTY_STATES.has(state))) ||
       (repositoryFullName !== undefined &&
@@ -167,7 +168,9 @@ export function buildApp(config: AppConfiguration = {}) {
   // addresses, custody balance, confidential evidence or speculative metrics.
   app.get("/v1/bounties/export.csv", async (request, reply) => {
     if (!postgresConfigured) {
-      return reply.code(503).send({ error: "PUBLIC_BOUNTY_API_NOT_CONFIGURED" });
+      return reply
+        .code(503)
+        .send({ error: "PUBLIC_BOUNTY_API_NOT_CONFIGURED" });
     }
     const query = request.query as Record<string, unknown>;
     const parseOffset = (value: unknown): number | null => {
@@ -188,14 +191,17 @@ export function buildApp(config: AppConfiguration = {}) {
       (repo !== undefined &&
         (typeof repo !== "string" ||
           !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo))) ||
-      typeof sort !== "string" || !(sort in PUBLIC_HISTORY_SORTS) ||
+      typeof sort !== "string" ||
+      !(sort in PUBLIC_HISTORY_SORTS) ||
       query.limit !== undefined
     ) {
       return reply.code(400).send({ error: "PUBLIC_BOUNTY_INVALID_FILTER" });
     }
     try {
       const records = await new PublicBountyClient(
-        supabaseUrl!, supabaseKey!, config.publicBountyFetch ?? fetch,
+        supabaseUrl!,
+        supabaseKey!,
+        config.publicBountyFetch ?? fetch,
       ).list(50, offset, undefined, {
         state: state as string | undefined,
         repositoryFullName: repo as string | undefined,
@@ -209,19 +215,34 @@ export function buildApp(config: AppConfiguration = {}) {
       };
       const lines = [
         "bounty_id,repository,state,created_at,chain_id,onchain_bounty_id,reward_atoms,manifest_digest,verified_fix",
-        ...records.map((item) => [
-          item.bountyId, item.repositoryFullName, item.state,
-          item.createdAt, item.chainId, item.onchainBountyId,
-          item.rewardAtoms, item.manifestDigest, "false",
-        ].map(quote).join(",")),
+        ...records.map((item) =>
+          [
+            item.bountyId,
+            item.repositoryFullName,
+            item.state,
+            item.createdAt,
+            item.chainId,
+            item.onchainBountyId,
+            item.rewardAtoms,
+            item.manifestDigest,
+            "false",
+          ]
+            .map(quote)
+            .join(","),
+        ),
       ];
       return reply
         .header("content-type", "text/csv; charset=utf-8")
         .header("cache-control", "no-store")
-        .header("content-disposition", 'attachment; filename="certifiks-public-history.csv"')
+        .header(
+          "content-disposition",
+          'attachment; filename="certifiks-public-history.csv"',
+        )
         .send(lines.join("\r\n") + "\r\n");
     } catch {
-      return reply.code(503).send({ error: "PUBLIC_BOUNTY_UPSTREAM_UNAVAILABLE" });
+      return reply
+        .code(503)
+        .send({ error: "PUBLIC_BOUNTY_UPSTREAM_UNAVAILABLE" });
     }
   });
 

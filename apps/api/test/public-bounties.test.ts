@@ -228,17 +228,32 @@ test("public history uses only whitelisted deterministic sorting and returns bou
       requests.push(new URL(url));
       assert.equal(options?.method, "GET");
       assert.equal(options?.redirect, "error");
-      assert.equal(new Headers(options?.headers).get("Authorization"), `Bearer ${serviceRole}`);
+      assert.equal(
+        new Headers(options?.headers).get("Authorization"),
+        `Bearer ${serviceRole}`,
+      );
       return new Response(JSON.stringify([record]), { status: 200 });
     }) as typeof fetch,
   });
   try {
-    const older = await app.inject({ method: "GET", url: "/v1/bounties?sort=oldest" });
+    const older = await app.inject({
+      method: "GET",
+      url: "/v1/bounties?sort=oldest",
+    });
     assert.equal(older.statusCode, 200, older.body);
-    assert.equal(requests[0].searchParams.get("order"), "created_at.asc,bounty_id.asc");
-    const alpha = await app.inject({ method: "GET", url: "/v1/bounties?sort=repository" });
+    assert.equal(
+      requests[0].searchParams.get("order"),
+      "created_at.asc,bounty_id.asc",
+    );
+    const alpha = await app.inject({
+      method: "GET",
+      url: "/v1/bounties?sort=repository",
+    });
     assert.equal(alpha.statusCode, 200, alpha.body);
-    assert.equal(requests[1].searchParams.get("order"), "repository_full_name.asc,bounty_id.asc");
+    assert.equal(
+      requests[1].searchParams.get("order"),
+      "repository_full_name.asc,bounty_id.asc",
+    );
 
     const csv = await app.inject({
       method: "GET",
@@ -251,7 +266,10 @@ test("public history uses only whitelisted deterministic sorting and returns bou
     assert.match(csv.body, /900719925474099312345678901234/);
     assert.ok(!csv.body.includes(serviceRole));
     assert.equal(requests[2].searchParams.get("state"), "eq.funded");
-    assert.equal(requests[2].searchParams.get("repository_full_name"), "eq.maintainer/fix-repo");
+    assert.equal(
+      requests[2].searchParams.get("repository_full_name"),
+      "eq.maintainer/fix-repo",
+    );
     assert.equal(requests[2].searchParams.get("limit"), "50");
     assert.equal(requests[2].searchParams.get("offset"), "20");
   } finally {

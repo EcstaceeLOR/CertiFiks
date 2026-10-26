@@ -33,7 +33,10 @@ test("public bounties fail closed on malformed search and cannot expose tenant d
   assert.match(history, /PUBLIC_STATES\.includes/);
   assert.match(history, /PUBLIC_SORTS\.includes/);
   assert.match(history, /\.protocol !== "https:"/);
-  assert.doesNotMatch(history, /SUPABASE_SERVICE_ROLE_KEY|localStorage|sessionStorage/);
+  assert.doesNotMatch(
+    history,
+    /SUPABASE_SERVICE_ROLE_KEY|localStorage|sessionStorage/,
+  );
 });
 
 test("detail and export remain public, bounded, private-data-free and shareable", () => {

@@ -1,6 +1,13 @@
 export const PUBLIC_STATES = [
-  "funded", "assigned", "submitted", "verifying", "review", "disputed",
-  "payable", "settled", "refunded",
+  "funded",
+  "assigned",
+  "submitted",
+  "verifying",
+  "review",
+  "disputed",
+  "payable",
+  "settled",
+  "refunded",
 ] as const;
 
 export const PUBLIC_SORTS = ["newest", "oldest", "repository"] as const;
@@ -43,9 +50,13 @@ export function safePublicApiOrigin(value: string | undefined): URL | null {
       url.protocol === "http:" &&
       ["localhost", "127.0.0.1"].includes(url.hostname);
     if (
-      !local && url.protocol !== "https:" ||
-      url.username || url.password || url.search || url.hash
-    ) return null;
+      (!local && url.protocol !== "https:") ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash
+    )
+      return null;
     return url;
   } catch {
     return null;
@@ -64,16 +75,22 @@ export function parseHistoryFilters(
   const sort = stringQuery(search.sort) || "newest";
   const offset = stringQuery(search.offset) || "0";
   if (
-    state === null || repo === null ||
-    (state !== "" && !PUBLIC_STATES.includes(state as typeof PUBLIC_STATES[number])) ||
+    state === null ||
+    repo === null ||
+    (state !== "" &&
+      !PUBLIC_STATES.includes(state as (typeof PUBLIC_STATES)[number])) ||
     (repo !== "" && !REPOSITORY.test(repo)) ||
-    !PUBLIC_SORTS.includes(sort as typeof PUBLIC_SORTS[number]) ||
+    !PUBLIC_SORTS.includes(sort as (typeof PUBLIC_SORTS)[number]) ||
     !/^(0|[1-9][0-9]*)$/.test(offset) ||
     !Number.isSafeInteger(Number(offset)) ||
     Number(offset) > 10000
-  ) return null;
+  )
+    return null;
   return {
-    state, repo, sort: sort as HistoryFilters["sort"], offset: Number(offset),
+    state,
+    repo,
+    sort: sort as HistoryFilters["sort"],
+    offset: Number(offset),
   };
 }
 
@@ -89,19 +106,25 @@ export function historyQuery(
   return params.toString();
 }
 
-export function checkPublicHistoryItem(item: unknown): item is PublicHistoryItem {
+export function checkPublicHistoryItem(
+  item: unknown,
+): item is PublicHistoryItem {
   if (!item || typeof item !== "object" || Array.isArray(item)) return false;
   const i = item as Record<string, unknown>;
   return (
-    typeof i.bountyId === "string" && UUID.test(i.bountyId) &&
-    typeof i.repositoryFullName === "string" && REPOSITORY.test(i.repositoryFullName) &&
+    typeof i.bountyId === "string" &&
+    UUID.test(i.bountyId) &&
+    typeof i.repositoryFullName === "string" &&
+    REPOSITORY.test(i.repositoryFullName) &&
     ["repositoryId", "chainId", "onchainBountyId", "rewardAtoms"].every(
       (k) => typeof i[k] === "string" && DECIMAL.test(i[k] as string),
     ) &&
-    typeof i.manifestDigest === "string" && DIGEST.test(i.manifestDigest) &&
+    typeof i.manifestDigest === "string" &&
+    DIGEST.test(i.manifestDigest) &&
     typeof i.state === "string" &&
-    PUBLIC_STATES.includes(i.state as typeof PUBLIC_STATES[number]) &&
-    typeof i.createdAt === "string" && Number.isFinite(Date.parse(i.createdAt)) &&
+    PUBLIC_STATES.includes(i.state as (typeof PUBLIC_STATES)[number]) &&
+    typeof i.createdAt === "string" &&
+    Number.isFinite(Date.parse(i.createdAt)) &&
     i.verificationProven === false
   );
 }
@@ -133,11 +156,15 @@ export async function loadPublicHistory(
     if (!response.ok) return { kind: "unavailable" };
     const json: unknown = await response.json();
     if (
-      !json || typeof json !== "object" || Array.isArray(json) ||
-      !("items" in json) || !Array.isArray(json.items) ||
+      !json ||
+      typeof json !== "object" ||
+      Array.isArray(json) ||
+      !("items" in json) ||
+      !Array.isArray(json.items) ||
       json.items.length > 20 ||
       !json.items.every(checkPublicHistoryItem)
-    ) return { kind: "unavailable" };
+    )
+      return { kind: "unavailable" };
     return { kind: "available", items: json.items };
   } catch {
     return { kind: "unavailable" };

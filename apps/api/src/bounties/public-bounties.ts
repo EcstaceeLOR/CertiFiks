@@ -139,7 +139,10 @@ export class PublicBountyClient {
     );
     url.searchParams.set("limit", String(limit));
     url.searchParams.set("offset", String(offset));
-    url.searchParams.set("order", PUBLIC_HISTORY_SORTS[filters.sort ?? "newest"]);
+    url.searchParams.set(
+      "order",
+      PUBLIC_HISTORY_SORTS[filters.sort ?? "newest"],
+    );
     if (bountyId) url.searchParams.set("bounty_id", `eq.${bountyId}`);
     if (filters.state) url.searchParams.set("state", `eq.${filters.state}`);
     if (filters.repositoryFullName)

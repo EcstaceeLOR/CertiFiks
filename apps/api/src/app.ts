@@ -210,7 +210,8 @@ export function buildApp(config: AppConfiguration = {}) {
       const quote = (value: string) => {
         // CSV fields can begin with "-" even when repository names validate.
         // Prevent spreadsheet formula interpretation without changing numeric precision.
-        const safe = /^[=+\\-@\\t\\r]/.test(value) ? "'" + value : value;
+        const dangerousPrefix = ["=", "+", "-", "@"].some((prefix) => value.startsWith(prefix)) || value.charCodeAt(0) === 9 || value.charCodeAt(0) === 13;
+        const safe = dangerousPrefix ? "'" + value : value;
         return '"' + safe.replaceAll('"', '""') + '"';
       };
       const lines = [

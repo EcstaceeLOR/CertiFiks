@@ -24,7 +24,8 @@
     "protocol:check": "node protocol/generate-openapi.mjs --check && openapi-typescript protocol/openapi.v1.json -o packages/shared/src/generated/openapi.d.ts && biome format --write packages/shared/src/generated/openapi.d.ts && git diff --exit-code -- packages/shared/src/generated/openapi.d.ts",
     "submission:status": "node scripts/check-submission-readiness.mjs",
     "submission:checkin": "node scripts/check-submission-readiness.mjs --require-checkin",
-    "submission:final": "node scripts/check-submission-readiness.mjs --require-final"
+    "submission:final": "node scripts/check-submission-readiness.mjs --require-final",
+    "e2e:preflight": "node scripts/e2e/live-preflight.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

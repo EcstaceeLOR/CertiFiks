@@ -13,9 +13,18 @@ export const PUBLIC_BOUNTY_STATES = new Set([
   "refunded",
 ]);
 
+export const PUBLIC_HISTORY_SORTS = {
+  newest: "created_at.desc,bounty_id.asc",
+  oldest: "created_at.asc,bounty_id.asc",
+  reward_high: "reward_atoms.desc,bounty_id.asc",
+  reward_low: "reward_atoms.asc,bounty_id.asc",
+} as const;
+export type PublicHistorySort = keyof typeof PUBLIC_HISTORY_SORTS;
+
 export interface PublicBountyFiltersV1 {
   state?: string;
   repositoryFullName?: string;
+  sort?: PublicHistorySort;
 }
 
 export interface PublicBountyV1 {
@@ -118,6 +127,7 @@ export class PublicBountyClient {
       (bountyId !== undefined && !ID.test(bountyId)) ||
       (filters.state !== undefined &&
         !PUBLIC_BOUNTY_STATES.has(filters.state)) ||
+      (filters.sort !== undefined && !(filters.sort in PUBLIC_HISTORY_SORTS)) ||
       (filters.repositoryFullName !== undefined &&
         !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(filters.repositoryFullName))
     ) {
@@ -130,7 +140,7 @@ export class PublicBountyClient {
     );
     url.searchParams.set("limit", String(limit));
     url.searchParams.set("offset", String(offset));
-    url.searchParams.set("order", "created_at.desc,bounty_id.asc");
+    url.searchParams.set("order", PUBLIC_HISTORY_SORTS[filters.sort ?? "newest"]);
     if (bountyId) url.searchParams.set("bounty_id", `eq.${bountyId}`);
     if (filters.state) url.searchParams.set("state", `eq.${filters.state}`);
     if (filters.repositoryFullName)

@@ -121,7 +121,9 @@ async function digestLocalFile(root, item) {
     offset !== ".." && !offset.startsWith(".." + sep),
     "artifact path escaped evidence directory",
   );
-  const info = await lstat(absolute);
+  const info = await lstat(absolute).catch(() => {
+    throw new E2EIntakeError("artifact missing or inaccessible");
+  });
   check(
     info.isFile() && !info.isSymbolicLink() && info.size === item.sizeBytes,
     "artifact missing, symlink or byte-length mismatch",

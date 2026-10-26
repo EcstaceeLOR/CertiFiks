@@ -453,3 +453,86 @@ end;
 $$;
 reset request.jwt.claim.role;
 select 'PASS: inbox replay/idempotency, tenant isolation, read owner, preference opt-out and no fake email' as result;
+
+-- Issue #30: tenant workspace creation, invitations, replay and owner transfer.
+set request.jwt.claim.role='service_role';
+do $$
+declare invitation uuid;
+begin
+  if not public.certifiks_create_workspace(
+    '20000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001')
+  then raise exception 'workspace creation failed'; end if;
+  invitation:=public.certifiks_invite_workspace_member(
+    '20000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000002',
+    'maintainer',repeat('7',64),now()+interval '1 day'
+  );
+  begin
+    perform public.certifiks_accept_workspace_invite(
+      invitation,'10000000-0000-4000-8000-000000000001',repeat('7',64)
+    );
+    raise exception 'invite redeemed by unintended user';
+  exception when raise_exception then
+    if sqlerrm<>'invitation not valid for authenticated user' then raise; end if;
+  end;
+  if not public.certifiks_accept_workspace_invite(
+    invitation,'10000000-0000-4000-8000-000000000002',repeat('7',64)
+  ) then raise exception 'authorized invite rejected'; end if;
+  begin
+    perform public.certifiks_accept_workspace_invite(
+      invitation,'10000000-0000-4000-8000-000000000002',repeat('7',64)
+    );
+    raise exception 'invite replay accepted';
+  exception when raise_exception then
+    if sqlerrm<>'invitation not valid for authenticated user' then raise; end if;
+  end;
+  begin
+    perform public.certifiks_invite_workspace_member(
+      '20000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000002',
+      '10000000-0000-4000-8000-000000000001',
+      'reviewer',repeat('8',64),now()+interval '1 day'
+    );
+    raise exception 'maintainer escalated reviewer permissions';
+  exception when raise_exception then
+    if sqlerrm<>'workspace invite denied' then raise; end if;
+  end;
+  if not public.certifiks_transfer_workspace_owner(
+    '20000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000002'
+  ) then raise exception 'ownership transfer not committed'; end if;
+  if not public.certifiks_revoke_workspace_member(
+    '20000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000002',
+    '10000000-0000-4000-8000-000000000001'
+  ) then raise exception 'old owner revocation failed'; end if;
+  begin
+    perform public.certifiks_revoke_workspace_member(
+      '20000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000002'
+    );
+    raise exception 'revoked founder regained team permissions';
+  exception when raise_exception then
+    if sqlerrm<>'owner delegation check failed' then raise; end if;
+  end;
+  if (select count(*) from public.certifiks_workspace_members
+      where organization_id='20000000-0000-4000-8000-000000000001'
+        and role='owner' and revoked_at is null)<>1
+  then raise exception 'workspace owner role corrupted'; end if;
+  if (select count(*) from public.certifiks_workspace_role_events
+      where organization_id='20000000-0000-4000-8000-000000000001')<>5
+  then raise exception 'workspace role changes not audited'; end if;
+  if (select sponsor_user_id from public.certifiks_bounties
+      where bounty_id='30000000-0000-4000-8000-000000000001')
+     <>'10000000-0000-4000-8000-000000000001'::uuid
+  then raise exception 'workspace transfer illegally changed custody sponsor'; end if;
+  if has_table_privilege('anon','public.certifiks_workspace_invites','SELECT')
+  then raise exception 'browser reads private workspace invitations'; end if;
+end;
+$$;
+reset request.jwt.claim.role;
+select 'PASS: workspace invite replay, delegation matrix, owner transfer, revocation and custody separation' as result;

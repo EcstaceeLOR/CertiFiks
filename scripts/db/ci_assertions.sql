@@ -700,3 +700,108 @@ end;
 $$;
 reset request.jwt.claim.role;
 select 'PASS: independent reviewer eligibility and unsigned, no-payment preflight' as result;
+
+-- Issue #35: private immutable dispute timeline and independent arbitrator access.
+insert into public.certifiks_auth_role_memberships(user_id,organization_id,role)
+ values('10000000-0000-4000-8000-000000000003',
+        '20000000-0000-4000-8000-000000000001','arbitrator');
+insert into public.certifiks_disputes(
+  organization_id,bounty_id,dispute_id,opened_by,evidence_digest
+) values(
+  '20000000-0000-4000-8000-000000000001',
+  '30000000-0000-4000-8000-000000000001',
+  'b0000000-0000-4000-8000-000000000001',
+  '10000000-0000-4000-8000-000000000001',
+  '0x'||repeat('a',64)
+);
+insert into public.certifiks_dispute_adjudicators(
+  organization_id,dispute_id,arbitrator_user_id
+) values(
+  '20000000-0000-4000-8000-000000000001',
+  'b0000000-0000-4000-8000-000000000001',
+  '10000000-0000-4000-8000-000000000003'
+);
+set request.jwt.claim.role='service_role';
+do $$
+declare
+  opening uuid;
+  replay uuid;
+  reply uuid;
+  reviewer uuid;
+begin
+  if not public.certifiks_can_read_dispute(
+    '20000000-0000-4000-8000-000000000001',
+    'b0000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000003'
+  ) then raise exception 'explicit arbitrator assignment unreadable'; end if;
+  if public.certifiks_can_read_dispute(
+    '20000000-0000-4000-8000-000000000002',
+    'b0000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000003'
+  ) then raise exception 'arbitrator bypassed tenant'; end if;
+  opening:=public.certifiks_record_dispute_timeline(
+    '20000000-0000-4000-8000-000000000001',
+    'b0000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001',
+    'case_opened','0x'||repeat('a',64),null,repeat('1',64)
+  );
+  replay:=public.certifiks_record_dispute_timeline(
+    '20000000-0000-4000-8000-000000000001',
+    'b0000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001',
+    'case_opened','0x'||repeat('a',64),null,repeat('1',64)
+  );
+  if opening<>replay then raise exception 'dispute timeline duplicated on replay'; end if;
+  reply:=public.certifiks_record_dispute_timeline(
+    '20000000-0000-4000-8000-000000000001',
+    'b0000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000002',
+    'party_response','0x'||repeat('b',64),'0x'||repeat('c',64),repeat('2',64)
+  );
+  reviewer:=public.certifiks_record_dispute_timeline(
+    '20000000-0000-4000-8000-000000000001',
+    'b0000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000003',
+    'arbitrator_note','0x'||repeat('d',64),null,repeat('3',64)
+  );
+  if (select count(*) from public.certifiks_read_dispute_timeline(
+    '20000000-0000-4000-8000-000000000001',
+    'b0000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000003',25
+  ))<>3 then raise exception 'assigned arb cannot see immutable case history'; end if;
+  begin
+    perform public.certifiks_record_dispute_timeline(
+      '20000000-0000-4000-8000-000000000001',
+      'b0000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000001',
+      'arbitrator_note','0x'||repeat('f',64),null,repeat('4',64)
+    );
+    raise exception 'sponsor spoofed arbitrator note';
+  exception when raise_exception then
+    if sqlerrm<>'dispute actor not entitled to this event kind' then raise; end if;
+  end;
+  begin
+    perform public.certifiks_record_dispute_timeline(
+      '20000000-0000-4000-8000-000000000001',
+      'b0000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000001',
+      'case_opened','0x'||repeat('e',64),null,repeat('1',64)
+    );
+    raise exception 'changed-content event replay accepted';
+  exception when raise_exception then
+    if sqlerrm<>'conflicting dispute event replay' then raise; end if;
+  end;
+  begin
+    delete from public.certifiks_dispute_timeline where timeline_id=opening;
+    raise exception 'case evidence could be deleted';
+  exception when raise_exception then
+    if sqlerrm<>'immutable CertiFiks evidence/audit record' then raise; end if;
+  end;
+  if (select count(*) from public.certifiks_payments)<>0
+  then raise exception 'dispute note created an unauthorized payout'; end if;
+  if has_table_privilege('anon','public.certifiks_dispute_timeline','SELECT')
+  then raise exception 'public browser can access private dispute timeline'; end if;
+end;
+$$;
+reset request.jwt.claim.role;
+select 'PASS: private dispute timeline, per-case arbitrator, idempotency and no payout' as result;

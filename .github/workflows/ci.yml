@@ -115,3 +115,56 @@ jobs:
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  relational-db:
+    name: PostgreSQL migration, tenancy, dedupe and restore drill
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: certifiks-ci-only-password
+          POSTGRES_DB: certifiks_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d certifiks_test"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply every migration on a clean database
+        run: |
+          for file in \
+            scripts/db/ci_bootstrap.sql \
+            supabase/migrations/202610150001_github_delivery_queue.sql \
+            supabase/migrations/202610150002_github_delivery_leases.sql \
+            supabase/migrations/202610260001_wallet_auth_foundation.sql \
+            supabase/migrations/202610260002_lifecycle_tenancy.sql \
+            scripts/db/ci_assertions.sql
+          do
+            docker run --rm --network host \
+              -e PGPASSWORD=certifiks-ci-only-password \
+              -v "$PWD:/repo:ro" postgres:16 \
+              psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d certifiks_test -f "/repo/$file"
+          done
+      - name: Backup, recreate database and independently restore funded lifecycle
+        run: |
+          mkdir -p "$RUNNER_TEMP/certifiks-backup"
+          docker run --rm --network host \
+            -e PGPASSWORD=certifiks-ci-only-password \
+            -v "$RUNNER_TEMP/certifiks-backup:/backup" postgres:16 \
+            pg_dump -h 127.0.0.1 -U postgres -d certifiks_test -Fc -f /backup/lifecycle.dump
+          docker run --rm --network host -e PGPASSWORD=certifiks-ci-only-password \
+            postgres:16 createdb -h 127.0.0.1 -U postgres certifiks_restored
+          docker run --rm --network host \
+            -e PGPASSWORD=certifiks-ci-only-password \
+            -v "$RUNNER_TEMP/certifiks-backup:/backup:ro" postgres:16 \
+            pg_restore --no-owner --no-acl -h 127.0.0.1 -U postgres \
+              -d certifiks_restored /backup/lifecycle.dump
+          result=$(docker run --rm --network host -e PGPASSWORD=certifiks-ci-only-password \
+            postgres:16 psql -tA -h 127.0.0.1 -U postgres -d certifiks_restored \
+            -c "select (select count(*) from public.certifiks_bounties), (select count(*) from public.certifiks_attempts), (select count(*) from public.certifiks_audit_entries);" -F '|')
+          test "$result" = "1|1|1"
+          rm -rf "$RUNNER_TEMP/certifiks-backup"

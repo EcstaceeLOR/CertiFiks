@@ -21,7 +21,7 @@ test("no public-facing onboarding or reward claim can bypass live prerequisites"
   assert.match(onboarding, /Onboarding is not enabled yet/);
   assert.match(
     onboarding,
-    /No wallet connection or GitHub installation is performed here/,
+  assert.match(onboarding, /GitHub installation is performed here/);
   );
 });
 

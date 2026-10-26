@@ -155,6 +155,9 @@ export default function OnboardingPage() {
           <Link href="/" className="button button-outline">
             Return to overview ↗
           </Link>
+          <Link href="/sponsor" className="text-link">
+            Explore public sponsor view ↗
+          </Link>
           <a
             href="https://github.com/EcstaceeLOR/CertiFiks/issues"
             target="_blank"

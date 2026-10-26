@@ -15,7 +15,7 @@ export function ConnectivityNotice() {
   useEffect(() => {
     const goOffline = () => setState("offline");
     const goOnline = () =>
-      setState((previous) => (previous === "offline" ? "restored" : "unknown"));
+      setState((previous) => (previous === "unknown" ? "unknown" : "restored"));
     if (!navigator.onLine) goOffline();
     window.addEventListener("offline", goOffline);
     window.addEventListener("online", goOnline);

@@ -31,7 +31,10 @@ export type QualificationOutcomeV1 =
   | "infrastructure_error";
 
 export interface QualificationStepReceiptV1 {
-  kind: "baseline-acceptance" | "candidate-acceptance" | "candidate-regressions";
+  kind:
+    | "baseline-acceptance"
+    | "candidate-acceptance"
+    | "candidate-regressions";
   repetition: 1 | 2;
   commitSha: string;
   image: string;
@@ -63,48 +66,82 @@ export type RunnerExecutorV1 = (
 export function digestRunOutcomeV1(
   value: Pick<VerifierRunResult, "status" | "exitCode" | "stdout" | "stderr">,
 ): string {
-  return "0x" + createHash("sha256")
-    .update(JSON.stringify({
-      status: value.status,
-      exitCode: value.exitCode,
-      stdout: value.stdout,
-      stderr: value.stderr,
-    }))
-    .digest("hex");
+  return (
+    "0x" +
+    createHash("sha256")
+      .update(
+        JSON.stringify({
+          status: value.status,
+          exitCode: value.exitCode,
+          stdout: value.stdout,
+          stderr: value.stderr,
+        }),
+      )
+      .digest("hex")
+  );
 }
 
 function validate(input: QualificationPolicyV1): void {
-  if (!SHA1.test(input.baseCommitSha) || !SHA1.test(input.headCommitSha) ||
-      input.baseCommitSha === input.headCommitSha) {
+  if (
+    !SHA1.test(input.baseCommitSha) ||
+    !SHA1.test(input.headCommitSha) ||
+    input.baseCommitSha === input.headCommitSha
+  ) {
     throw new Error("QUALIFICATION_INVALID: commit identity");
   }
-  if (![input.manifestDigest, input.testPlanDigest,
-    input.trustedTestDigestAtBase, input.trustedTestDigestAtHead,
-    input.expectedBaselineFailureDigest].every((x) => SHA256.test(x))) {
+  if (
+    ![
+      input.manifestDigest,
+      input.testPlanDigest,
+      input.trustedTestDigestAtBase,
+      input.trustedTestDigestAtHead,
+      input.expectedBaselineFailureDigest,
+    ].every((x) => SHA256.test(x))
+  ) {
     throw new Error("QUALIFICATION_INVALID: uncommitted evidence digest");
   }
   if (!/^[a-z0-9][a-z0-9./:_-]*@sha256:[a-f0-9]{64}$/i.test(input.image)) {
     throw new Error("QUALIFICATION_INVALID: unpinned runner image");
   }
   for (const command of [input.acceptanceCommand, input.regressionsCommand]) {
-    if (!Array.isArray(command) || command.length === 0 ||
-        command.some((x) => typeof x !== "string" || !x.trim() || x.includes("\0"))) {
+    if (
+      !Array.isArray(command) ||
+      command.length === 0 ||
+      command.some(
+        (x) => typeof x !== "string" || !x.trim() || x.includes("\0"),
+      )
+    ) {
       throw new Error("QUALIFICATION_INVALID: missing trusted test command");
     }
   }
-  if (input.acceptanceCommand.join("\0") === input.regressionsCommand.join("\0")) {
-    throw new Error("QUALIFICATION_INVALID: acceptance and regressions must be distinct");
+  if (
+    input.acceptanceCommand.join("\0") === input.regressionsCommand.join("\0")
+  ) {
+    throw new Error(
+      "QUALIFICATION_INVALID: acceptance and regressions must be distinct",
+    );
   }
-  if (!input.baselineWorkspace || !input.candidateWorkspace ||
-      input.baselineWorkspace === input.candidateWorkspace) {
-    throw new Error("QUALIFICATION_INVALID: same workspace for baseline and candidate");
+  if (
+    !input.baselineWorkspace ||
+    !input.candidateWorkspace ||
+    input.baselineWorkspace === input.candidateWorkspace
+  ) {
+    throw new Error(
+      "QUALIFICATION_INVALID: same workspace for baseline and candidate",
+    );
   }
 }
 
-function classify(value: VerifierRunResult): "success" | "failure" | "uncertain" | "error" {
+function classify(
+  value: VerifierRunResult,
+): "success" | "failure" | "uncertain" | "error" {
   if (value.status === "passed" && value.exitCode === 0) return "success";
-  if (value.status === "failed" && typeof value.exitCode === "number" &&
-      value.exitCode > 0) return "failure";
+  if (
+    value.status === "failed" &&
+    typeof value.exitCode === "number" &&
+    value.exitCode > 0
+  )
+    return "failure";
   if (value.status === "runner_error") return "error";
   return "uncertain";
 }
@@ -123,7 +160,10 @@ export async function qualifyCandidateV1(
 ): Promise<QualificationReceiptV1> {
   validate(policy);
   const steps: QualificationStepReceiptV1[] = [];
-  const result = (outcome: QualificationOutcomeV1, reason: string): QualificationReceiptV1 => ({
+  const result = (
+    outcome: QualificationOutcomeV1,
+    reason: string,
+  ): QualificationReceiptV1 => ({
     protocolVersion: "1",
     outcome,
     reason,
@@ -137,8 +177,10 @@ export async function qualifyCandidateV1(
     payoutAuthorized: false,
   });
 
-  if (policy.trustedTestDigestAtBase !== policy.testPlanDigest ||
-      policy.trustedTestDigestAtHead !== policy.testPlanDigest) {
+  if (
+    policy.trustedTestDigestAtBase !== policy.testPlanDigest ||
+    policy.trustedTestDigestAtHead !== policy.testPlanDigest
+  ) {
     return result("rejected", "TRUSTED_TESTS_CHANGED_OR_REMOVED");
   }
 
@@ -156,9 +198,14 @@ export async function qualifyCandidateV1(
         command: [...command],
         timeoutMs: 120000,
       });
-      if (!value || !["passed","failed","runner_error","timed_out"].includes(value.status) ||
-          typeof value.evidenceSha256 !== "string" ||
-          !/^[a-f0-9]{64}$/.test(value.evidenceSha256)) {
+      if (
+        !value ||
+        !["passed", "failed", "runner_error", "timed_out"].includes(
+          value.status,
+        ) ||
+        typeof value.evidenceSha256 !== "string" ||
+        !/^[a-f0-9]{64}$/.test(value.evidenceSha256)
+      ) {
         throw new Error("invalid sandbox execution receipt");
       }
       steps.push({
@@ -180,9 +227,24 @@ export async function qualifyCandidateV1(
 
   try {
     const phases = [
-      ["baseline-acceptance", policy.baselineWorkspace, policy.baseCommitSha, policy.acceptanceCommand],
-      ["candidate-acceptance", policy.candidateWorkspace, policy.headCommitSha, policy.acceptanceCommand],
-      ["candidate-regressions", policy.candidateWorkspace, policy.headCommitSha, policy.regressionsCommand],
+      [
+        "baseline-acceptance",
+        policy.baselineWorkspace,
+        policy.baseCommitSha,
+        policy.acceptanceCommand,
+      ],
+      [
+        "candidate-acceptance",
+        policy.candidateWorkspace,
+        policy.headCommitSha,
+        policy.acceptanceCommand,
+      ],
+      [
+        "candidate-regressions",
+        policy.candidateWorkspace,
+        policy.headCommitSha,
+        policy.regressionsCommand,
+      ],
     ] as const;
     for (const [kind, workspace, commitSha, command] of phases) {
       const runs = await twice(kind, workspace, commitSha, command);
@@ -190,17 +252,25 @@ export async function qualifyCandidateV1(
         return result("infrastructure_error", "SANDBOX_UNAVAILABLE");
       if (runs.some((v) => classify(v) === "uncertain"))
         return result("inconclusive", "SANDBOX_TIMEOUT_OR_AMBIGUOUS_EXIT");
-      if (runs.length !== 2 ||
-          digestRunOutcomeV1(runs[0]) !== digestRunOutcomeV1(runs[1]))
+      if (
+        runs.length !== 2 ||
+        digestRunOutcomeV1(runs[0]) !== digestRunOutcomeV1(runs[1])
+      )
         return result("needs_review", "FLAKY_OR_NONDETERMINISTIC_TEST");
       if (kind === "baseline-acceptance") {
         if (runs.some((v) => classify(v) !== "failure"))
           return result("rejected", "BASELINE_DID_NOT_FAIL");
-        if (digestRunOutcomeV1(runs[0]) !== policy.expectedBaselineFailureDigest)
+        if (
+          digestRunOutcomeV1(runs[0]) !== policy.expectedBaselineFailureDigest
+        )
           return result("rejected", "WRONG_BASELINE_FAILURE_REASON");
       } else if (runs.some((v) => classify(v) !== "success")) {
-        return result("rejected",
-          kind === "candidate-acceptance" ? "CANDIDATE_DID_NOT_FIX_DEFECT" : "REGRESSION_SUITE_FAILED");
+        return result(
+          "rejected",
+          kind === "candidate-acceptance"
+            ? "CANDIDATE_DID_NOT_FIX_DEFECT"
+            : "REGRESSION_SUITE_FAILED",
+        );
       }
     }
   } catch {

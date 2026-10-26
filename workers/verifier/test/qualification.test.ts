@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { VerifierRunResult } from "../src/index.js";
 import {
   digestRunOutcomeV1,
-  qualifyCandidateV1,
   type QualificationPolicyV1,
+  qualifyCandidateV1,
   type RunnerExecutorV1,
 } from "../src/qualification.js";
-import type { VerifierRunResult } from "../src/index.js";
 
 const baseline: VerifierRunResult = {
   status: "failed",
@@ -17,12 +17,20 @@ const baseline: VerifierRunResult = {
   evidenceSha256: "b".repeat(64),
 };
 const passed: VerifierRunResult = {
-  status: "passed", exitCode: 0, stdout: "1 passed\n", stderr: "",
-  durationMs: 5, evidenceSha256: "c".repeat(64),
+  status: "passed",
+  exitCode: 0,
+  stdout: "1 passed\n",
+  stderr: "",
+  durationMs: 5,
+  evidenceSha256: "c".repeat(64),
 };
 const regression: VerifierRunResult = {
-  status: "passed", exitCode: 0, stdout: "15 passed\n", stderr: "",
-  durationMs: 5, evidenceSha256: "d".repeat(64),
+  status: "passed",
+  exitCode: 0,
+  stdout: "15 passed\n",
+  stderr: "",
+  durationMs: 5,
+  evidenceSha256: "d".repeat(64),
 };
 const policy: QualificationPolicyV1 = {
   baseCommitSha: "a".repeat(40),
@@ -57,7 +65,12 @@ function scripted(runs: VerifierRunResult[]): {
 
 test("two baseline failures, two candidate passes and two regression passes qualify only as unsigned claim", async () => {
   const { executor, history } = scripted([
-    baseline, baseline, passed, passed, regression, regression,
+    baseline,
+    baseline,
+    passed,
+    passed,
+    regression,
+    regression,
   ]);
   const result = await qualifyCandidateV1(policy, executor);
   assert.equal(result.outcome, "qualified");
@@ -79,51 +92,66 @@ test("baseline that already passes is rejected without executing candidate", asy
 });
 
 test("baseline unexpected failure reason is rejected", async () => {
-  const { executor } = scripted([{ ...baseline, stderr: "different assertion" },
-    { ...baseline, stderr: "different assertion" }]);
+  const { executor } = scripted([
+    { ...baseline, stderr: "different assertion" },
+    { ...baseline, stderr: "different assertion" },
+  ]);
   const result = await qualifyCandidateV1(policy, executor);
   assert.equal(result.reason, "WRONG_BASELINE_FAILURE_REASON");
 });
 
 test("changing protected tests rejects before executing any untrusted container", async () => {
   const fake = scripted([]);
-  const result = await qualifyCandidateV1({
-    ...policy, trustedTestDigestAtHead: "0x" + "9".repeat(64),
-  }, fake.executor);
+  const result = await qualifyCandidateV1(
+    {
+      ...policy,
+      trustedTestDigestAtHead: "0x" + "9".repeat(64),
+    },
+    fake.executor,
+  );
   assert.equal(result.reason, "TRUSTED_TESTS_CHANGED_OR_REMOVED");
   assert.equal(fake.history.length, 0);
 });
 
 test("flaky baseline or candidate refuses automatic qualification", async () => {
-  const a = await qualifyCandidateV1(policy, scripted([
-    baseline, { ...baseline, stdout: "time dependent output" },
-  ]).executor);
+  const a = await qualifyCandidateV1(
+    policy,
+    scripted([baseline, { ...baseline, stdout: "time dependent output" }])
+      .executor,
+  );
   assert.equal(a.outcome, "needs_review");
-  const b = await qualifyCandidateV1(policy, scripted([
-    baseline, baseline, passed, { ...passed, stdout: "2 passed" },
-  ]).executor);
+  const b = await qualifyCandidateV1(
+    policy,
+    scripted([baseline, baseline, passed, { ...passed, stdout: "2 passed" }])
+      .executor,
+  );
   assert.equal(b.outcome, "needs_review");
 });
 
 test("candidate acceptance and regression failures never count as a fix", async () => {
-  const a = await qualifyCandidateV1(policy, scripted([
-    baseline, baseline, baseline, baseline,
-  ]).executor);
+  const a = await qualifyCandidateV1(
+    policy,
+    scripted([baseline, baseline, baseline, baseline]).executor,
+  );
   assert.equal(a.reason, "CANDIDATE_DID_NOT_FIX_DEFECT");
-  const b = await qualifyCandidateV1(policy, scripted([
-    baseline, baseline, passed, passed, baseline, baseline,
-  ]).executor);
+  const b = await qualifyCandidateV1(
+    policy,
+    scripted([baseline, baseline, passed, passed, baseline, baseline]).executor,
+  );
   assert.equal(b.reason, "REGRESSION_SUITE_FAILED");
 });
 
 test("runner outage, thrown container errors or timeouts never claim success", async () => {
-  const infra = await qualifyCandidateV1(policy, scripted([
-    { ...baseline, status: "runner_error", exitCode: null },
-  ]).executor);
+  const infra = await qualifyCandidateV1(
+    policy,
+    scripted([{ ...baseline, status: "runner_error", exitCode: null }])
+      .executor,
+  );
   assert.equal(infra.outcome, "infrastructure_error");
-  const timed = await qualifyCandidateV1(policy, scripted([
-    { ...baseline, status: "timed_out", exitCode: null },
-  ]).executor);
+  const timed = await qualifyCandidateV1(
+    policy,
+    scripted([{ ...baseline, status: "timed_out", exitCode: null }]).executor,
+  );
   assert.equal(timed.outcome, "inconclusive");
   const crashed = await qualifyCandidateV1(policy, async () => {
     throw new Error("secret internal workspace path");

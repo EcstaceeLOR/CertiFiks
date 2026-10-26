@@ -67,7 +67,7 @@ export default function OnboardingPage() {
           </Link>
           <nav className="main-nav" aria-label="Primary navigation">
             <Link href="/">Home</Link>
-            <Link href="/#marketplace">Bounties</Link>
+            <Link href="/opportunities">Bounties</Link>
             <a
               href="https://github.com/EcstaceeLOR/CertiFiks/issues"
               target="_blank"

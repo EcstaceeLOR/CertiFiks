@@ -640,3 +640,63 @@ end;
 $$;
 reset request.jwt.claim.role;
 select 'PASS: immutable sponsored funding intent, replay, cancellation, no synthetic custody' as result;
+
+-- Issue #34: one safe review case, no invented signature or paid vote.
+insert into public.certifiks_auth_users(user_id)
+values ('10000000-0000-4000-8000-000000000003');
+insert into public.certifiks_auth_role_memberships(user_id,organization_id,role)
+values
+ ('10000000-0000-4000-8000-000000000003',
+  '20000000-0000-4000-8000-000000000001','verifier'),
+ ('10000000-0000-4000-8000-000000000002',
+  '20000000-0000-4000-8000-000000000001','verifier'),
+ ('10000000-0000-4000-8000-000000000001',
+  '20000000-0000-4000-8000-000000000001','verifier');
+update public.certifiks_verification_runs
+set outcome='needs_review', result_digest='0x'||repeat('9',64),completed_at=now()
+where run_id='70000000-0000-4000-8000-000000000001';
+
+set request.jwt.claim.role='service_role';
+do $$
+declare
+  cnt integer;
+  allowed boolean;
+  payout boolean;
+  art_cnt bigint;
+begin
+  select count(*),bool_or(can_attest),bool_or(payout_authorized),max(artifact_count)
+    into cnt,allowed,payout,art_cnt
+    from public.certifiks_verifier_review_preflight(
+      '20000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000003',25
+    );
+  if cnt<>1 or allowed is distinct from false
+    or payout is distinct from false or art_cnt<>0
+  then raise exception 'unprivileged reviewer incorrectly signed / leaked evidence'; end if;
+  if (select count(*) from public.certifiks_verifier_review_preflight(
+      '20000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000001',25
+      ))<>0
+  then raise exception 'sponsor self-review admitted'; end if;
+  if (select count(*) from public.certifiks_verifier_review_preflight(
+      '20000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000002',25
+      ))<>0
+  then raise exception 'developer self-review admitted'; end if;
+  begin
+    perform * from public.certifiks_verifier_review_preflight(
+      '20000000-0000-4000-8000-000000000002',
+      '10000000-0000-4000-8000-000000000003',25
+    );
+    raise exception 'reviewer accessed unrelated organization';
+  exception when raise_exception then
+    if sqlerrm<>'reviewer not enrolled in this organization' then raise; end if;
+  end;
+  if (select count(*) from public.certifiks_verifier_votes)<>0
+  then raise exception 'reviewer preflight created phantom signed votes'; end if;
+  if (select count(*) from public.certifiks_payments)<>0
+  then raise exception 'reviewer preflight triggered payment'; end if;
+end;
+$$;
+reset request.jwt.claim.role;
+select 'PASS: independent reviewer eligibility and unsigned, no-payment preflight' as result;

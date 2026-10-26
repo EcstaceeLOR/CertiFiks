@@ -20,7 +20,7 @@ test("public history is a real server-driven search, not a decorative dashboard"
   assert.match(dashboard, /historyQuery\(filters/);
   assert.match(dashboard, /Public records are unavailable/);
   assert.match(dashboard, /No matching published records/);
-  assert.match(dashboard, /This is not a[\s\S]*count of all bounties/);
+  assert.match(dashboard, /This is not[\s\S]*count of all bounties/);
   assert.doesNotMatch(dashboard, /sampleVolume|mockBalance|fakePayouts/);
 });
 

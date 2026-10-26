@@ -11,7 +11,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body><ConnectivityNotice />{children}</body>
+      <body>
+        <ConnectivityNotice />
+        {children}
+      </body>
     </html>
   );
 }

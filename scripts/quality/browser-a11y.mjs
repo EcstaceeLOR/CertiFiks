@@ -74,41 +74,97 @@ try {
 
       const entry = { route, width, status: response?.status(), ...result };
       summary.push(entry);
-      if (entry.status !== 200) failures.push({ route, width, problem: "HTTP not 200", status: entry.status });
-      if (entry.serious.length) failures.push({ route, width, problem: "WCAG serious/critical", violations: entry.serious });
-      if (entry.h1Count !== 1) failures.push({ route, width, problem: "Expected one page heading", h1Count: entry.h1Count });
-      if (entry.width > entry.viewport + 3) failures.push({ route, width, problem: "Horizontal page overflow", actual: entry.width });
-      if (entry.ttfbMs !== null && entry.ttfbMs > 8500) failures.push({ route, width, problem: "TTFB budget exceeded", ms: entry.ttfbMs });
-      if (entry.scriptBytes > 1_600_000) failures.push({ route, width, problem: "Uncompressed JS budget exceeded", bytes: entry.scriptBytes });
+      if (entry.status !== 200)
+        failures.push({
+          route,
+          width,
+          problem: "HTTP not 200",
+          status: entry.status,
+        });
+      if (entry.serious.length)
+        failures.push({
+          route,
+          width,
+          problem: "WCAG serious/critical",
+          violations: entry.serious,
+        });
+      if (entry.h1Count !== 1)
+        failures.push({
+          route,
+          width,
+          problem: "Expected one page heading",
+          h1Count: entry.h1Count,
+        });
+      if (entry.width > entry.viewport + 3)
+        failures.push({
+          route,
+          width,
+          problem: "Horizontal page overflow",
+          actual: entry.width,
+        });
+      if (entry.ttfbMs !== null && entry.ttfbMs > 8500)
+        failures.push({
+          route,
+          width,
+          problem: "TTFB budget exceeded",
+          ms: entry.ttfbMs,
+        });
+      if (entry.scriptBytes > 1_600_000)
+        failures.push({
+          route,
+          width,
+          problem: "Uncompressed JS budget exceeded",
+          bytes: entry.scriptBytes,
+        });
 
       if (["/", "/dashboard", "/onboarding"].includes(route)) {
-        await page.screenshot({ path: join("quality-artifacts", `${slug}-${width}.png`), fullPage: true });
+        await page.screenshot({
+          path: join("quality-artifacts", `${slug}-${width}.png`),
+          fullPage: true,
+        });
       }
-      console.log(`${entry.status} ${route} @${width}px: ${result.serious.length} serious WCAG failures, script ${result.scriptBytes}B`);
+      console.log(
+        `${entry.status} ${route} @${width}px: ${result.serious.length} serious WCAG failures, script ${result.scriptBytes}B`,
+      );
     }
 
     await page.goto(baseUrl + "/", { waitUntil: "domcontentloaded" });
     await page.keyboard.press("Tab");
-    const firstTab = await page.evaluate(() => document.activeElement?.textContent?.trim());
+    const firstTab = await page.evaluate(() =>
+      document.activeElement?.textContent?.trim(),
+    );
     if (firstTab !== "Skip to content") {
-      failures.push({ width, problem: "First keyboard tab does not reach skip link", actual: firstTab });
+      failures.push({
+        width,
+        problem: "First keyboard tab does not reach skip link",
+        actual: firstTab,
+      });
     }
 
     await context.setOffline(true);
     await page.evaluate(() => window.dispatchEvent(new Event("offline")));
     try {
-      await page.locator('[data-connection-state="offline"]').waitFor({ timeout: 3000 });
+      await page
+        .locator('[data-connection-state="offline"]')
+        .waitFor({ timeout: 3000 });
     } catch {
       failures.push({ width, problem: "Offline announcement missing" });
     }
     await context.setOffline(false);
     await page.evaluate(() => window.dispatchEvent(new Event("online")));
     try {
-      await page.getByRole("button", { name: "Refresh verified data" }).waitFor({ timeout: 3000 });
+      await page
+        .getByRole("button", { name: "Refresh verified data" })
+        .waitFor({ timeout: 3000 });
     } catch {
       failures.push({ width, problem: "Recovery refresh action missing" });
     }
-    if (pageErrors.length) failures.push({ width, problem: "Unhandled browser JS errors", errors: pageErrors });
+    if (pageErrors.length)
+      failures.push({
+        width,
+        problem: "Unhandled browser JS errors",
+        errors: pageErrors,
+      });
     await context.close();
   }
 } finally {
@@ -123,5 +179,7 @@ if (failures.length) {
   console.error(JSON.stringify(failures, null, 2));
   process.exitCode = 1;
 } else {
-  console.log(`PASS: ${summary.length} browser route/viewport scans, offline recovery and keyboard access`);
+  console.log(
+    `PASS: ${summary.length} browser route/viewport scans, offline recovery and keyboard access`,
+  );
 }

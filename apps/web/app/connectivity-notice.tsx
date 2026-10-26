@@ -8,11 +8,14 @@ import { useEffect, useState } from "react";
  * transaction finality must always come from a new verified server/chain read.
  */
 export function ConnectivityNotice() {
-  const [state, setState] = useState<"unknown" | "offline" | "restored">("unknown");
+  const [state, setState] = useState<"unknown" | "offline" | "restored">(
+    "unknown",
+  );
 
   useEffect(() => {
     const goOffline = () => setState("offline");
-    const goOnline = () => setState((previous) => (previous === "offline" ? "restored" : "unknown"));
+    const goOnline = () =>
+      setState((previous) => (previous === "offline" ? "restored" : "unknown"));
     if (!navigator.onLine) goOffline();
     window.addEventListener("offline", goOffline);
     window.addEventListener("online", goOnline);
@@ -32,7 +35,11 @@ export function ConnectivityNotice() {
     >
       <div className="container connectivity-notice__inner">
         <div>
-          <strong>{state === "offline" ? "Your device appears offline." : "Network connection returned."}</strong>{" "}
+          <strong>
+            {state === "offline"
+              ? "Your device appears offline."
+              : "Network connection returned."}
+          </strong>{" "}
           <span>
             {state === "offline"
               ? "Published listings and transaction states may be unavailable or outdated. Do not assume a payment succeeded."

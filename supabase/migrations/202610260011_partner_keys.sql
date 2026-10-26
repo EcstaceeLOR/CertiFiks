@@ -40,6 +40,9 @@ begin
       where m.organization_id=item.organization_id
         and m.user_id=item.issued_by_user_id
         and m.revoked_at is null and u.disabled_at is null)
+    or not exists(select 1 from public.certifiks_workspace_members w
+      where w.organization_id=item.organization_id
+        and w.user_id=item.issued_by_user_id and w.revoked_at is null)
   then return false; end if;
 
   if item.request_window<=now()-interval '1 minute' then

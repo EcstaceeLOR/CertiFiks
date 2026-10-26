@@ -1,7 +1,7 @@
 const ID = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/;
 const DECIMAL = /^(0|[1-9][0-9]*)$/;
 const SHA256 = /^0x[a-f0-9]{64}$/;
-const STATES = new Set([
+export const PUBLIC_BOUNTY_STATES = new Set([
   "funded",
   "assigned",
   "submitted",
@@ -12,6 +12,11 @@ const STATES = new Set([
   "settled",
   "refunded",
 ]);
+
+export interface PublicBountyFiltersV1 {
+  state?: string;
+  repositoryFullName?: string;
+}
 
 export interface PublicBountyV1 {
   bountyId: string;
@@ -52,7 +57,7 @@ function parseRecord(row: unknown): PublicBountyV1 {
     typeof record.manifest_digest === "string" &&
       SHA256.test(record.manifest_digest),
   );
-  assertField(typeof record.state === "string" && STATES.has(record.state));
+  assertField(typeof record.state === "string" && PUBLIC_BOUNTY_STATES.has(record.state));
   assertField(
     typeof record.created_at === "string" &&
       Number.isFinite(Date.parse(record.created_at)),
@@ -99,6 +104,7 @@ export class PublicBountyClient {
     limit: number,
     offset: number,
     bountyId?: string,
+    filters: PublicBountyFiltersV1 = {},
   ): Promise<PublicBountyV1[]> {
     if (
       !Number.isSafeInteger(limit) ||
@@ -107,7 +113,10 @@ export class PublicBountyClient {
       !Number.isSafeInteger(offset) ||
       offset < 0 ||
       offset > 10000 ||
-      (bountyId !== undefined && !ID.test(bountyId))
+      (bountyId !== undefined && !ID.test(bountyId)) ||
+      (filters.state !== undefined && !PUBLIC_BOUNTY_STATES.has(filters.state)) ||
+      (filters.repositoryFullName !== undefined &&
+        !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(filters.repositoryFullName))
     ) {
       throw new TypeError("PUBLIC_BOUNTY_INVALID_QUERY");
     }
@@ -120,6 +129,9 @@ export class PublicBountyClient {
     url.searchParams.set("offset", String(offset));
     url.searchParams.set("order", "created_at.desc,bounty_id.asc");
     if (bountyId) url.searchParams.set("bounty_id", `eq.${bountyId}`);
+    if (filters.state) url.searchParams.set("state", `eq.${filters.state}`);
+    if (filters.repositoryFullName)
+      url.searchParams.set("repository_full_name", `eq.${filters.repositoryFullName}`);
     let response: Response;
     try {
       response = await this.request(url.href, {

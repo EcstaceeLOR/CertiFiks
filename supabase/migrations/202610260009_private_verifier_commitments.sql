@@ -150,3 +150,28 @@ revoke all on function public.certifiks_commit_private_reviewer_intent(
 grant execute on function public.certifiks_commit_private_reviewer_intent(
   uuid,uuid,uuid,uuid,text,text,text,text,text,text,timestamptz
 ) to service_role;
+
+-- A registered review commitment freezes the exact runner result and image/
+-- plan binding. The server must never retroactively mutate a decided case.
+create function public.certifiks_guard_reviewed_runner_context()
+returns trigger language plpgsql set search_path = '' as $$
+begin
+  if exists(select 1 from public.certifiks_private_review_commitments
+    where organization_id=old.organization_id and run_id=old.run_id)
+    and (
+      old.attempt_id is distinct from new.attempt_id or
+      old.committed_plan_digest is distinct from new.committed_plan_digest or
+      old.image_digest is distinct from new.image_digest or
+      old.result_digest is distinct from new.result_digest or
+      old.outcome is distinct from new.outcome or
+      old.completed_at is distinct from new.completed_at
+    )
+  then raise exception 'immutable reviewed runner context'; end if;
+  return new;
+end; $$;
+
+create trigger certifiks_guard_reviewed_runner_context
+  before update of attempt_id,committed_plan_digest,image_digest,
+    result_digest,outcome,completed_at
+  on public.certifiks_verification_runs
+  for each row execute function public.certifiks_guard_reviewed_runner_context();

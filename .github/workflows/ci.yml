@@ -42,6 +42,8 @@ jobs:
         run: npm run typecheck
       - name: Unit tests
         run: npm run test
+      - name: Independent read-only manifest and evidence CLI acceptance
+        run: node --import tsx --test scripts/verify-manifest.test.mjs scripts/verify-evidence.test.mjs
       - name: Build every workspace
         run: npm run build
 
@@ -150,6 +152,7 @@ jobs:
             supabase/migrations/202610260008_sponsor_funding_intents.sql \
             supabase/migrations/202610260009_verifier_preflight.sql \
             supabase/migrations/202610260010_dispute_timeline.sql \
+            supabase/migrations/202610260011_partner_keys.sql \
             scripts/db/ci_assertions.sql
           do
             docker run --rm --network host \

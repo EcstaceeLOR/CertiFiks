@@ -28,6 +28,9 @@ create table public.certifiks_dispute_timeline (
 );
 create index certifiks_dispute_timeline_view
  on public.certifiks_dispute_timeline(organization_id,dispute_id,created_at,timeline_id);
+create unique index certifiks_dispute_one_opening_event
+  on public.certifiks_dispute_timeline(organization_id,dispute_id)
+  where kind='case_opened';
 
 create trigger certifiks_guard_dispute_timeline
 before update or delete on public.certifiks_dispute_timeline
@@ -106,9 +109,26 @@ begin
     or (p_artifact is not null and p_artifact !~ '^0x[0-9a-f]{64}$')
   then raise exception 'unauthorized or immutable dispute update'; end if;
   select exists (
-    select 1 from public.certifiks_dispute_adjudicators
-    where organization_id=p_org and dispute_id=p_dispute
-      and arbitrator_user_id=p_actor and revoked_at is null
+    select 1 from public.certifiks_dispute_adjudicators arb
+    join public.certifiks_auth_role_memberships m
+      on m.organization_id=arb.organization_id
+      and m.user_id=arb.arbitrator_user_id
+      and m.role='arbitrator' and m.revoked_at is null
+    join public.certifiks_disputes d
+      on d.organization_id=arb.organization_id and d.dispute_id=arb.dispute_id
+    join public.certifiks_bounties b
+      on b.organization_id=d.organization_id and b.bounty_id=d.bounty_id
+    where arb.organization_id=p_org and arb.dispute_id=p_dispute
+      and arb.arbitrator_user_id=p_actor and arb.revoked_at is null
+      and d.opened_by<>p_actor and b.sponsor_user_id<>p_actor
+      and not exists (
+        select 1 from public.certifiks_assignments ass
+        join public.certifiks_applications a
+          on a.organization_id=ass.organization_id
+            and a.bounty_id=ass.bounty_id and a.application_id=ass.application_id
+        where ass.organization_id=p_org and ass.bounty_id=d.bounty_id
+          and a.developer_user_id=p_actor
+      )
   ) into is_assigned_arb;
   if (p_kind='case_opened' and p_actor<>opened_by)
     or (p_kind='arbitrator_note' and not is_assigned_arb)

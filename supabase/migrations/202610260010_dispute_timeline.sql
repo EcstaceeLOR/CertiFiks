@@ -96,6 +96,7 @@ create function public.certifiks_record_dispute_timeline(
 as $$
 declare result_id uuid; original public.certifiks_dispute_timeline%rowtype;
         case_state text; opened_by uuid; is_assigned_arb boolean;
+        is_case_party boolean;
 begin
   if auth.role() is distinct from 'service_role' then raise exception 'server role required'; end if;
   select state,opened_by into case_state,opened_by
@@ -130,7 +131,23 @@ begin
           and a.developer_user_id=p_actor
       )
   ) into is_assigned_arb;
+  select exists(
+    select 1 from public.certifiks_disputes d
+    join public.certifiks_bounties b
+      on b.organization_id=d.organization_id and b.bounty_id=d.bounty_id
+    where d.organization_id=p_org and d.dispute_id=p_dispute
+      and (d.opened_by=p_actor or b.sponsor_user_id=p_actor
+       or exists (
+        select 1 from public.certifiks_assignments ass
+        join public.certifiks_applications a
+          on a.organization_id=ass.organization_id and a.bounty_id=ass.bounty_id
+            and a.application_id=ass.application_id
+        where ass.organization_id=p_org and ass.bounty_id=d.bounty_id
+          and a.developer_user_id=p_actor))
+  ) into is_case_party;
   if (p_kind='case_opened' and p_actor<>opened_by)
+    or (p_kind='party_response' and (not is_case_party or p_actor=opened_by))
+    or (p_kind='supporting_evidence' and not is_case_party)
     or (p_kind='arbitrator_note' and not is_assigned_arb)
   then raise exception 'dispute actor not entitled to this event kind'; end if;
 

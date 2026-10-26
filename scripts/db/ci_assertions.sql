@@ -211,3 +211,19 @@ begin
   end if;
 end;
 $$;
+
+-- A chain reorg/finality rollback must immediately remove a once-public bounty.
+update public.certifiks_chain_events
+   set finalized = false, orphaned = true
+ where chain_id = 11155111 and transaction_hash = '0x' || repeat('1',64);
+do $$
+begin
+  if (select count(*) from public.certifiks_public_bounties_v1) <> 0 then
+    raise exception 'orphaned funding remained publicly listed';
+  end if;
+end;
+$$;
+-- Re-indexed canonical finalized fixture, never an actual RPC proof.
+update public.certifiks_chain_events
+   set finalized = true, orphaned = false
+ where chain_id = 11155111 and transaction_hash = '0x' || repeat('1',64);

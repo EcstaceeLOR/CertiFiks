@@ -105,7 +105,7 @@ test("upstream access failure, malformed rows and hidden bounty never return fak
   });
   try {
     assert.equal((await app.inject({ method: "GET", url: "/v1/bounties" })).statusCode, 503);
-    response = new Response(JSON.stringify([{ ...record, reward_atoms: 9007199254740993 }]), {
+    response = new Response(JSON.stringify([{ ...record, reward_atoms: 9007199254740992 }]), {
       status: 200,
     });
     assert.equal((await app.inject({ method: "GET", url: "/v1/bounties" })).statusCode, 503);

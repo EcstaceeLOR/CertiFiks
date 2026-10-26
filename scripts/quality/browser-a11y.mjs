@@ -12,7 +12,6 @@ const routes = [
   "/onboarding",
   "/opportunities",
   "/sponsor",
-  "/developer",
   "/verifier",
   "/disputes",
   "/wallet",

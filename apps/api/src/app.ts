@@ -187,7 +187,7 @@ export function buildApp(config: AppConfiguration = {}) {
         (typeof state !== "string" || !PUBLIC_BOUNTY_STATES.has(state))) ||
       (repo !== undefined &&
         (typeof repo !== "string" ||
-          !/^[A-Za-z0-9_.-]+\\/[A-Za-z0-9_.-]+$/.test(repo))) ||
+          !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo))) ||
       typeof sort !== "string" || !(sort in PUBLIC_HISTORY_SORTS) ||
       query.limit !== undefined
     ) {

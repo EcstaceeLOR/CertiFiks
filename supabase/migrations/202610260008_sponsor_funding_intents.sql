@@ -14,7 +14,6 @@ create table public.certifiks_sponsor_funding_intents (
   expires_at timestamptz not null,
   state text not null default 'prepared' check (state in ('prepared','cancelled')),
   cancelled_at timestamptz,
-  primary key (intent_id),
   unique (organization_id,sponsor_user_id,idempotency_digest),
   foreign key (organization_id,bounty_id)
     references public.certifiks_bounties(organization_id,bounty_id),

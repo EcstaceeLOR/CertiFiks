@@ -23,11 +23,10 @@ type Feed =
   | { kind: "available"; items: PublishedOpportunity[]; page: number; next: boolean };
 
 function canonical(params: Params): { state?: string; repo?: string; page: number } | null {
+  if (Array.isArray(params.state) || Array.isArray(params.repo) || Array.isArray(params.page)) return null;
   const state = params.state === "" ? undefined : params.state;
   const repo = params.repo === "" ? undefined : params.repo;
   if (
-    Array.isArray(params.state) || Array.isArray(params.repo) ||
-    Array.isArray(params.page) ||
     (state !== undefined && !STATES.includes(state as (typeof STATES)[number])) ||
     (repo !== undefined && !REPO.test(repo)) ||
     (params.page !== undefined && !/^(0|[1-9][0-9]{0,2})$/.test(params.page))

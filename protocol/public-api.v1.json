@@ -1,0 +1,416 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CertiFiks Implemented Public Read API",
+    "version": "1.0.0",
+    "description": "Live code route contract only. No private evidence or payout effects. The broader protocol/openapi.v1.json includes specification-only operations and must NOT be used to infer deployed mutations."
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Current CertiFiks server origin"
+    }
+  ],
+  "paths": {
+    "/v1/bounties": {
+      "get": {
+        "operationId": "listPublishedBountiesV1",
+        "summary": "Only explicitly published chain-indexed PUBLIC bounty metadata",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000,
+              "default": 0
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "funded",
+                "assigned",
+                "submitted",
+                "verifying",
+                "review",
+                "disputed",
+                "payable",
+                "settled",
+                "refunded"
+              ]
+            }
+          },
+          {
+            "name": "repo",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "oldest",
+                "repository"
+              ],
+              "default": "newest"
+            }
+          }
+        ],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "PublicBountyPageV1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicBountyPageV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ErrorV1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ErrorV1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          }
+        },
+        "x-certifiks-actual-implementation": true
+      }
+    },
+    "/v1/bounties/{bountyId}": {
+      "get": {
+        "operationId": "getPublishedBountyV1",
+        "summary": "Get one published public bounty by UUID",
+        "security": [],
+        "parameters": [
+          {
+            "name": "bountyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PublicBountyV1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicBountyV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ErrorV1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ErrorV1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ErrorV1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          }
+        },
+        "x-certifiks-actual-implementation": true
+      }
+    },
+    "/v1/partner/bounties": {
+      "get": {
+        "operationId": "listPartnerPublicBountiesV1",
+        "summary": "Partner-key authenticated PUBLIC finalized bounty listing",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000,
+              "default": 0
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "funded",
+                "assigned",
+                "submitted",
+                "verifying",
+                "review",
+                "disputed",
+                "payable",
+                "settled",
+                "refunded"
+              ]
+            }
+          },
+          {
+            "name": "repo",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "newest",
+                "oldest",
+                "repository"
+              ],
+              "default": "newest"
+            }
+          }
+        ],
+        "security": [
+          {
+            "PartnerKey": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PublicBountyPageV1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicBountyPageV1"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ErrorV1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "ErrorV1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ErrorV1",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorV1"
+                }
+              }
+            }
+          }
+        },
+        "x-certifiks-actual-implementation": true
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "PartnerKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-certifiks-api-key",
+        "description": "Operator-approved, revocable, hashed bearer key scoped to bounties:read and PostgreSQL shared 60/min quota. Never issue or send keys from a browser."
+      }
+    },
+    "schemas": {
+      "PublicBountyV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "bountyId",
+          "repositoryId",
+          "repositoryFullName",
+          "chainId",
+          "onchainBountyId",
+          "rewardAtoms",
+          "manifestDigest",
+          "state",
+          "createdAt",
+          "verificationProven"
+        ],
+        "properties": {
+          "bountyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "repositoryId": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "repositoryFullName": {
+            "type": "string"
+          },
+          "chainId": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "onchainBountyId": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "rewardAtoms": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$"
+          },
+          "manifestDigest": {
+            "type": "string",
+            "pattern": "^0x[a-f0-9]{64}$"
+          },
+          "state": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "verificationProven": {
+            "type": "boolean",
+            "const": false
+          }
+        }
+      },
+      "PublicBountyPageV1": {
+        "type": "object",
+        "required": [
+          "items",
+          "page"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicBountyV1"
+            }
+          },
+          "page": {
+            "type": "object",
+            "required": [
+              "limit",
+              "offset",
+              "nextOffset"
+            ],
+            "properties": {
+              "limit": {
+                "type": "integer"
+              },
+              "offset": {
+                "type": "integer"
+              },
+              "nextOffset": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            }
+          },
+          "verificationProven": {
+            "type": "boolean",
+            "const": false
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "ErrorV1": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

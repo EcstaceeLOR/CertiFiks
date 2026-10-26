@@ -536,3 +536,107 @@ end;
 $$;
 reset request.jwt.claim.role;
 select 'PASS: workspace invite replay, delegation matrix, owner transfer, revocation and custody separation' as result;
+
+-- Issue #32: prepared funding is immutable, tenant-scoped and never paid.
+insert into public.certifiks_bounties(
+  organization_id,bounty_id,repository_id,sponsor_user_id,
+  funded_manifest_digest,chain_id,reward_atoms,state
+) values(
+  '20000000-0000-4000-8000-000000000001',
+  '30000000-0000-4000-8000-000000000002',
+  401,'10000000-0000-4000-8000-000000000001',
+  '0x'||repeat('3',64),11155111,4200000,'draft'
+);
+
+set request.jwt.claim.role='service_role';
+do $$
+declare intent uuid; retry uuid; cancelled boolean;
+begin
+  intent:=public.certifiks_prepare_sponsor_funding(
+    '20000000-0000-4000-8000-000000000001',
+    '30000000-0000-4000-8000-000000000002',
+    '10000000-0000-4000-8000-000000000001',
+    '0x'||repeat('3',64),11155111,4200000,repeat('a',64)
+  );
+  retry:=public.certifiks_prepare_sponsor_funding(
+    '20000000-0000-4000-8000-000000000001',
+    '30000000-0000-4000-8000-000000000002',
+    '10000000-0000-4000-8000-000000000001',
+    '0x'||repeat('3',64),11155111,4200000,repeat('a',64)
+  );
+  if retry<>intent then raise exception 'replayed funding created multiple intents'; end if;
+  if (select count(*) from public.certifiks_sponsor_funding_intent_events
+      where intent_id=intent)<>1
+  then raise exception 'idempotency did not suppress duplicate audit events'; end if;
+  if exists(select 1 from public.certifiks_sponsor_funding_intents
+      where intent_id=intent and state<>'prepared')
+  then raise exception 'intent falsely claimed funds'; end if;
+
+  begin
+    update public.certifiks_bounties set reward_atoms=5000000
+    where bounty_id='30000000-0000-4000-8000-000000000002';
+    raise exception 'sponsor financial terms changed after intent preparation';
+  exception when raise_exception then
+    if sqlerrm<>'bounty financial terms locked by prepared sponsor intent'
+      then raise; end if;
+  end;
+  begin
+    update public.certifiks_sponsor_funding_intents
+      set manifest_digest='0x'||repeat('4',64) where intent_id=intent;
+    raise exception 'immutable intent was rewritten';
+  exception when raise_exception then
+    if sqlerrm<>'prepared funding intent cannot be changed' then raise; end if;
+  end;
+  begin
+    perform public.certifiks_prepare_sponsor_funding(
+      '20000000-0000-4000-8000-000000000001',
+      '30000000-0000-4000-8000-000000000002',
+      '10000000-0000-4000-8000-000000000002',
+      '0x'||repeat('3',64),11155111,4200000,repeat('b',64)
+    );
+    raise exception 'non-sponsor prepared bounty funding';
+  exception when raise_exception then
+    if sqlerrm<>'sponsor, draft or immutable financial terms mismatch'
+      then raise; end if;
+  end;
+  begin
+    perform public.certifiks_prepare_sponsor_funding(
+      '20000000-0000-4000-8000-000000000001',
+      '30000000-0000-4000-8000-000000000002',
+      '10000000-0000-4000-8000-000000000001',
+      '0x'||repeat('4',64),11155111,4200000,repeat('c',64)
+    );
+    raise exception 'unapproved manifest accepted for sponsor';
+  exception when raise_exception then
+    if sqlerrm<>'sponsor, draft or immutable financial terms mismatch'
+      then raise; end if;
+  end;
+  if public.certifiks_cancel_sponsor_funding(
+    intent,'20000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000002'
+  ) then raise exception 'unrelated contributor cancelled funding'; end if;
+  cancelled:=public.certifiks_cancel_sponsor_funding(
+    intent,'20000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001'
+  );
+  if not cancelled then raise exception 'sponsor cancellation not persisted'; end if;
+  if public.certifiks_cancel_sponsor_funding(
+    intent,'20000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001'
+  ) then raise exception 'cancellation was not idempotently terminal'; end if;
+  if (select count(*) from public.certifiks_sponsor_funding_intent_events
+     where intent_id=intent)<>2
+  then raise exception 'missing or duplicate funding audit events'; end if;
+  if (select state from public.certifiks_bounties
+      where bounty_id='30000000-0000-4000-8000-000000000002')<>'draft'
+  then raise exception 'intent incorrectly marked bounty funded'; end if;
+  if (select count(*) from public.certifiks_chain_observed_logs
+      where chain_id=11155111)<>0
+  then raise exception 'intent fabricated chain logs'; end if;
+  if has_table_privilege('anon',
+      'public.certifiks_sponsor_funding_intents','SELECT')
+  then raise exception 'browser can access private intents'; end if;
+end;
+$$;
+reset request.jwt.claim.role;
+select 'PASS: immutable sponsored funding intent, replay, cancellation, no synthetic custody' as result;

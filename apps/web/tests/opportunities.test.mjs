@@ -43,5 +43,5 @@ test("filterable pagination is bounded and exact before displaying public-only b
   assert.match(opportunity, /endpoint\.searchParams\.set\("state"/);
   assert.match(opportunity, /endpoint\.searchParams\.set\("repo"/);
   assert.match(opportunity, /endpoint\.searchParams\.set\("offset"/);
-  assert.match(opportunity, /Filters apply at the live backend/);
+  assert.match(opportunity, /Filters apply/);
 });

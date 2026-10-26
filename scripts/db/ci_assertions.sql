@@ -291,3 +291,89 @@ end;
 $$;
 reset request.jwt.claim.role;
 select 'PASS: chain replay, parent gap, reorg, finality, privacy and unchanged bounty funding' as result;
+
+-- Issue #28: durable queue retries, idempotent attempt/stage and lease fencing.
+set request.jwt.claim.role = 'service_role';
+do $$
+declare
+  a uuid;
+  b uuid;
+  claimed public.certifiks_verification_jobs%rowtype;
+  replay uuid;
+begin
+  a := public.certifiks_enqueue_verification_stage(
+    '20000000-0000-4000-8000-000000000001',
+    '30000000-0000-4000-8000-000000000001',
+    '60000000-0000-4000-8000-000000000001',
+    '0x'||repeat('a',64), 'baseline'
+  );
+  replay := public.certifiks_enqueue_verification_stage(
+    '20000000-0000-4000-8000-000000000001',
+    '30000000-0000-4000-8000-000000000001',
+    '60000000-0000-4000-8000-000000000001',
+    '0x'||repeat('a',64), 'baseline'
+  );
+  if a<>replay then raise exception 'duplicate job created by retry'; end if;
+  begin
+    perform public.certifiks_enqueue_verification_stage(
+      '20000000-0000-4000-8000-000000000002',
+      '30000000-0000-4000-8000-000000000001',
+      '60000000-0000-4000-8000-000000000001',
+      '0x'||repeat('a',64), 'baseline'
+    );
+    raise exception 'foreign-tenant queued verification';
+  exception when raise_exception then
+    if sqlerrm<>'attempt does not match the funded manifest and tenant'
+    then raise; end if;
+  end;
+  select * into claimed from public.certifiks_claim_verification_jobs(5);
+  if claimed.job_id<>a or claimed.attempts<>1 or claimed.lease_id is null
+  then raise exception 'job lease was not atomically acquired'; end if;
+  if public.certifiks_complete_verification_job(
+      a,gen_random_uuid(),1,true,null)
+  then raise exception 'wrong lease completed job'; end if;
+  if not public.certifiks_heartbeat_verification_job(
+      a,claimed.lease_id,1)
+  then raise exception 'valid heartbeat rejected'; end if;
+  if not public.certifiks_complete_verification_job(
+      a,claimed.lease_id,1,false,'GITHUB_RATE_LIMITED')
+  then raise exception 'retry failed'; end if;
+  if exists(select 1 from public.certifiks_claim_verification_jobs(5))
+  then raise exception 'backoff was not respected'; end if;
+  update public.certifiks_verification_jobs
+    set retry_after=now()-interval '1 second'
+    where job_id=a;
+  select * into claimed from public.certifiks_claim_verification_jobs(5);
+  if claimed.job_id<>a or claimed.attempts<>2
+  then raise exception 'retry attempt not re-leased'; end if;
+  if public.certifiks_complete_verification_job(
+      a,gen_random_uuid(),1,true,null)
+  then raise exception 'expired worker acknowledged new lease'; end if;
+  if not public.certifiks_complete_verification_job(
+      a,claimed.lease_id,2,true,null)
+  then raise exception 'correct lease acknowledgement failed'; end if;
+  if (select status from public.certifiks_verification_jobs where job_id=a)<>'succeeded'
+  then raise exception 'verified job not terminal'; end if;
+  b:=public.certifiks_enqueue_verification_stage(
+    '20000000-0000-4000-8000-000000000001',
+    '30000000-0000-4000-8000-000000000001',
+    '60000000-0000-4000-8000-000000000001',
+    '0x'||repeat('a',64),'candidate'
+  );
+  update public.certifiks_verification_jobs
+    set max_attempts=1 where job_id=b;
+  select * into claimed from public.certifiks_claim_verification_jobs(5);
+  if claimed.job_id<>b then raise exception 'candidate stage not claimable'; end if;
+  if not public.certifiks_complete_verification_job(
+      b,claimed.lease_id,1,false,'RUNNER_CRASHED')
+  then raise exception 'failure acknowledgement rejected'; end if;
+  if (select status from public.certifiks_verification_jobs where job_id=b)<>'dead_letter'
+  then raise exception 'exhausted job did not dead-letter'; end if;
+  if (select count(*) from public.certifiks_payments)<>0 then
+    raise exception 'verification jobs unexpectedly mutated payments'; end if;
+  if has_table_privilege('anon','public.certifiks_verification_jobs','SELECT') then
+    raise exception 'browser can access private queue'; end if;
+end;
+$$;
+reset request.jwt.claim.role;
+select 'PASS: verifier queue idempotency, lease fencing, backoff, dead-letter and no payout writes' as result;

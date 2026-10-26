@@ -15,10 +15,16 @@ const onboarding = readFileSync(
 test("contributor discovery is linked and does not pretend to apply, withdraw, or sign funds", () => {
   assert.match(home, /href="\/opportunities"/);
   assert.match(onboarding, /href="\/opportunities"/);
-  assert.match(opportunity, /Contributor applications and earnings are not enabled/);
+  assert.match(
+    opportunity,
+    /Contributor applications and earnings are not enabled/,
+  );
   assert.match(opportunity, /APPLICATION UNAVAILABLE/);
   assert.match(opportunity, /wallet payouts must be operational/);
-  assert.doesNotMatch(opportunity, /onClick=|POST.*\/applications|sendTransaction/);
+  assert.doesNotMatch(
+    opportunity,
+    /onClick=|POST.*\/applications|sendTransaction/,
+  );
 });
 
 test("contributor browsing is live-data only and fails visibly without configured API", () => {

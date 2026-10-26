@@ -158,10 +158,16 @@ test("developer search applies exact DB filters before pagination and never infl
     called++;
     const u = new URL(String(url));
     assert.equal(u.searchParams.get("state"), "eq.funded");
-    assert.equal(u.searchParams.get("repository_full_name"), "eq.maintainer/fix-repo");
+    assert.equal(
+      u.searchParams.get("repository_full_name"),
+      "eq.maintainer/fix-repo",
+    );
     assert.equal(u.searchParams.get("limit"), "12");
     assert.equal(u.searchParams.get("offset"), "24");
-    assert.equal(new Headers(options?.headers).get("Authorization"), `Bearer ${serviceRole}`);
+    assert.equal(
+      new Headers(options?.headers).get("Authorization"),
+      `Bearer ${serviceRole}`,
+    );
     return new Response(JSON.stringify([record]), { status: 200 });
   }) as typeof fetch;
   const app = buildApp({

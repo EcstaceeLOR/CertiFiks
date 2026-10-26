@@ -1,5 +1,8 @@
 import Fastify from "fastify";
-import { PublicBountyClient, PUBLIC_BOUNTY_STATES } from "./bounties/public-bounties.js";
+import {
+  PUBLIC_BOUNTY_STATES,
+  PublicBountyClient,
+} from "./bounties/public-bounties.js";
 import {
   GitHubWebhookError,
   parseTrustedGitHubWebhook,

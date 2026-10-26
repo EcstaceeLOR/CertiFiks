@@ -57,7 +57,9 @@ function parseRecord(row: unknown): PublicBountyV1 {
     typeof record.manifest_digest === "string" &&
       SHA256.test(record.manifest_digest),
   );
-  assertField(typeof record.state === "string" && PUBLIC_BOUNTY_STATES.has(record.state));
+  assertField(
+    typeof record.state === "string" && PUBLIC_BOUNTY_STATES.has(record.state),
+  );
   assertField(
     typeof record.created_at === "string" &&
       Number.isFinite(Date.parse(record.created_at)),
@@ -114,7 +116,8 @@ export class PublicBountyClient {
       offset < 0 ||
       offset > 10000 ||
       (bountyId !== undefined && !ID.test(bountyId)) ||
-      (filters.state !== undefined && !PUBLIC_BOUNTY_STATES.has(filters.state)) ||
+      (filters.state !== undefined &&
+        !PUBLIC_BOUNTY_STATES.has(filters.state)) ||
       (filters.repositoryFullName !== undefined &&
         !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(filters.repositoryFullName))
     ) {
@@ -131,7 +134,10 @@ export class PublicBountyClient {
     if (bountyId) url.searchParams.set("bounty_id", `eq.${bountyId}`);
     if (filters.state) url.searchParams.set("state", `eq.${filters.state}`);
     if (filters.repositoryFullName)
-      url.searchParams.set("repository_full_name", `eq.${filters.repositoryFullName}`);
+      url.searchParams.set(
+        "repository_full_name",
+        `eq.${filters.repositoryFullName}`,
+      );
     let response: Response;
     try {
       response = await this.request(url.href, {

@@ -56,7 +56,8 @@ function validateIdentity(principal: VerifiedSponsorPrincipalV1): void {
 
 function assertPositiveAtomicInteger(value: string): void {
   fail(
-    typeof value === "string" && NUMBER.test(value) &&
+    typeof value === "string" &&
+      NUMBER.test(value) &&
       BigInt(value) < 2n ** 256n,
     "Only canonical decimal-string atomic units are allowed",
   );
@@ -72,9 +73,14 @@ export class ServerSponsorFundingIntentV1 {
   ) {
     const url = new URL(supabaseUrl);
     fail(
-      url.protocol === "https:" && url.hostname.endsWith(".supabase.co") &&
-      !url.username && !url.password && !url.search && !url.hash &&
-      typeof serverKey === "string" && serverKey.length >= 16,
+      url.protocol === "https:" &&
+        url.hostname.endsWith(".supabase.co") &&
+        !url.username &&
+        !url.password &&
+        !url.search &&
+        !url.hash &&
+        typeof serverKey === "string" &&
+        serverKey.length >= 16,
       "Server-only database credentials required",
     );
     this.endpoint = new URL("/rest/v1/rpc/", url);
@@ -97,15 +103,20 @@ export class ServerSponsorFundingIntentV1 {
         signal: AbortSignal.timeout(8_000),
       });
     } catch {
-      throw new SponsorFundingIntentError("Funding preparation store unavailable");
+      throw new SponsorFundingIntentError(
+        "Funding preparation store unavailable",
+      );
     }
-    if (!response.ok) throw new SponsorFundingIntentError(
-      "Funding preparation rejected by immutable server policy",
-    );
+    if (!response.ok)
+      throw new SponsorFundingIntentError(
+        "Funding preparation rejected by immutable server policy",
+      );
     try {
       return await response.json();
     } catch {
-      throw new SponsorFundingIntentError("Invalid funding preparation receipt");
+      throw new SponsorFundingIntentError(
+        "Invalid funding preparation receipt",
+      );
     }
   }
 
@@ -115,9 +126,11 @@ export class ServerSponsorFundingIntentV1 {
   ): Promise<PreparedSponsorFundingV1> {
     validateIdentity(principal);
     fail(UUID.test(details.bountyId), "Invalid bounty identity");
-    fail(DIGEST.test(details.manifestDigest) &&
-      IDEMPOTENCY.test(details.idempotencyDigest),
-      "Invalid immutable acceptance or idempotency digest");
+    fail(
+      DIGEST.test(details.manifestDigest) &&
+        IDEMPOTENCY.test(details.idempotencyDigest),
+      "Invalid immutable acceptance or idempotency digest",
+    );
     assertPositiveAtomicInteger(details.chainId);
     assertPositiveAtomicInteger(details.rewardAtoms);
     const value = await this.rpc("certifiks_prepare_sponsor_funding", {
@@ -129,8 +142,10 @@ export class ServerSponsorFundingIntentV1 {
       p_reward: details.rewardAtoms,
       p_idempotency_digest: details.idempotencyDigest,
     });
-    fail(typeof value === "string" && UUID.test(value),
-      "Backend did not return canonical intent identity");
+    fail(
+      typeof value === "string" && UUID.test(value),
+      "Backend did not return canonical intent identity",
+    );
     return {
       intentId: value,
       state: "prepared",

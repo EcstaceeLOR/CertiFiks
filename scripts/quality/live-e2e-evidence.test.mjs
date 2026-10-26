@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -26,8 +26,11 @@ function fixture() {
     path,
     sha256: createHash("sha256").update(contentByPath[path]).digest("hex"),
     sizeBytes: Buffer.byteLength(contentByPath[path]),
-    kind: path.startsWith("receipts/") ? "receipt" : path.startsWith("browser/") ?
-      "browser" : "report",
+    kind: path.startsWith("receipts/")
+      ? "receipt"
+      : path.startsWith("browser/")
+        ? "browser"
+        : "report",
   }));
   // More than eight independent paths are required for an actual bundle.
   for (let i = 0; i < 5; i++) {
@@ -56,16 +59,22 @@ function fixture() {
       networkName: "SYNTHETIC_UNIT_TEST",
       chainId: "31337",
       genesisHash: "0x" + "b".repeat(64),
-      approvedRuntimeEvidenceUrl: "https://github.com/EcstaceeLOR/CertiFiks/issues/18",
+      approvedRuntimeEvidenceUrl:
+        "https://github.com/EcstaceeLOR/CertiFiks/issues/18",
     },
     participants: {
       sponsorGitHubUserId: "101",
       contributorGitHubUserId: "102",
-      verifierOrganizationIds: ["synthetic-review-org-a", "synthetic-review-org-b"],
+      verifierOrganizationIds: [
+        "synthetic-review-org-a",
+        "synthetic-review-org-b",
+      ],
       independentReplayGitHubUserId: "103",
     },
     transactions: [
-      tx("funding", "1"), tx("withdrawal", "2"), tx("refund", "3"),
+      tx("funding", "1"),
+      tx("withdrawal", "2"),
+      tx("refund", "3"),
     ],
     escrowConservation: {
       openingAtoms: "0",
@@ -75,7 +84,9 @@ function fixture() {
       closingAtoms: "50",
     },
     scenarios: REQUIRED_LIVE_SCENARIOS_V1.map((name) => ({
-      name, status: "observed_pass", evidenceArtifact: reportPath,
+      name,
+      status: "observed_pass",
+      evidenceArtifact: reportPath,
     })),
     artifacts,
     independentReviewer: {
@@ -142,7 +153,10 @@ test("mock outcomes and placebo URLs are rejected", async () => {
     await assert.rejects(validateLiveE2EIntakeV1(bundle, root), E2EIntakeError);
     bundle.scenarios[0].status = "observed_pass";
     bundle.network.approvedRuntimeEvidenceUrl = "https://example.com/fake";
-    await assert.rejects(validateLiveE2EIntakeV1(bundle, root), /chain runtime/);
+    await assert.rejects(
+      validateLiveE2EIntakeV1(bundle, root),
+      /chain runtime/,
+    );
   });
 });
 

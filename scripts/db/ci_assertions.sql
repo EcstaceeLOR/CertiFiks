@@ -805,3 +805,52 @@ end;
 $$;
 reset request.jwt.claim.role;
 select 'PASS: private dispute timeline, per-case arbitrator, idempotency and no payout' as result;
+
+-- Issue #39: scoped API credentials never leak tenant content, cannot survive
+-- revocation, and are rate-budgeted transactionally across replicas.
+set request.jwt.claim.role='service_role';
+do $$
+declare key_record uuid; org_id uuid := '20000000-0000-4000-8000-000000000001';
+  owner_id uuid := '10000000-0000-4000-8000-000000000002';
+  old_owner uuid := '10000000-0000-4000-8000-000000000001';
+  n integer;
+begin
+  insert into public.certifiks_partner_keys(
+    organization_id,issued_by_user_id,key_sha256,expires_at
+  ) values(org_id,owner_id,repeat('a',64),now()+interval '1 day')
+  returning key_id into key_record;
+  if not public.certifiks_authorize_partner_key(repeat('a',64),'bounties:read')
+  then raise exception 'active scoped key rejected'; end if;
+  if public.certifiks_authorize_partner_key(repeat('a',64),'evidence:private')
+  then raise exception 'partner key escalated to private evidence'; end if;
+  if public.certifiks_authorize_partner_key(repeat('f',64),'bounties:read')
+  then raise exception 'unknown partner token authorized'; end if;
+  for n in 1..59 loop
+    if not public.certifiks_authorize_partner_key(repeat('a',64),'bounties:read')
+    then raise exception 'partner rate budget blocked too early'; end if;
+  end loop;
+  if public.certifiks_authorize_partner_key(repeat('a',64),'bounties:read')
+  then raise exception 'global partner rate budget ignored'; end if;
+  update public.certifiks_partner_keys
+     set request_window=now()-interval '2 minutes' where key_id=key_record;
+  if not public.certifiks_authorize_partner_key(repeat('a',64),'bounties:read')
+  then raise exception 'expired rate window never reset'; end if;
+  begin
+    perform public.certifiks_revoke_partner_key(key_record,org_id,old_owner);
+    raise exception 'revoked owner could revoke API credentials';
+  exception when raise_exception then
+    if sqlerrm<>'active owner authentication required' then raise; end if;
+  end;
+  if not public.certifiks_revoke_partner_key(key_record,org_id,owner_id)
+  then raise exception 'current owner could not revoke partner key'; end if;
+  if public.certifiks_authorize_partner_key(repeat('a',64),'bounties:read')
+  then raise exception 'revoked partner key still authorized'; end if;
+  if has_table_privilege('anon','public.certifiks_partner_keys','SELECT')
+  then raise exception 'anonymous principals can see token digest'; end if;
+  if has_function_privilege('authenticated',
+    'public.certifiks_authorize_partner_key(text,text)','EXECUTE')
+  then raise exception 'browser principals can invoke server-side partner auth'; end if;
+end;
+$$;
+reset request.jwt.claim.role;
+select 'PASS: partner scopes, revocation, cross-replica quota, owner approval and private RLS' as result;

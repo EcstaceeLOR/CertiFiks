@@ -59,7 +59,15 @@ join public.certifiks_repositories r
   on r.organization_id = b.organization_id
  and r.repository_id = b.repository_id
 where b.public_listing = true
-  and b.state not in ('draft','blocked');
+  and b.state not in ('draft','blocked')
+  and exists (
+    select 1 from public.certifiks_chain_events e
+     where e.organization_id = b.organization_id
+       and e.bounty_id = b.bounty_id
+       and e.chain_id = b.chain_id
+       and e.finalized = true
+       and e.orphaned = false
+  );
 
 revoke all on public.certifiks_public_bounties_v1 from public,anon,authenticated;
 grant select on public.certifiks_public_bounties_v1 to service_role;

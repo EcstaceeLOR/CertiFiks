@@ -1,0 +1,29 @@
+name: Normalize Issue 39 integration
+on:
+  push:
+    branches:
+      - feat/issue-39-partner-cli-api-contracts
+permissions:
+  contents: write
+jobs:
+  format:
+    if: ${{ !contains(github.event.head_commit.message, '[format-ci]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npx biome check --write apps/api/src/app.ts apps/api/src/partners/partner-keys.ts apps/api/src/partners/github-check-plan.ts apps/api/test/partner-keys.test.ts apps/api/test/github-check-plan.test.ts scripts/verify-manifest.mjs scripts/verify-manifest.test.mjs scripts/verify-evidence.test.mjs scripts/check-public-api-contract.test.mjs protocol/public-api.v1.json
+      - name: Commit canonical formatting
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/api/src/app.ts apps/api/src/partners apps/api/test/partner-keys.test.ts apps/api/test/github-check-plan.test.ts scripts/verify-manifest.mjs scripts/verify-manifest.test.mjs scripts/verify-evidence.test.mjs scripts/check-public-api-contract.test.mjs protocol/public-api.v1.json
+          if ! git diff --cached --quiet; then
+            git commit -m "style(#39): canonical API and CLI formatting [format-ci]"
+            git push origin HEAD:feat/issue-39-partner-cli-api-contracts
+          fi

@@ -41,7 +41,7 @@ export function prepareGitHubCheckV1(
 ): PreparedGitHubCheckRunV1 {
   if (
     !REPO.test(v.repositoryFullName) ||
-    /(^|\\/)\\.{1,2}(\\/|$)/.test(v.repositoryFullName) ||
+    /(^|\/)\.{1,2}(\/|$)/.test(v.repositoryFullName) ||
     !UINT.test(v.repositoryId) ||
     !UINT.test(v.attemptId) ||
     !SHA.test(v.headCommitSha) ||

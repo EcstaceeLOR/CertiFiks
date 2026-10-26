@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 const route = join(dirname(fileURLToPath(import.meta.url)), "../app/verifier");
 
@@ -15,7 +15,10 @@ test("reviewer route has a protected, truthful initial state without sign button
   assert.match(page, /aria-label="Verifier navigation"/);
   assert.match(page, /href="#review-requirements"/);
   assert.match(page, /id="review-requirements"/);
-  assert.doesNotMatch(page, /onClick\s*=|signMessage\(|writeContract\(|submitAttestation\(/);
+  assert.doesNotMatch(
+    page,
+    /onClick\s*=|signMessage\(|writeContract\(|submitAttestation\(/,
+  );
 });
 
 test("reviewer focus, contrast and mobile reflow requirements have dedicated styling", () => {

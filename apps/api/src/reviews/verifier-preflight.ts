@@ -56,7 +56,11 @@ function parseRow(input: unknown): VerifierReviewPreflightV1 {
       blocked("unpinned commit");
     }
   }
-  for (const key of ["funded_manifest_digest", "plan_digest", "runner_image_digest"]) {
+  for (const key of [
+    "funded_manifest_digest",
+    "plan_digest",
+    "runner_image_digest",
+  ]) {
     if (typeof row[key] !== "string" || !SHA256.test(row[key])) {
       blocked("uncommitted reviewer evidence");
     }
@@ -64,21 +68,27 @@ function parseRow(input: unknown): VerifierReviewPreflightV1 {
   if (
     row.result_digest !== null &&
     (typeof row.result_digest !== "string" || !SHA256.test(row.result_digest))
-  ) blocked("invalid reported result digest");
-  if (typeof row.runner_outcome !== "string" || !OUTCOMES.has(row.runner_outcome)) {
+  )
+    blocked("invalid reported result digest");
+  if (
+    typeof row.runner_outcome !== "string" ||
+    !OUTCOMES.has(row.runner_outcome)
+  ) {
     blocked("unexpected reported outcome");
   }
   if (
     row.completed_at !== null &&
     (typeof row.completed_at !== "string" ||
       !Number.isFinite(Date.parse(row.completed_at)))
-  ) blocked("invalid review timestamp");
+  )
+    blocked("invalid review timestamp");
   if (
     typeof row.artifact_count !== "number" ||
     !Number.isSafeInteger(row.artifact_count) ||
     row.artifact_count < 0 ||
     row.artifact_count > 100
-  ) blocked("untrusted artifact count");
+  )
+    blocked("untrusted artifact count");
   if (row.can_attest !== false || row.payout_authorized !== false) {
     blocked("unauthorized signer or payout flag");
   }
@@ -112,9 +122,14 @@ export class ServerVerifierReviewClientV1 {
     if (
       url.protocol !== "https:" ||
       !url.hostname.endsWith(".supabase.co") ||
-      url.username || url.password || url.search || url.hash ||
-      typeof serviceRoleKey !== "string" || serviceRoleKey.length < 16
-    ) blocked("trusted server-only Supabase configuration is required");
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash ||
+      typeof serviceRoleKey !== "string" ||
+      serviceRoleKey.length < 16
+    )
+      blocked("trusted server-only Supabase configuration is required");
     this.endpoint = new URL(
       "/rest/v1/rpc/certifiks_verifier_review_preflight",
       url,
@@ -128,9 +143,13 @@ export class ServerVerifierReviewClientV1 {
     limit = 25,
   ): Promise<VerifierReviewPreflightV1[]> {
     if (
-      !UUID.test(organizationId) || !UUID.test(trustedActorUserId) ||
-      !Number.isSafeInteger(limit) || limit < 1 || limit > 50
-    ) blocked("invalid review principal or pagination");
+      !UUID.test(organizationId) ||
+      !UUID.test(trustedActorUserId) ||
+      !Number.isSafeInteger(limit) ||
+      limit < 1 ||
+      limit > 50
+    )
+      blocked("invalid review principal or pagination");
     let response: Response;
     try {
       response = await this.request(this.endpoint, {

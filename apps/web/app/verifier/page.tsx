@@ -25,10 +25,16 @@ const duties = [
 export default function VerifierPage() {
   return (
     <main id="main-content" className={styles.page}>
-      <a href="#review-requirements" className={styles.skip}>Skip to review requirements</a>
+      <a href="#review-requirements" className={styles.skip}>
+        Skip to review requirements
+      </a>
       <header className={styles.header}>
         <div className={styles.headerInner}>
-          <Link href="/" className={styles.wordmark} aria-label="CertiFiks home">
+          <Link
+            href="/"
+            className={styles.wordmark}
+            aria-label="CertiFiks home"
+          >
             certi<span>fiks</span>.
           </Link>
           <nav aria-label="Verifier navigation" className={styles.nav}>
@@ -39,18 +45,21 @@ export default function VerifierPage() {
       </header>
       <div className={styles.body}>
         <p className={styles.eyebrow}>INDEPENDENT VERIFICATION / ROLE ACCESS</p>
-        <h1>Evidence before <em>approval.</em></h1>
+        <h1>
+          Evidence before <em>approval.</em>
+        </h1>
         <p className={styles.lead}>
-          An actual verification decision needs independently reproducible test outcomes,
-          trusted reviewer identity and report signatures tied to an immutable commit.
-          Nothing is approved just because a runner completed.
+          An actual verification decision needs independently reproducible test
+          outcomes, trusted reviewer identity and report signatures tied to an
+          immutable commit. Nothing is approved just because a runner completed.
         </p>
         <div className={styles.warning} role="status" aria-live="polite">
           <strong>Live reviewer sessions are not enabled.</strong>
           <p>
-            This screen will not display private cases or allow signatures until secure
-            wallet/GitHub authentication, reviewer enrollment and evidence access are connected.
-            No attestation or payout is performed here.
+            This screen will not display private cases or allow signatures until
+            secure wallet/GitHub authentication, reviewer enrollment and
+            evidence access are connected. No attestation or payout is performed
+            here.
           </p>
         </div>
         <section id="review-requirements" aria-labelledby="requirements-title">
@@ -73,9 +82,10 @@ export default function VerifierPage() {
             <p className={styles.eyebrow}>PROTECTED REVIEW QUEUE</p>
             <h2 id="queue-title">No authenticated cases available here</h2>
             <p>
-              The server-side preflight checks tenant scope and excludes a bounty's sponsor
-              or contributing developer. Public browsers are not given private artifact URLs,
-              review votes or a fabricated approval queue.
+              The server-side preflight checks tenant scope and excludes a
+              bounty's sponsor or contributing developer. Public browsers are
+              not given private artifact URLs, review votes or a fabricated
+              approval queue.
             </p>
           </div>
           <div className={styles.queueStatus}>
@@ -83,16 +93,26 @@ export default function VerifierPage() {
             <strong>Review disabled</strong>
           </div>
         </section>
-        <section aria-labelledby="integrity-title" className={styles.footerNote}>
+        <section
+          aria-labelledby="integrity-title"
+          className={styles.footerNote}
+        >
           <h2 id="integrity-title">Nothing is signed automatically.</h2>
           <p>
-            On-chain attestation, reviewer separation, report retention, appeal windows
-            and escrow settlement require additional independent checks and an explicit,
-            authenticated user action. They are not yet available.
+            On-chain attestation, reviewer separation, report retention, appeal
+            windows and escrow settlement require additional independent checks
+            and an explicit, authenticated user action. They are not yet
+            available.
           </p>
-          <Link href="/onboarding" className={styles.link}>View role requirements ↗</Link>
-          <a href="https://github.com/EcstaceeLOR/CertiFiks/issues/34"
-            rel="noreferrer" target="_blank" className={styles.secondaryLink}>
+          <Link href="/onboarding" className={styles.link}>
+            View role requirements ↗
+          </Link>
+          <a
+            href="https://github.com/EcstaceeLOR/CertiFiks/issues/34"
+            rel="noreferrer"
+            target="_blank"
+            className={styles.secondaryLink}
+          >
             Follow verifier implementation ↗
           </a>
         </section>

@@ -26,7 +26,10 @@ test("verifier queue reads fixed server RPC with trusted actor and disallows sig
   let calls = 0;
   const mock = (async (url: string, request?: RequestInit) => {
     calls++;
-    assert.equal(url, "https://reviewer-test.supabase.co/rest/v1/rpc/certifiks_verifier_review_preflight");
+    assert.equal(
+      url,
+      "https://reviewer-test.supabase.co/rest/v1/rpc/certifiks_verifier_review_preflight",
+    );
     assert.equal(request?.method, "POST");
     assert.equal(request?.redirect, "error");
     assert.equal(
@@ -54,13 +57,21 @@ test("verifier queue reads fixed server RPC with trusted actor and disallows sig
 });
 
 test("rejects untrusted identity, cross-tenant rows and forged signer flags", async () => {
-  let responseRows = [{ ...row, organization_id: "20000000-0000-4000-8000-000000000002" }];
+  let responseRows = [
+    { ...row, organization_id: "20000000-0000-4000-8000-000000000002" },
+  ];
   const reader = new ServerVerifierReviewClientV1(
     "https://reviewer-test.supabase.co",
     "reviewer-test-service-key",
-    (async () => new Response(JSON.stringify(responseRows), { status: 200 })) as typeof fetch,
+    (async () =>
+      new Response(JSON.stringify(responseRows), {
+        status: 200,
+      })) as typeof fetch,
   );
-  await assert.rejects(reader.list(ORG, "not-uuid", 10), /VERIFIER_PREFLIGHT_BLOCKED/);
+  await assert.rejects(
+    reader.list(ORG, "not-uuid", 10),
+    /VERIFIER_PREFLIGHT_BLOCKED/,
+  );
   await assert.rejects(reader.list(ORG, ACTOR, 10), /cross-tenant/);
   responseRows = [{ ...row, can_attest: true }] as typeof responseRows;
   await assert.rejects(reader.list(ORG, ACTOR, 10), /unauthorized signer/);
@@ -72,9 +83,13 @@ test("unavailable or unauthorized upstream must never report verified evidence",
   const reader = new ServerVerifierReviewClientV1(
     "https://reviewer-test.supabase.co",
     "reviewer-test-service-key",
-    (async () => new Response("not authorized", { status: 403 })) as typeof fetch,
+    (async () =>
+      new Response("not authorized", { status: 403 })) as typeof fetch,
   );
-  await assert.rejects(reader.list(ORG, ACTOR), /authorization or database unavailable/);
+  await assert.rejects(
+    reader.list(ORG, ACTOR),
+    /authorization or database unavailable/,
+  );
 });
 
 test("unsafe backend origins and credentials are blocked", () => {
@@ -84,7 +99,8 @@ test("unsafe backend origins and credentials are blocked", () => {
     "https://reviewer-test.supabase.co/?key=bad",
   ]) {
     assert.throws(
-      () => new ServerVerifierReviewClientV1(origin, "reviewer-test-service-key"),
+      () =>
+        new ServerVerifierReviewClientV1(origin, "reviewer-test-service-key"),
       /VERIFIER_PREFLIGHT_BLOCKED/,
     );
   }

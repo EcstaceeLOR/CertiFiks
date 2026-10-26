@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFile, stat } from "node:fs/promises";
+import { lstat, readFile } from "node:fs/promises";
 import { resolve, relative, sep } from "node:path";
 
 const SHA256 = /^[a-f0-9]{64}$/;
@@ -96,7 +96,7 @@ async function digestLocalFile(root, item) {
   const absolute = resolve(root, item.path);
   const offset = relative(root, absolute);
   check(offset !== ".." && !offset.startsWith(".." + sep), "artifact path escaped evidence directory");
-  const info = await stat(absolute);
+  const info = await lstat(absolute);
   check(info.isFile() && !info.isSymbolicLink() && info.size === item.sizeBytes,
     "artifact missing, symlink or byte-length mismatch");
   const bytes = await readFile(absolute);

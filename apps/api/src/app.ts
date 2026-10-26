@@ -1,5 +1,8 @@
 import Fastify from "fastify";
-import { PublicBountyClient } from "./bounties/public-bounties.js";
+import {
+  PUBLIC_BOUNTY_STATES,
+  PublicBountyClient,
+} from "./bounties/public-bounties.js";
 import {
   GitHubWebhookError,
   parseTrustedGitHubWebhook,
@@ -117,12 +120,28 @@ export function buildApp(config: AppConfiguration = {}) {
     ) {
       return reply.code(400).send({ error: "PUBLIC_BOUNTY_INVALID_QUERY" });
     }
+    // Only exact published state/repository match is accepted. Filtering must
+    // happen inside the private finalized-only PostgREST view *before* paging.
+    const state = query.state;
+    const repositoryFullName = query.repo;
+    if (
+      (state !== undefined &&
+        (typeof state !== "string" || !PUBLIC_BOUNTY_STATES.has(state))) ||
+      (repositoryFullName !== undefined &&
+        (typeof repositoryFullName !== "string" ||
+          !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repositoryFullName)))
+    ) {
+      return reply.code(400).send({ error: "PUBLIC_BOUNTY_INVALID_FILTER" });
+    }
     try {
       const items = await new PublicBountyClient(
         supabaseUrl!,
         supabaseKey!,
         config.publicBountyFetch ?? fetch,
-      ).list(limit, offset);
+      ).list(limit, offset, undefined, {
+        state: state as string | undefined,
+        repositoryFullName: repositoryFullName as string | undefined,
+      });
       return reply.send({
         items,
         page: {

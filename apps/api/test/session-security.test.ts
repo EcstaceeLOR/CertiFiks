@@ -28,28 +28,60 @@ test("creates unique cryptographic wallet challenges bound to approved domain an
   assert.ok(a.message.includes(`Chain ID: 1`));
   assert.ok(a.message.includes(`URI: ${origin}`));
   assert.ok(a.message.includes(`Nonce: ${a.nonce}`));
-  assertChallengeUsableV1(a, { ...input, message: a.message, nonce: a.nonce }, now + 10);
-  assert.throws(() => assertChallengeUsableV1(
-    a, { ...input, message: a.message, nonce: a.nonce }, now + 301,
-  ), /expired/);
-  assert.throws(() => assertChallengeUsableV1(
-    a, { ...input, chainId: "11155111", message: a.message, nonce: a.nonce }, now + 10,
-  ), /binding/);
+  assertChallengeUsableV1(
+    a,
+    { ...input, message: a.message, nonce: a.nonce },
+    now + 10,
+  );
+  assert.throws(
+    () =>
+      assertChallengeUsableV1(
+        a,
+        { ...input, message: a.message, nonce: a.nonce },
+        now + 301,
+      ),
+    /expired/,
+  );
+  assert.throws(
+    () =>
+      assertChallengeUsableV1(
+        a,
+        { ...input, chainId: "11155111", message: a.message, nonce: a.nonce },
+        now + 10,
+      ),
+    /binding/,
+  );
 });
 
 test("cross-domain, attacker wallet and unapproved chain are rejected", () => {
-  assert.throws(() => generateWalletChallengeV1(
-    { wallet, origin: "https://phishing.example", chainId: "1" }, config,
-  ), /domain/);
-  assert.throws(() => generateWalletChallengeV1(
-    { wallet, origin, chainId: "2" }, config,
-  ), /chain/);
-  assert.throws(() => generateWalletChallengeV1(
-    { wallet: "0x" + "FF".repeat(20), origin, chainId: "1" }, config,
-  ), /wallet/);
-  assert.throws(() => generateWalletChallengeV1(
-    { wallet, origin: "http://certifiks.example", chainId: "1" }, config,
-  ), /origin/);
+  assert.throws(
+    () =>
+      generateWalletChallengeV1(
+        { wallet, origin: "https://phishing.example", chainId: "1" },
+        config,
+      ),
+    /domain/,
+  );
+  assert.throws(
+    () => generateWalletChallengeV1({ wallet, origin, chainId: "2" }, config),
+    /chain/,
+  );
+  assert.throws(
+    () =>
+      generateWalletChallengeV1(
+        { wallet: "0x" + "FF".repeat(20), origin, chainId: "1" },
+        config,
+      ),
+    /wallet/,
+  );
+  assert.throws(
+    () =>
+      generateWalletChallengeV1(
+        { wallet, origin: "http://certifiks.example", chainId: "1" },
+        config,
+      ),
+    /origin/,
+  );
 });
 
 test("opaque credentials rotate and secure cookies do not expose tokens to scripts", () => {
@@ -65,9 +97,15 @@ test("opaque credentials rotate and secure cookies do not expose tokens to scrip
     assert.ok(cookie.includes(flag));
   }
   assert.match(clearSessionCookieV1(), /Max-Age=0/);
-  assert.throws(() => secureSessionCookieV1(a.sessionToken, { production: false }), /TLS/);
+  assert.throws(
+    () => secureSessionCookieV1(a.sessionToken, { production: false }),
+    /TLS/,
+  );
   assertCsrfTokenV1(a.csrfToken, a.csrfTokenDigest);
-  assert.throws(() => assertCsrfTokenV1(b.csrfToken, a.csrfTokenDigest), /CSRF/);
+  assert.throws(
+    () => assertCsrfTokenV1(b.csrfToken, a.csrfTokenDigest),
+    /CSRF/,
+  );
 });
 
 test("server-trusted role and expiration are mandatory", () => {
@@ -77,8 +115,23 @@ test("server-trusted role and expiration are mandatory", () => {
     trustedRoles: ["developer" as const],
   };
   requireRoleV1(active, "developer", new Date("2026-10-26T10:00:00.000Z"));
-  assert.throws(() => requireRoleV1(active, "arbitrator", new Date("2026-12-20T00:00:00.000Z")), /inactive or expired/);
-  assert.throws(() => requireRoleV1(active, "arbitrator", new Date("2026-10-26T10:00:00.000Z")), /privilege/);
-  assert.throws(() => requireRoleV1({ ...active, active: false },
-    "developer", new Date("2026-10-26T10:00:00.000Z")), /inactive/);
+  assert.throws(
+    () =>
+      requireRoleV1(active, "arbitrator", new Date("2026-12-20T00:00:00.000Z")),
+    /inactive or expired/,
+  );
+  assert.throws(
+    () =>
+      requireRoleV1(active, "arbitrator", new Date("2026-10-26T10:00:00.000Z")),
+    /privilege/,
+  );
+  assert.throws(
+    () =>
+      requireRoleV1(
+        { ...active, active: false },
+        "developer",
+        new Date("2026-10-26T10:00:00.000Z"),
+      ),
+    /inactive/,
+  );
 });

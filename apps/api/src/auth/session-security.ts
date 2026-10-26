@@ -37,16 +37,32 @@ function unixDate(seconds: number): string {
 /** No caller-supplied nonce, timestamp, domain, or chain identifier. */
 export function generateWalletChallengeV1(
   identity: { wallet: string; origin: string; chainId: string },
-  options: { allowedOrigins: string[]; allowedChainIds: string[]; nowSeconds?: number },
+  options: {
+    allowedOrigins: string[];
+    allowedChainIds: string[];
+    nowSeconds?: number;
+  },
 ): LoginChallengeV1 {
-  check(WALLET.test(identity.wallet), "wallet must be canonical lowercase EVM address");
-  check(/^[1-9][0-9]*$/.test(identity.chainId) &&
-    options.allowedChainIds.includes(identity.chainId), "unapproved chain");
+  check(
+    WALLET.test(identity.wallet),
+    "wallet must be canonical lowercase EVM address",
+  );
+  check(
+    /^[1-9][0-9]*$/.test(identity.chainId) &&
+      options.allowedChainIds.includes(identity.chainId),
+    "unapproved chain",
+  );
   const u = new URL(identity.origin);
-  check((u.protocol === "https:" ||
-    (u.protocol === "http:" && u.hostname === "localhost")) &&
-    !u.username && !u.password && !u.search && !u.hash &&
-    u.pathname === "/", "invalid origin");
+  check(
+    (u.protocol === "https:" ||
+      (u.protocol === "http:" && u.hostname === "localhost")) &&
+      !u.username &&
+      !u.password &&
+      !u.search &&
+      !u.hash &&
+      u.pathname === "/",
+    "invalid origin",
+  );
   check(options.allowedOrigins.includes(u.origin), "domain not approved");
   const now = options.nowSeconds ?? Math.floor(Date.now() / 1000);
   check(Number.isSafeInteger(now) && now > 0, "invalid server time");
@@ -81,18 +97,33 @@ export function generateWalletChallengeV1(
 /** Inputs must be loaded from the original, unconsumed server-side challenge. */
 export function assertChallengeUsableV1(
   challenge: LoginChallengeV1,
-  posted: { wallet: string; origin: string; chainId: string; message: string; nonce: string },
+  posted: {
+    wallet: string;
+    origin: string;
+    chainId: string;
+    message: string;
+    nonce: string;
+  },
   nowSeconds = Math.floor(Date.now() / 1000),
 ): void {
   check(NONCE.test(challenge.nonce), "invalid challenge nonce");
-  check(nowSeconds < Date.parse(challenge.expiresAt) / 1000 &&
-    nowSeconds >= Date.parse(challenge.issuedAt) / 1000 - 60, "expired or future challenge");
-  check(challenge.wallet === posted.wallet &&
-    challenge.origin === posted.origin &&
-    challenge.chainId === posted.chainId &&
-    challenge.message === posted.message &&
-    challenge.nonce === posted.nonce, "challenge binding mismatch");
-  check(challenge.nonceDigest === sha256(posted.nonce), "nonce commitment mismatch");
+  check(
+    nowSeconds < Date.parse(challenge.expiresAt) / 1000 &&
+      nowSeconds >= Date.parse(challenge.issuedAt) / 1000 - 60,
+    "expired or future challenge",
+  );
+  check(
+    challenge.wallet === posted.wallet &&
+      challenge.origin === posted.origin &&
+      challenge.chainId === posted.chainId &&
+      challenge.message === posted.message &&
+      challenge.nonce === posted.nonce,
+    "challenge binding mismatch",
+  );
+  check(
+    challenge.nonceDigest === sha256(posted.nonce),
+    "nonce commitment mismatch",
+  );
 }
 
 /**
@@ -121,8 +152,10 @@ export function secureSessionCookieV1(
 ): string {
   check(SESSION.test(token), "invalid session credential");
   const age = options.maxAgeSeconds ?? 3600;
-  check(Number.isSafeInteger(age) && age > 0 && age <= MAX_SESSION_SECONDS,
-    "session lifetime out of range");
+  check(
+    Number.isSafeInteger(age) && age > 0 && age <= MAX_SESSION_SECONDS,
+    "session lifetime out of range",
+  );
   check(options.production, "secure production cookie requires TLS deployment");
   return `__Host-certi_session=${token}; Path=/; Max-Age=${age}; HttpOnly; Secure; SameSite=Strict`;
 }
@@ -131,11 +164,21 @@ export function clearSessionCookieV1(): string {
   return "__Host-certi_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict";
 }
 
-export function assertCsrfTokenV1(candidate: string, expectedDigest: string): void {
-  check(SESSION.test(candidate) && /^[a-f0-9]{64}$/.test(expectedDigest),
-    "invalid CSRF token format");
-  check(timingSafeEqual(Buffer.from(sha256(candidate), "hex"),
-    Buffer.from(expectedDigest, "hex")), "invalid CSRF token");
+export function assertCsrfTokenV1(
+  candidate: string,
+  expectedDigest: string,
+): void {
+  check(
+    SESSION.test(candidate) && /^[a-f0-9]{64}$/.test(expectedDigest),
+    "invalid CSRF token format",
+  );
+  check(
+    timingSafeEqual(
+      Buffer.from(sha256(candidate), "hex"),
+      Buffer.from(expectedDigest, "hex"),
+    ),
+    "invalid CSRF token",
+  );
 }
 
 export type UserRoleV1 =
@@ -151,8 +194,14 @@ export function requireRoleV1(
   role: UserRoleV1,
   now = new Date(),
 ): void {
-  check(session.active && Number.isFinite(Date.parse(session.expiresAt)) &&
-    Date.parse(session.expiresAt) > now.getTime(), "inactive or expired session");
-  check(Array.isArray(session.trustedRoles) && session.trustedRoles.includes(role),
-    "insufficient privilege");
+  check(
+    session.active &&
+      Number.isFinite(Date.parse(session.expiresAt)) &&
+      Date.parse(session.expiresAt) > now.getTime(),
+    "inactive or expired session",
+  );
+  check(
+    Array.isArray(session.trustedRoles) && session.trustedRoles.includes(role),
+    "insufficient privilege",
+  );
 }

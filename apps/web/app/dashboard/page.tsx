@@ -2,9 +2,9 @@ import Link from "next/link";
 import {
   historyQuery,
   loadPublicHistory,
-  parseHistoryFilters,
   PUBLIC_SORTS,
   PUBLIC_STATES,
+  parseHistoryFilters,
 } from "./history.js";
 
 export const dynamic = "force-dynamic";
@@ -98,13 +98,13 @@ export default async function DashboardPage({
             <button className="button button-primary" type="submit">Apply filters</button>
             <Link href="/dashboard" className="button button-outline">Clear</Link>
           </form>
-          <div className="dashboard-views" aria-label="Bookmarkable public views">
+          <nav className="dashboard-views" aria-label="Bookmarkable public views">
             <span className="mono">QUICK VIEWS</span>
             <Link href="/dashboard?state=funded">Published &amp; funded</Link>
             <Link href="/dashboard?state=verifying">Verification in progress</Link>
             <Link href="/dashboard?state=disputed">Disputes</Link>
             <Link href="/dashboard?state=settled">Settled</Link>
-          </div>
+          </nav>
           {history.kind === "invalid" ? (
             <div role="alert" className="market-state">
               <div><h3>Invalid search parameters</h3>

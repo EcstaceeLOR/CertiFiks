@@ -3,8 +3,14 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const home = readFileSync(new URL("../app/page.tsx", import.meta.url), "utf8");
-const onboarding = readFileSync(new URL("../app/onboarding/page.tsx", import.meta.url), "utf8");
-const css = readFileSync(new URL("../app/globals.css", import.meta.url), "utf8");
+const onboarding = readFileSync(
+  new URL("../app/onboarding/page.tsx", import.meta.url),
+  "utf8",
+);
+const css = readFileSync(
+  new URL("../app/globals.css", import.meta.url),
+  "utf8",
+);
 
 test("no public-facing onboarding or reward claim can bypass live prerequisites", () => {
   assert.match(home, /No live deposits, funded rewards or automated payouts/);
@@ -13,14 +19,25 @@ test("no public-facing onboarding or reward claim can bypass live prerequisites"
   assert.match(home, /verificationProven === false/);
   assert.match(home, /No sample rewards or simulated activity/);
   assert.match(onboarding, /Onboarding is not enabled yet/);
-  assert.match(onboarding, /No wallet connection or GitHub installation is performed here/);
+  assert.match(
+    onboarding,
+    /No wallet connection or GitHub installation is performed here/,
+  );
 });
 
 test("role paths and trust disclaimers appear without fabricated activity", () => {
-  for (const label of ["FOR MAINTAINERS", "FOR CONTRIBUTORS", "FOR REVIEWERS"]) {
+  for (const label of [
+    "FOR MAINTAINERS",
+    "FOR CONTRIBUTORS",
+    "FOR REVIEWERS",
+  ]) {
     assert.ok(home.includes(label), label);
   }
-  for (const phrase of ["Sponsor / Maintainer", "Developer / Contributor", "Verifier / Arbitrator"]) {
+  for (const phrase of [
+    "Sponsor / Maintainer",
+    "Developer / Contributor",
+    "Verifier / Arbitrator",
+  ]) {
     assert.ok(onboarding.includes(phrase), phrase);
   }
   assert.match(home, /Live listings are unavailable/);
@@ -38,10 +55,15 @@ test("design includes keyboard landmarks, visible focus and reduced-motion paths
 });
 
 function luminance(hex) {
-  const parts = hex.slice(1).match(/.{2}/g)?.map((x) => Number.parseInt(x, 16) / 255) ?? [];
+  const parts =
+    hex
+      .slice(1)
+      .match(/.{2}/g)
+      ?.map((x) => Number.parseInt(x, 16) / 255) ?? [];
   return parts.reduce(
     (sum, value, index) =>
-      sum + [0.2126, 0.7152, 0.0722][index] *
+      sum +
+      [0.2126, 0.7152, 0.0722][index] *
         (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4),
     0,
   );

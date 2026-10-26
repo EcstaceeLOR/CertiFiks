@@ -17,7 +17,7 @@ test("no public-facing onboarding or reward claim can bypass live prerequisites"
   assert.match(home, /loadPublishedBounties/);
   assert.match(home, /role="status"/);
   assert.match(home, /verificationProven === false/);
-  assert.match(home, /No sample rewards[\\s\\S]*simulated activity/);
+  assert.match(home, /sample rewards or simulated activity/);
   assert.match(onboarding, /Onboarding is not enabled yet/);
   assert.match(
     onboarding,

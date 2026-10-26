@@ -21,7 +21,12 @@ create table public.certifiks_sponsor_funding_intents (
   check ((state='cancelled') = (cancelled_at is not null))
 );
 
--- Only one still-prepared funding authorization is permitted per bounty.\ncreate unique index certifiks_one_prepared_sponsor_intent\n  on public.certifiks_sponsor_funding_intents(organization_id,bounty_id)\n  where state='prepared';\n\ncreate table public.certifiks_sponsor_funding_intent_events (
+-- Only one still-prepared funding authorization is permitted per bounty.
+create unique index certifiks_one_prepared_sponsor_intent
+  on public.certifiks_sponsor_funding_intents(organization_id,bounty_id)
+  where state='prepared';
+
+create table public.certifiks_sponsor_funding_intent_events (
   event_id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.certifiks_organizations(organization_id),
   intent_id uuid not null references public.certifiks_sponsor_funding_intents(intent_id),

@@ -26,7 +26,7 @@ test("public history is a real server-driven search, not a decorative dashboard"
 
 test("public bounties fail closed on malformed search and cannot expose tenant data", () => {
   assert.match(history, /\.every\(checkPublicHistoryItem\)/);
-  assert.match(history, /item\.verificationProven/);
+  assert.match(history, /i\.verificationProven/);
   assert.match(history, /cache: "no-store"/);
   assert.match(history, /redirect: "error"/);
   assert.match(history, /limit: "20"/);

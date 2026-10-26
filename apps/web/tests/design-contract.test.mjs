@@ -19,10 +19,7 @@ test("no public-facing onboarding or reward claim can bypass live prerequisites"
   assert.match(home, /verificationProven === false/);
   assert.match(home, /sample rewards or simulated activity are displayed/);
   assert.match(onboarding, /Onboarding is not enabled yet/);
-  assert.match(
-    onboarding,
   assert.match(onboarding, /GitHub installation is performed here/);
-  );
 });
 
 test("role paths and trust disclaimers appear without fabricated activity", () => {

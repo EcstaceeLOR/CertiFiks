@@ -201,7 +201,12 @@ export function buildApp(config: AppConfiguration = {}) {
         repositoryFullName: repo as string | undefined,
         sort: sort as PublicHistorySort,
       });
-      const quote = (value: string) => '"' + value.replaceAll('"', '""') + '"';
+      const quote = (value: string) => {
+        // CSV fields can begin with "-" even when repository names validate.
+        // Prevent spreadsheet formula interpretation without changing numeric precision.
+        const safe = /^[=+\\-@\\t\\r]/.test(value) ? "'" + value : value;
+        return '"' + safe.replaceAll('"', '""') + '"';
+      };
       const lines = [
         "bounty_id,repository,state,created_at,chain_id,onchain_bounty_id,reward_atoms,manifest_digest,verified_fix",
         ...records.map((item) => [

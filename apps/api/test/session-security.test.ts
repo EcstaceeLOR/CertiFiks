@@ -77,7 +77,7 @@ test("server-trusted role and expiration are mandatory", () => {
     trustedRoles: ["developer" as const],
   };
   requireRoleV1(active, "developer", new Date("2026-10-26T10:00:00.000Z"));
-  assert.throws(() => requireRoleV1(active, "arbitrator"), /inactive or expired/);
+  assert.throws(() => requireRoleV1(active, "arbitrator", new Date("2026-12-20T00:00:00.000Z")), /inactive or expired/);
   assert.throws(() => requireRoleV1(active, "arbitrator", new Date("2026-10-26T10:00:00.000Z")), /privilege/);
   assert.throws(() => requireRoleV1({ ...active, active: false },
     "developer", new Date("2026-10-26T10:00:00.000Z")), /inactive/);

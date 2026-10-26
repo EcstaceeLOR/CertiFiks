@@ -11,6 +11,7 @@ import {
 } from "./github/webhook-auth.js";
 import { FileWebhookJournal } from "./github/webhook-journal.js";
 import { PostgresWebhookJournal } from "./github/webhook-postgres.js";
+import { PartnerAuthError, PartnerPublicKeyAuthorizer } from "./partners/partner-keys.js";
 
 export interface AppConfiguration {
   webhookSecret?: string;
@@ -19,6 +20,7 @@ export interface AppConfiguration {
   supabaseServiceRoleKey?: string;
   production?: boolean;
   publicBountyFetch?: typeof fetch;
+  partnerAuthorizationFetch?: typeof fetch;
 }
 
 function oneHeader(value: string | string[] | undefined): string | undefined {
@@ -273,6 +275,73 @@ export function buildApp(config: AppConfiguration = {}) {
       return reply
         .code(503)
         .send({ error: "PUBLIC_BOUNTY_UPSTREAM_UNAVAILABLE" });
+    }
+  });
+
+
+  // Partner API keys are only a scoped, revocable front door to the exact same
+  // FINALIZED-only PUBLIC projection. A key cannot retrieve private evidence,
+  // tenant billing, wallet custody or organization members.
+  app.get("/v1/partner/bounties", async (request, reply) => {
+    reply.header("cache-control", "no-store");
+    reply.header("vary", "x-certifiks-api-key");
+    if (!postgresConfigured) {
+      return reply.code(503).send({ error: "PARTNER_API_NOT_CONFIGURED" });
+    }
+    try {
+      await new PartnerPublicKeyAuthorizer(
+        supabaseUrl!,
+        supabaseKey!,
+        config.partnerAuthorizationFetch ?? fetch,
+      ).requireBountyRead(oneHeader(request.headers["x-certifiks-api-key"]));
+    } catch (error) {
+      if (error instanceof PartnerAuthError && error.code === "NOT_AUTHORIZED") {
+        return reply.code(401).send({ error: "PARTNER_NOT_AUTHORIZED" });
+      }
+      return reply.code(503).send({ error: "PARTNER_AUTH_UNAVAILABLE" });
+    }
+
+    const query = request.query as Record<string, unknown>;
+    if (Object.keys(query).some((key) => !["limit", "offset", "state", "repo", "sort"].includes(key))) {
+      return reply.code(400).send({ error: "PARTNER_INVALID_FILTER" });
+    }
+    const parsePage = (value: unknown, fallback: number) => {
+      if (value === undefined) return fallback;
+      if (typeof value !== "string" || !/^(0|[1-9][0-9]*)$/.test(value)) return null;
+      const parsed = Number(value);
+      return Number.isSafeInteger(parsed) ? parsed : null;
+    };
+    const limit = parsePage(query.limit, 20);
+    const offset = parsePage(query.offset, 0);
+    const state = query.state;
+    const repo = query.repo;
+    const sort = query.sort ?? "newest";
+    if (
+      limit === null || limit < 1 || limit > 50 ||
+      offset === null || offset > 10000 ||
+      (state !== undefined && (typeof state !== "string" || !PUBLIC_BOUNTY_STATES.has(state))) ||
+      (repo !== undefined && (typeof repo !== "string" || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo))) ||
+      typeof sort !== "string" || !Object.hasOwn(PUBLIC_HISTORY_SORTS, sort)
+    ) return reply.code(400).send({ error: "PARTNER_INVALID_FILTER" });
+
+    try {
+      const items = await new PublicBountyClient(
+        supabaseUrl!,
+        supabaseKey!,
+        config.publicBountyFetch ?? fetch,
+      ).list(limit, offset, undefined, {
+        state: state as string | undefined,
+        repositoryFullName: repo as string | undefined,
+        sort: sort as PublicHistorySort,
+      });
+      return reply.send({
+        items,
+        page: { limit, offset, nextOffset: items.length === limit ? offset + limit : null },
+        verificationProven: false,
+        note: "Public finalized-index metadata only; no private evidence or confirmed payouts.",
+      });
+    } catch {
+      return reply.code(503).send({ error: "PARTNER_UPSTREAM_UNAVAILABLE" });
     }
   });
 

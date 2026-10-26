@@ -33,21 +33,27 @@ function fail(): never {
 function parseEntry(value: unknown): DisputeTimelineEntryV1 {
   if (!value || typeof value !== "object" || Array.isArray(value)) fail();
   const record = value as Record<string, unknown>;
-  if (["timeline_id", "organization_id", "dispute_id", "actor_user_id"].some(
-    key => typeof record[key] !== "string" || !UUID.test(record[key] as string),
-  )) fail();
   if (
-    typeof record.kind !== "string" || !KINDS.has(record.kind) ||
-    typeof record.reason_digest !== "string" || !HASH.test(record.reason_digest) ||
-    (record.artifact_digest !== null && (
-      typeof record.artifact_digest !== "string" ||
-      !HASH.test(record.artifact_digest)
-    )) ||
+    ["timeline_id", "organization_id", "dispute_id", "actor_user_id"].some(
+      (key) =>
+        typeof record[key] !== "string" || !UUID.test(record[key] as string),
+    )
+  )
+    fail();
+  if (
+    typeof record.kind !== "string" ||
+    !KINDS.has(record.kind) ||
+    typeof record.reason_digest !== "string" ||
+    !HASH.test(record.reason_digest) ||
+    (record.artifact_digest !== null &&
+      (typeof record.artifact_digest !== "string" ||
+        !HASH.test(record.artifact_digest))) ||
     typeof record.event_idempotency !== "string" ||
     !HEX.test(record.event_idempotency) ||
     typeof record.created_at !== "string" ||
     !Number.isFinite(Date.parse(record.created_at))
-  ) fail();
+  )
+    fail();
   return {
     timelineId: record.timeline_id as string,
     organizationId: record.organization_id as string,
@@ -73,9 +79,14 @@ export class PrivateDisputeTimelineClientV1 {
     if (
       url.protocol !== "https:" ||
       !url.hostname.endsWith(".supabase.co") ||
-      url.username || url.password || url.search || url.hash ||
-      typeof serverKey !== "string" || serverKey.length < 16
-    ) fail();
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash ||
+      typeof serverKey !== "string" ||
+      serverKey.length < 16
+    )
+      fail();
     this.endpoint = new URL(
       "/rest/v1/rpc/certifiks_read_dispute_timeline",
       url,
@@ -89,9 +100,14 @@ export class PrivateDisputeTimelineClientV1 {
     limit = 25,
   ): Promise<DisputeTimelineEntryV1[]> {
     if (
-      ![organizationId, disputeId, verifiedActorUserId].every(id => UUID.test(id)) ||
-      !Number.isSafeInteger(limit) || limit < 1 || limit > 50
-    ) fail();
+      ![organizationId, disputeId, verifiedActorUserId].every((id) =>
+        UUID.test(id),
+      ) ||
+      !Number.isSafeInteger(limit) ||
+      limit < 1 ||
+      limit > 50
+    )
+      fail();
     let response: Response;
     try {
       response = await this.request(this.endpoint, {
@@ -124,9 +140,14 @@ export class PrivateDisputeTimelineClientV1 {
     }
     if (!Array.isArray(data) || data.length > limit) fail();
     const entries = data.map(parseEntry);
-    if (entries.some(entry =>
-      entry.organizationId !== organizationId || entry.disputeId !== disputeId
-    )) fail();
+    if (
+      entries.some(
+        (entry) =>
+          entry.organizationId !== organizationId ||
+          entry.disputeId !== disputeId,
+      )
+    )
+      fail();
     return entries;
   }
 }

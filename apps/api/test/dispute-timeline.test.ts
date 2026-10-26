@@ -19,7 +19,10 @@ const entry = {
 
 test("private timeline uses exact server-side RPC and never emits payout authorization", async () => {
   const fetcher = (async (url: string, init?: RequestInit) => {
-    assert.equal(url, "https://tenant-db.supabase.co/rest/v1/rpc/certifiks_read_dispute_timeline");
+    assert.equal(
+      url,
+      "https://tenant-db.supabase.co/rest/v1/rpc/certifiks_read_dispute_timeline",
+    );
     assert.equal(init?.method, "POST");
     assert.equal(init?.redirect, "error");
     assert.equal(
@@ -35,7 +38,9 @@ test("private timeline uses exact server-side RPC and never emits payout authori
     return new Response(JSON.stringify([entry]), { status: 200 });
   }) as typeof fetch;
   const client = new PrivateDisputeTimelineClientV1(
-    "https://tenant-db.supabase.co", "server-test-secret-long", fetcher,
+    "https://tenant-db.supabase.co",
+    "server-test-secret-long",
+    fetcher,
   );
   const result = await client.list(ORG, DISPUTE, ACTOR, 10);
   assert.equal(result.length, 1);
@@ -45,16 +50,28 @@ test("private timeline uses exact server-side RPC and never emits payout authori
 });
 
 test("rejects wrong identities and cross-tenant case leaks", async () => {
-  let rows = [{ ...entry, organization_id: "20000000-0000-4000-8000-000000000002" }];
+  let rows = [
+    { ...entry, organization_id: "20000000-0000-4000-8000-000000000002" },
+  ];
   const client = new PrivateDisputeTimelineClientV1(
     "https://tenant-db.supabase.co",
     "server-test-secret-long",
-    (async () => new Response(JSON.stringify(rows), { status: 200 })) as typeof fetch,
+    (async () =>
+      new Response(JSON.stringify(rows), { status: 200 })) as typeof fetch,
   );
-  await assert.rejects(client.list(ORG, DISPUTE, "tampered"), /DISPUTE_TIMELINE_UNAVAILABLE/);
-  await assert.rejects(client.list(ORG, DISPUTE, ACTOR), /DISPUTE_TIMELINE_UNAVAILABLE/);
+  await assert.rejects(
+    client.list(ORG, DISPUTE, "tampered"),
+    /DISPUTE_TIMELINE_UNAVAILABLE/,
+  );
+  await assert.rejects(
+    client.list(ORG, DISPUTE, ACTOR),
+    /DISPUTE_TIMELINE_UNAVAILABLE/,
+  );
   rows = [{ ...entry, reason_digest: "tampered" }];
-  await assert.rejects(client.list(ORG, DISPUTE, ACTOR), /DISPUTE_TIMELINE_UNAVAILABLE/);
+  await assert.rejects(
+    client.list(ORG, DISPUTE, ACTOR),
+    /DISPUTE_TIMELINE_UNAVAILABLE/,
+  );
 });
 
 test("database refusal cannot turn into fabricated dispute resolution", async () => {
@@ -63,5 +80,8 @@ test("database refusal cannot turn into fabricated dispute resolution", async ()
     "server-test-secret-long",
     (async () => new Response("forbidden", { status: 403 })) as typeof fetch,
   );
-  await assert.rejects(client.list(ORG, DISPUTE, ACTOR), /DISPUTE_TIMELINE_UNAVAILABLE/);
+  await assert.rejects(
+    client.list(ORG, DISPUTE, ACTOR),
+    /DISPUTE_TIMELINE_UNAVAILABLE/,
+  );
 });

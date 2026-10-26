@@ -25,10 +25,16 @@ const stages = [
 export default function DisputesPage() {
   return (
     <main id="main-content" className={styles.page}>
-      <a className={styles.skip} href="#dispute-workflow">Skip to dispute requirements</a>
+      <a className={styles.skip} href="#dispute-workflow">
+        Skip to dispute requirements
+      </a>
       <header className={styles.header}>
         <div className={styles.headerInner}>
-          <Link className={styles.wordmark} href="/" aria-label="CertiFiks home">
+          <Link
+            className={styles.wordmark}
+            href="/"
+            aria-label="CertiFiks home"
+          >
             certi<span>fiks</span>.
           </Link>
           <nav aria-label="Dispute navigation" className={styles.nav}>
@@ -45,16 +51,18 @@ export default function DisputesPage() {
         </h1>
         <p className={styles.lead}>
           A contested bug-fix bounty deserves transparent evidence and a bounded
-          review process—not a support ticket that can silently move escrow funds.
-          CertiFiks is building immutable, role-scoped dispute histories.
+          review process—not a support ticket that can silently move escrow
+          funds. CertiFiks is building immutable, role-scoped dispute histories.
         </p>
         <div className={styles.warning} role="status">
-          <strong>Live disputes and on-chain resolution are not enabled.</strong>
+          <strong>
+            Live disputes and on-chain resolution are not enabled.
+          </strong>
           <p>
             This page cannot start a case, display confidential evidence or
             authorize payouts. Secure account sessions, arbitrator assignment,
-            private artifact access and verified settlement transactions are still
-            required. Do not send funds.
+            private artifact access and verified settlement transactions are
+            still required. Do not send funds.
           </p>
         </div>
         <section id="dispute-workflow" aria-labelledby="dispute-process-title">
@@ -77,9 +85,10 @@ export default function DisputesPage() {
             <p className={styles.eyebrow}>PRIVATE CASES</p>
             <h2 id="case-access-title">No authenticated case access</h2>
             <p>
-              Case records are private to authorized participants and individually
-              assigned arbitrators. No public list or fabricated dispute activity
-              is presented. Ledger entries are only content-addressed metadata.
+              Case records are private to authorized participants and
+              individually assigned arbitrators. No public list or fabricated
+              dispute activity is presented. Ledger entries are only
+              content-addressed metadata.
             </p>
           </div>
           <div className={styles.queueStatus}>
@@ -87,17 +96,25 @@ export default function DisputesPage() {
             <strong>Dispute actions disabled</strong>
           </div>
         </section>
-        <section className={styles.footerNote} aria-labelledby="case-safety-title">
+        <section
+          className={styles.footerNote}
+          aria-labelledby="case-safety-title"
+        >
           <h2 id="case-safety-title">There is no automatic verdict.</h2>
           <p>
             A case timeline cannot release or refund escrow. On-chain appeals,
             settlement and withdrawal must independently enforce the authorized
             signer policy, deadline windows and non-duplicated accounting.
           </p>
-          <Link className={styles.link} href="/onboarding">Understand the roles ↗</Link>
-          <a className={styles.secondaryLink}
+          <Link className={styles.link} href="/onboarding">
+            Understand the roles ↗
+          </Link>
+          <a
+            className={styles.secondaryLink}
             href="https://github.com/EcstaceeLOR/CertiFiks/issues/35"
-            target="_blank" rel="noreferrer">
+            target="_blank"
+            rel="noreferrer"
+          >
             Read implementation requirements ↗
           </a>
         </section>

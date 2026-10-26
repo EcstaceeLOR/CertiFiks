@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
-const path = join(dirname(fileURLToPath(import.meta.url)), "../app/disputes/page.tsx");
+const path = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "../app/disputes/page.tsx",
+);
 
 test("dispute interface never shows a pretend payout, open case or signed verdict", () => {
   const src = readFileSync(path, "utf8");

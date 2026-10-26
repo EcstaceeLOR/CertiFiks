@@ -148,6 +148,7 @@ jobs:
             supabase/migrations/202610260006_notification_delivery.sql \
             supabase/migrations/202610260007_workspace_delegation.sql \
             supabase/migrations/202610260008_sponsor_funding_intents.sql \
+            supabase/migrations/202610260009_private_verifier_commitments.sql \
             scripts/db/ci_assertions.sql
           do
             docker run --rm --network host \

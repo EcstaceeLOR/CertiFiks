@@ -227,3 +227,67 @@ $$;
 update public.certifiks_chain_events
    set finalized = true, orphaned = false
  where chain_id = 11155111 and transaction_hash = '0x' || repeat('1',64);
+
+-- Issue #27: synthetic chain history and deep-reorg checks. Not a live receipt.
+set request.jwt.claim.role = 'service_role';
+select public.certifiks_begin_evm_observation(31337,'0x'||repeat('a',64),2);
+do $$
+declare decision text;
+begin
+  decision:=public.certifiks_commit_evm_observation(
+    31337,1,'0x'||repeat('b',64),'0x'||repeat('a',64),3,
+    jsonb_build_array(jsonb_build_object(
+      'transactionHash','0x'||repeat('1',64),
+      'blockHash','0x'||repeat('b',64),
+      'blockNumber','1',
+      'logIndex','0','address','0x'||repeat('c',40),
+      'topic0','0x'||repeat('d',64),
+      'dataSha256','0x'||repeat('e',64)
+    ))
+  );
+  if decision <> 'accepted' then raise exception 'first block rejected'; end if;
+  decision:=public.certifiks_commit_evm_observation(
+    31337,1,'0x'||repeat('b',64),'0x'||repeat('a',64),3,'[]'::jsonb
+  );
+  if decision <> 'duplicate' then raise exception 'block replay not idempotent'; end if;
+  if (select count(*) from public.certifiks_chain_observed_logs where chain_id=31337)<>1
+  then raise exception 'duplicate chain log'; end if;
+  begin
+    perform public.certifiks_commit_evm_observation(
+      31337,3,'0x'||repeat('f',64),'0x'||repeat('b',64),3,'[]'::jsonb
+    );
+    raise exception 'out-of-sequence block accepted';
+  exception when raise_exception then
+    if sqlerrm <> 'chain gap or mismatched parent hash' then raise; end if;
+  end;
+  perform public.certifiks_commit_evm_observation(
+    31337,2,'0x'||repeat('c',64),'0x'||repeat('b',64),3,'[]'::jsonb
+  );
+  perform public.certifiks_rewind_evm_observations(
+    31337,1,'0x'||repeat('b',64)
+  );
+  perform public.certifiks_commit_evm_observation(
+    31337,2,'0x'||repeat('d',64),'0x'||repeat('b',64),3,'[]'::jsonb
+  );
+  if (select count(*) from public.certifiks_chain_observed_blocks
+      where chain_id=31337 and block_number=2 and canonical)<>1
+     or (select count(*) from public.certifiks_chain_observed_blocks
+      where chain_id=31337 and block_number=2 and not canonical)<>1
+  then raise exception 'reorg branches were not preserved'; end if;
+  if public.certifiks_finalize_evm_observations(31337,3)<>1
+  then raise exception 'confirmation depth not respected'; end if;
+  begin
+    perform public.certifiks_rewind_evm_observations(31337,0,'0x'||repeat('a',64));
+    raise exception 'deep reorg of finalized block allowed';
+  exception when raise_exception then
+    if sqlerrm <> 'deep reorg exceeds finality: operator halt required'
+      then raise; end if;
+  end;
+  if has_table_privilege('anon','public.certifiks_chain_observed_logs','SELECT') then
+    raise exception 'browser principal can read private chain event ledger'; end if;
+  if (select count(*) from public.certifiks_public_bounties_v1)<>1 then
+    raise exception 'synthetic indexer observations changed bounty/funds projection'; end if;
+end;
+$$;
+reset request.jwt.claim.role;
+select 'PASS: chain replay, parent gap, reorg, finality, privacy and unchanged bounty funding' as result;

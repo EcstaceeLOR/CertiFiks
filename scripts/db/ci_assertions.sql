@@ -161,3 +161,69 @@ $$;
 reset request.jwt.claim.role;
 
 select 'PASS: tenant foreign keys, idempotency, immutable audit, replay and private RLS' as result;
+
+-- Public projection is fail-closed unless the indexer has recorded finality.
+do $$
+begin
+  if (select count(*) from public.certifiks_public_bounties_v1) <> 0 then
+    raise exception 'private/unfinalized bounty is listed publicly';
+  end if;
+  begin
+    update public.certifiks_bounties set public_listing = true
+     where bounty_id = '30000000-0000-4000-8000-000000000001';
+    raise exception 'unfinalized bounty was allowed public listing';
+  exception when raise_exception then
+    if sqlerrm <> 'public bounty requires finalized independently indexed funding' then
+      raise;
+    end if;
+  end;
+end;
+$$;
+
+-- Synthetic finalized chain event fixture, not a real chain receipt.
+insert into public.certifiks_chain_events (
+  organization_id,bounty_id,chain_id,transaction_hash,log_index,
+  block_hash,block_number,event_digest,finalized
+) values (
+  '20000000-0000-4000-8000-000000000001',
+  '30000000-0000-4000-8000-000000000001',
+  11155111,'0x' || repeat('1',64),0,
+  '0x' || repeat('2',64),1000,'0x' || repeat('3',64),true
+);
+update public.certifiks_bounties
+   set onchain_bounty_id = 42,
+       funded_transaction_hash = '0x' || repeat('1',64),
+       public_listing = true
+ where bounty_id = '30000000-0000-4000-8000-000000000001';
+
+do $$
+declare
+  published_count integer;
+  amount_text text;
+begin
+  select count(*), max(reward_atoms) into published_count, amount_text
+    from public.certifiks_public_bounties_v1;
+  if published_count <> 1 or amount_text <> '1000000' then
+    raise exception 'public projection omitted finalized bounty or lost precision';
+  end if;
+  if has_table_privilege('anon','public.certifiks_public_bounties_v1','SELECT') then
+    raise exception 'anonymous clients must not bypass backend redaction';
+  end if;
+end;
+$$;
+
+-- A chain reorg/finality rollback must immediately remove a once-public bounty.
+update public.certifiks_chain_events
+   set finalized = false, orphaned = true
+ where chain_id = 11155111 and transaction_hash = '0x' || repeat('1',64);
+do $$
+begin
+  if (select count(*) from public.certifiks_public_bounties_v1) <> 0 then
+    raise exception 'orphaned funding remained publicly listed';
+  end if;
+end;
+$$;
+-- Re-indexed canonical finalized fixture, never an actual RPC proof.
+update public.certifiks_chain_events
+   set finalized = true, orphaned = false
+ where chain_id = 11155111 and transaction_hash = '0x' || repeat('1',64);

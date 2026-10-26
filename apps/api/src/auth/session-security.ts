@@ -6,7 +6,7 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
  * address binding plus atomic DB nonce redemption may create live sessions.
  */
 const WALLET = /^0x[a-f0-9]{40}$/;
-const NONCE = /^[A-Za-z0-9]{16,64}$/;
+const NONCE = /^[A-Za-z0-9_-]{16,64}$/;
 const SESSION = /^[A-Za-z0-9_-]{43}$/;
 const MAX_CHALLENGE_SECONDS = 300;
 const MAX_SESSION_SECONDS = 24 * 3600;

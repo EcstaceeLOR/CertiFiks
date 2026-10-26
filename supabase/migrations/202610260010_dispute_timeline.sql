@@ -95,13 +95,13 @@ create function public.certifiks_record_dispute_timeline(
 ) returns uuid language plpgsql security definer set search_path = ''
 as $$
 declare result_id uuid; original public.certifiks_dispute_timeline%rowtype;
-        case_state text; opened_by uuid; is_assigned_arb boolean;
+        case_state text; case_opener uuid; is_assigned_arb boolean;
         is_case_party boolean;
 begin
   if auth.role() is distinct from 'service_role' then raise exception 'server role required'; end if;
-  select state,opened_by into case_state,opened_by
-    from public.certifiks_disputes
-    where organization_id=p_org and dispute_id=p_dispute for update;
+  select d.state,d.opened_by into case_state,case_opener
+    from public.certifiks_disputes d
+    where d.organization_id=p_org and d.dispute_id=p_dispute for update;
   if case_state is null or case_state in ('resolved','expired')
     or not public.certifiks_can_read_dispute(p_org,p_dispute,p_actor)
     or p_kind not in ('case_opened','party_response','supporting_evidence','arbitrator_note')
@@ -145,8 +145,8 @@ begin
         where ass.organization_id=p_org and ass.bounty_id=d.bounty_id
           and a.developer_user_id=p_actor))
   ) into is_case_party;
-  if (p_kind='case_opened' and p_actor<>opened_by)
-    or (p_kind='party_response' and (not is_case_party or p_actor=opened_by))
+  if (p_kind='case_opened' and p_actor<>case_opener)
+    or (p_kind='party_response' and (not is_case_party or p_actor=case_opener))
     or (p_kind='supporting_evidence' and not is_case_party)
     or (p_kind='arbitrator_note' and not is_assigned_arb)
   then raise exception 'dispute actor not entitled to this event kind'; end if;

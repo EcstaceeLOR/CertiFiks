@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 const app = join(dirname(fileURLToPath(import.meta.url)), "..", "app");
 const read = (name) => readFileSync(join(app, name), "utf8");
@@ -20,7 +20,10 @@ test("both site journeys have keyboard skip links, landmarks and disabled-live d
   }
   assert.match(home, /CONCEPT ONLY/);
   assert.match(home, /No live deposits/);
-  assert.match(onboard, /No wallet connection or GitHub installation is performed here/);
+  assert.match(
+    onboard,
+    /No wallet connection or GitHub installation is performed here/,
+  );
   for (const role of ["sponsor", "contributor", "reviewer"]) {
     assert.match(onboard, new RegExp('id: "' + role + '"'));
   }
@@ -37,7 +40,10 @@ test("marketplace is tied to a real HTTP backend and never fabricates a bounty",
   assert.match(src, /listings\.items\.length === 0/);
   assert.match(src, /verificationProven === false/);
   assert.match(src, /Fix verification has not been established/);
-  assert.doesNotMatch(src, /mockBounties|sampleRewards|fakePayout|demoListings/);
+  assert.doesNotMatch(
+    src,
+    /mockBounties|sampleRewards|fakePayout|demoListings/,
+  );
 });
 
 test("WCAG-oriented focus, reduced-motion, reflow and explicit light/dark tokens exist", () => {

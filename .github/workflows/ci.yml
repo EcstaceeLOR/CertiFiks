@@ -143,6 +143,7 @@ jobs:
             supabase/migrations/202610260001_wallet_auth_foundation.sql \
             supabase/migrations/202610260002_lifecycle_tenancy.sql \
             supabase/migrations/202610260003_public_bounty_projection.sql \
+            supabase/migrations/202610260004_chain_observation_ledger.sql \
             scripts/db/ci_assertions.sql
           do
             docker run --rm --network host \

@@ -1154,3 +1154,112 @@ h2 em {
     justify-content: flex-start;
   }
 }
+
+/* Issue #38: truthful failure recovery and small-screen navigation. */
+.recovery-page {
+  min-height: min(78vh, 640px);
+  padding-block: clamp(70px, 9vw, 120px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 17px;
+}
+.recovery-page h1 {
+  font-size: clamp(2.5rem, 6vw, 4.7rem);
+  line-height: 1.12;
+  letter-spacing: -0.06em;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+.recovery-page > p:not(.eyebrow),
+.recovery-page > div[role="status"] > p:not(.eyebrow) {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--muted);
+  max-width: 660px;
+  margin: 0;
+}
+.recovery-page > div[role="status"] h1 {
+  margin: 12px 0 25px;
+}
+.recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 14px;
+}
+.recovery-page .recovery-note {
+  font-size: 13px;
+  max-width: 600px;
+  color: var(--quiet);
+}
+.connectivity-notice {
+  position: relative;
+  z-index: 80;
+  border-bottom: 2px solid #af855a;
+  background: #3b301f;
+  color: #fff0d4;
+  padding: 12px 0;
+}
+.connectivity-notice__inner {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  justify-content: space-between;
+  line-height: 1.65;
+  font-size: 13px;
+}
+.connectivity-notice__inner strong {
+  font-weight: 800;
+}
+.connectivity-notice__action {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border: 1px solid #f8e3b9;
+  background: transparent;
+  border-radius: 7px;
+  color: #fff0d4;
+  font-weight: 700;
+  min-height: 44px;
+}
+.connectivity-notice__action:hover {
+  background: #6b5028;
+}
+.main-nav {
+  min-width: 0;
+}
+.main-nav a {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .main-nav {
+    flex-wrap: wrap;
+    row-gap: 14px;
+    justify-content: flex-start;
+  }
+  .header-inner {
+    align-items: flex-start;
+  }
+  .recovery-page {
+    min-height: 64vh;
+  }
+  .connectivity-notice__inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+@media (prefers-color-scheme: light) {
+  .connectivity-notice {
+    background: #f5e8c7;
+    border-bottom-color: #9d6e3c;
+    color: #45351c;
+  }
+  .connectivity-notice__action {
+    color: #45351c;
+    border-color: #82613a;
+  }
+  .connectivity-notice__action:hover {
+    background: #e7d3a4;
+  }
+}

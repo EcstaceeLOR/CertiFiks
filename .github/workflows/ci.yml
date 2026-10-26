@@ -176,3 +176,46 @@ jobs:
             -c "select (select count(*) from public.certifiks_bounties), (select count(*) from public.certifiks_attempts), (select count(*) from public.certifiks_audit_entries), (select count(*) from public.certifiks_public_bounties_v1);" -F '|')
           test "$result" = "2|1|1|1"
           rm -rf "$RUNNER_TEMP/certifiks-backup"
+
+
+  browser-quality:
+    name: Real Chromium mobile/desktop accessibility, recovery and performance budgets
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      CERTIFIKS_BROWSER_ORIGIN: "http://127.0.0.1:4100"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Reproducible workspace installation
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Pin browser automation and accessibility audit tools
+        run: npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.56.1 axe-core@4.10.3
+      - name: Install Chromium and headless Linux dependencies
+        run: ./node_modules/.bin/playwright install --with-deps chromium
+      - name: Build the actual production website
+        run: npm run build --workspace=@certifiks/web
+      - name: Launch Next.js production server
+        run: |
+          ./node_modules/.bin/next start apps/web --port 4100 > "$RUNNER_TEMP/certifiks-web.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/certifiks-web.pid"
+          for attempt in $(seq 1 60); do
+            if curl --silent --fail http://127.0.0.1:4100/ > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/certifiks-web.log"
+          exit 1
+      - name: Verify eight routes at desktop/mobile, WCAG, keyboard, offline and resource budgets
+        run: node scripts/quality/browser-a11y.mjs
+      - name: Upload actual browser screenshots and audit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: certifiks-browser-quality
+          path: quality-artifacts/
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import {
   checkPublicHistoryItem,
-  safePublicApiOrigin,
   type PublicHistoryItem,
+  safePublicApiOrigin,
 } from "../../history.js";
 
 export const dynamic = "force-dynamic";

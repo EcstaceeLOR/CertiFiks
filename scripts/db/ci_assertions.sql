@@ -640,3 +640,129 @@ end;
 $$;
 reset request.jwt.claim.role;
 select 'PASS: immutable sponsored funding intent, replay, cancellation, no synthetic custody' as result;
+
+-- Issue #34: two independently enrolled reviewers can only commit blinded
+-- hashes to a truly completed immutable run, never a public or on-chain vote.
+insert into public.certifiks_auth_users (user_id) values
+  ('10000000-0000-4000-8000-000000000003'),
+  ('10000000-0000-4000-8000-000000000004');
+insert into public.certifiks_organizations (organization_id,display_name) values
+  ('20000000-0000-4000-8000-000000000003','Independent Reviewer Three'),
+  ('20000000-0000-4000-8000-000000000004','Independent Reviewer Four');
+insert into public.certifiks_auth_role_memberships
+  (organization_id,user_id,role) values
+  ('20000000-0000-4000-8000-000000000003',
+   '10000000-0000-4000-8000-000000000003','verifier'),
+  ('20000000-0000-4000-8000-000000000004',
+   '10000000-0000-4000-8000-000000000004','verifier');
+insert into public.certifiks_reviewer_registry(
+  reviewer_user_id,signer_organization_id,signer_key_id,expires_at
+) values
+  ('10000000-0000-4000-8000-000000000003',
+   '20000000-0000-4000-8000-000000000003','key-reviewer-3',now()+interval '1 day'),
+  ('10000000-0000-4000-8000-000000000004',
+   '20000000-0000-4000-8000-000000000004','key-reviewer-4',now()+interval '1 day');
+
+update public.certifiks_verification_runs
+   set outcome='needs_review',result_digest='0x'||repeat('9',64),completed_at=now()
+ where run_id='70000000-0000-4000-8000-000000000001';
+
+set request.jwt.claim.role='service_role';
+do $$
+declare verdict text;
+begin
+  verdict:=public.certifiks_commit_private_reviewer_intent(
+    '20000000-0000-4000-8000-000000000001',
+    '70000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000003',
+    '20000000-0000-4000-8000-000000000003',
+    'key-reviewer-3',repeat('c',40),'0x'||repeat('a',64),
+    '0x'||repeat('9',64),'0x'||repeat('6',64),'0x'||repeat('1',64),
+    now()+interval '4 hours'
+  );
+  if verdict<>'accepted' then raise exception 'first blinded commitment blocked'; end if;
+  verdict:=public.certifiks_commit_private_reviewer_intent(
+    '20000000-0000-4000-8000-000000000001',
+    '70000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000003',
+    '20000000-0000-4000-8000-000000000003',
+    'key-reviewer-3',repeat('c',40),'0x'||repeat('a',64),
+    '0x'||repeat('9',64),'0x'||repeat('6',64),'0x'||repeat('1',64),
+    now()+interval '4 hours'
+  );
+  if verdict<>'duplicate' then raise exception 'review replay produced new record'; end if;
+  begin
+    perform public.certifiks_commit_private_reviewer_intent(
+      '20000000-0000-4000-8000-000000000001',
+      '70000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000003',
+      '20000000-0000-4000-8000-000000000003',
+      'key-reviewer-3',repeat('c',40),'0x'||repeat('a',64),
+      '0x'||repeat('9',64),'0x'||repeat('6',64),'0x'||repeat('2',64),
+      now()+interval '4 hours'
+    );
+    raise exception 'reviewer changed blinded decision';
+  exception when raise_exception then
+    if sqlerrm<>'cannot change a blinded reviewer commitment'
+    then raise; end if;
+  end;
+  begin
+    perform public.certifiks_commit_private_reviewer_intent(
+      '20000000-0000-4000-8000-000000000001',
+      '70000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000003',
+      '20000000-0000-4000-8000-000000000003',
+      'key-reviewer-3',repeat('d',40),'0x'||repeat('a',64),
+      '0x'||repeat('9',64),'0x'||repeat('6',64),'0x'||repeat('1',64),
+      now()+interval '4 hours'
+    );
+    raise exception 'changed head commit was accepted';
+  exception when raise_exception then
+    if sqlerrm<>'reviewer is conflicted or attempted to change pinned evidence'
+      then raise; end if;
+  end;
+  begin
+    perform public.certifiks_commit_private_reviewer_intent(
+      '20000000-0000-4000-8000-000000000001',
+      '70000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000004',
+      '20000000-0000-4000-8000-000000000004',
+      'key-reviewer-4',repeat('c',40),'0x'||repeat('a',64),
+      '0x'||repeat('9',64),'0x'||repeat('6',64),'0x'||repeat('3',64),
+      now()-interval '1 minute'
+    );
+    raise exception 'expired reviewer authorization accepted';
+  exception when raise_exception then
+    if sqlerrm<>'invalid immutable commitment binding' then raise; end if;
+  end;
+
+  verdict:=public.certifiks_commit_private_reviewer_intent(
+    '20000000-0000-4000-8000-000000000001',
+    '70000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000004',
+    '20000000-0000-4000-8000-000000000004',
+    'key-reviewer-4',repeat('c',40),'0x'||repeat('a',64),
+    '0x'||repeat('9',64),'0x'||repeat('6',64),'0x'||repeat('3',64),
+    now()+interval '4 hours'
+  );
+  if verdict<>'accepted' then raise exception 'independent second reviewer blocked'; end if;
+
+  begin
+    update public.certifiks_verification_runs
+       set result_digest='0x'||repeat('4',64)
+     where run_id='70000000-0000-4000-8000-000000000001';
+    raise exception 'runner result changed after reviewer committed';
+  exception when raise_exception then
+    if sqlerrm<>'immutable reviewed runner context' then raise; end if;
+  end;
+  if (select count(*) from public.certifiks_private_review_commitments
+    where run_id='70000000-0000-4000-8000-000000000001')<>2
+  then raise exception 'independent reviewer quorum commitments missing'; end if;
+  if (select count(*) from public.certifiks_verifier_votes)<>0
+  then raise exception 'a private blinded commitment fabricated signed votes'; end if;
+  if has_table_privilege('anon','public.certifiks_private_review_commitments','SELECT')
+  then raise exception 'browser principal can see private blind reviews'; end if;
+end;
+$$;
+reset request.jwt.claim.role;
+select 'PASS: blinded reviewer enrollment, replay, immutability and no leaked signed vote' as result;

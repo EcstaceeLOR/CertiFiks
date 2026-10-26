@@ -1,6 +1,6 @@
 import {
-  ReadOnlyEvmObserverV1,
   type EvmObservationConfigV1,
+  ReadOnlyEvmObserverV1,
 } from "./evm-observer.js";
 
 /**
@@ -30,9 +30,16 @@ export class DurableEvmIndexStepV1 {
     if (
       url.protocol !== "https:" ||
       !url.hostname.endsWith(".supabase.co") ||
-      url.search || url.hash || url.username || url.password ||
-      typeof serviceKey !== "string" || serviceKey.length < 16
-    ) throw new ChainIndexerBlockedError("Approved server-side database not configured");
+      url.search ||
+      url.hash ||
+      url.username ||
+      url.password ||
+      typeof serviceKey !== "string" ||
+      serviceKey.length < 16
+    )
+      throw new ChainIndexerBlockedError(
+        "Approved server-side database not configured",
+      );
     this.endpoint = new URL("/rest/v1/", url);
     this.observer = new ReadOnlyEvmObserverV1(config, rpcFetch);
   }
@@ -55,13 +62,18 @@ export class DurableEvmIndexStepV1 {
         signal: AbortSignal.timeout(8000),
       });
     } catch {
-      throw new ChainIndexerBlockedError("Database unavailable; no chain observation acknowledged");
+      throw new ChainIndexerBlockedError(
+        "Database unavailable; no chain observation acknowledged",
+      );
     }
-    if (!response.ok) throw new ChainIndexerBlockedError("Database rejected chain observation");
+    if (!response.ok)
+      throw new ChainIndexerBlockedError("Database rejected chain observation");
     try {
       return await response.json();
     } catch {
-      throw new ChainIndexerBlockedError("Database response could not be independently validated");
+      throw new ChainIndexerBlockedError(
+        "Database response could not be independently validated",
+      );
     }
   }
 
@@ -74,9 +86,15 @@ export class DurableEvmIndexStepV1 {
     const cursor = await this.readOrWrite(
       `certifiks_chain_indexer_heads?${query.toString()}`,
     );
-    if (!Array.isArray(cursor) || cursor.length !== 1 ||
-      typeof cursor[0] !== "object" || cursor[0] === null) {
-      throw new ChainIndexerBlockedError("Chain indexer cursor not provisioned");
+    if (
+      !Array.isArray(cursor) ||
+      cursor.length !== 1 ||
+      typeof cursor[0] !== "object" ||
+      cursor[0] === null
+    ) {
+      throw new ChainIndexerBlockedError(
+        "Chain indexer cursor not provisioned",
+      );
     }
     const row = cursor[0] as Record<string, unknown>;
     const height = Number(row.last_scanned);
@@ -85,13 +103,17 @@ export class DurableEvmIndexStepV1 {
       row.genesis_hash !== this.config.approvedGenesisHash ||
       typeof row.last_hash !== "string" ||
       !/^0x[a-f0-9]{64}$/.test(row.last_hash) ||
-      !Number.isSafeInteger(height) || height < 0
-    ) throw new ChainIndexerBlockedError("Chain cursor inconsistent or halted");
+      !Number.isSafeInteger(height) ||
+      height < 0
+    )
+      throw new ChainIndexerBlockedError("Chain cursor inconsistent or halted");
     const block = await this.observer.observeBlock(height + 1);
     if (block.parentHash !== row.last_hash) {
       // DO NOT resolve this automatically: finality and accounting history
       // must be examined before choosing an authorized rewind ancestor.
-      throw new ChainIndexerBlockedError("REORG_OR_GAP: operator reconciliation required");
+      throw new ChainIndexerBlockedError(
+        "REORG_OR_GAP: operator reconciliation required",
+      );
     }
     const result = await this.readOrWrite(
       "rpc/certifiks_commit_evm_observation",
@@ -105,7 +127,9 @@ export class DurableEvmIndexStepV1 {
       },
     );
     if (result !== "accepted" && result !== "duplicate") {
-      throw new ChainIndexerBlockedError("Database did not confirm exact committed block");
+      throw new ChainIndexerBlockedError(
+        "Database did not confirm exact committed block",
+      );
     }
     return result;
   }

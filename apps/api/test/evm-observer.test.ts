@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   ChainObservationError,
-  ReadOnlyEvmObserverV1,
   type EvmObservationConfigV1,
+  ReadOnlyEvmObserverV1,
 } from "../src/chain/evm-observer.js";
 
 const genesis = "0x" + "a".repeat(64);
@@ -37,29 +37,35 @@ function rpcFetch(overrides: Record<string, unknown> = {}): typeof fetch {
         result = "0x5";
         break;
       case "eth_getBlockByNumber":
-        result = req.params[0] === "0x0"
-          ? { number: "0x0", hash: overrides.genesis ?? genesis }
-          : {
-              number: "0x1",
-              hash: overrides.reorgHash ?? blockHash,
-              parentHash: genesis,
-            };
+        result =
+          req.params[0] === "0x0"
+            ? { number: "0x0", hash: overrides.genesis ?? genesis }
+            : {
+                number: "0x1",
+                hash: overrides.reorgHash ?? blockHash,
+                parentHash: genesis,
+              };
         break;
       case "eth_getLogs":
-        result = [{
-          blockHash: overrides.logBlockHash ?? blockHash,
-          blockNumber: "0x1",
-          transactionHash,
-          logIndex: "0x0",
-          address: overrides.logAddress ?? address,
-          topics: [topic],
-          data: "0x1234",
-          removed: false,
-        }];
+        result = [
+          {
+            blockHash: overrides.logBlockHash ?? blockHash,
+            blockNumber: "0x1",
+            transactionHash,
+            logIndex: "0x0",
+            address: overrides.logAddress ?? address,
+            topics: [topic],
+            data: "0x1234",
+            removed: false,
+          },
+        ];
         break;
-      default: throw new Error("Unexpected RPC method");
+      default:
+        throw new Error("Unexpected RPC method");
     }
-    return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }), { status: 200 });
+    return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }), {
+      status: 200,
+    });
   }) as typeof fetch;
 }
 
@@ -71,7 +77,11 @@ test("indexes only verified chain genesis, pinned contract and canonical block e
   assert.equal(observed.parentHash, genesis);
   assert.equal(observed.observedHead, "5");
   assert.deepEqual(
-    observed.logs.map((event) => [event.transactionHash, event.logIndex, event.address]),
+    observed.logs.map((event) => [
+      event.transactionHash,
+      event.logIndex,
+      event.address,
+    ]),
     [[transactionHash, "0", address]],
   );
   assert.match(observed.logs[0].dataSha256, /^0x[a-f0-9]{64}$/);
@@ -85,20 +95,26 @@ test("rejects malicious chain identity and wrong genesis", async () => {
     await assert.rejects(
       new ReadOnlyEvmObserverV1(config, rpcFetch(override)).observeBlock(1),
       (error: unknown) =>
-        error instanceof ChainObservationError && error.reason === "UNAPPROVED_CHAIN",
+        error instanceof ChainObservationError &&
+        error.reason === "UNAPPROVED_CHAIN",
     );
   }
 });
 
 test("rejects unapproved contract events and log/block reorg disagreement", async () => {
   const attempts = [
-    { override: { logAddress: "0x" + "f".repeat(40) }, reason: "UNAPPROVED_CONTRACT" },
+    {
+      override: { logAddress: "0x" + "f".repeat(40) },
+      reason: "UNAPPROVED_CONTRACT",
+    },
     { override: { logBlockHash: "0x" + "f".repeat(64) }, reason: "REORG" },
     { override: { reorgHash: "0x" + "f".repeat(64) }, reason: "REORG" },
   ];
   for (const item of attempts) {
     await assert.rejects(
-      new ReadOnlyEvmObserverV1(config, rpcFetch(item.override)).observeBlock(1),
+      new ReadOnlyEvmObserverV1(config, rpcFetch(item.override)).observeBlock(
+        1,
+      ),
       (error: unknown) =>
         error instanceof ChainObservationError && error.reason === item.reason,
     );
@@ -113,7 +129,8 @@ test("does not silently fall back to unapproved or non-TLS endpoints", () => {
   ]) {
     assert.throws(
       () => new ReadOnlyEvmObserverV1({ ...config, rpcHttpsUrl }),
-      (error: unknown) => error instanceof ChainObservationError &&
+      (error: unknown) =>
+        error instanceof ChainObservationError &&
         error.reason === "UNAPPROVED_CHAIN",
     );
   }

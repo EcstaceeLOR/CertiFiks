@@ -76,7 +76,10 @@ export class ReadOnlyEvmObserverV1 {
       !config.contractAddresses.every((value) => ADDRESS.test(value)) ||
       !config.eventTopic0.every((value) => HASH.test(value))
     ) {
-      throw new ChainObservationError("UNAPPROVED_CHAIN", "Missing approved chain/contract/RPC identity");
+      throw new ChainObservationError(
+        "UNAPPROVED_CHAIN",
+        "Missing approved chain/contract/RPC identity",
+      );
     }
     this.url = url.href;
     this.addressSet = new Set(config.contractAddresses);
@@ -95,9 +98,16 @@ export class ReadOnlyEvmObserverV1 {
         signal: AbortSignal.timeout(10000),
       });
     } catch {
-      throw new ChainObservationError("PROVIDER_UNAVAILABLE", "EVM provider unavailable");
+      throw new ChainObservationError(
+        "PROVIDER_UNAVAILABLE",
+        "EVM provider unavailable",
+      );
     }
-    if (!reply.ok) throw new ChainObservationError("PROVIDER_UNAVAILABLE", "EVM provider rejected request");
+    if (!reply.ok)
+      throw new ChainObservationError(
+        "PROVIDER_UNAVAILABLE",
+        "EVM provider rejected request",
+      );
     let result: unknown;
     try {
       result = await reply.json();
@@ -114,7 +124,10 @@ export class ReadOnlyEvmObserverV1 {
       !("result" in result) ||
       "error" in result
     ) {
-      throw new ChainObservationError("MALFORMED_RPC", "Malformed RPC envelope");
+      throw new ChainObservationError(
+        "MALFORMED_RPC",
+        "Malformed RPC envelope",
+      );
     }
     return result.result;
   }
@@ -124,16 +137,27 @@ export class ReadOnlyEvmObserverV1 {
       throw new ChainObservationError("MALFORMED_RPC", "Invalid block height");
     }
     const chain = await this.rpc("eth_chainId");
-    if (typeof chain !== "string" || !NUMBER_HEX.test(chain) ||
-      BigInt(chain).toString() !== this.config.approvedChainId) {
-      throw new ChainObservationError("UNAPPROVED_CHAIN", "Wrong chain identity");
+    if (
+      typeof chain !== "string" ||
+      !NUMBER_HEX.test(chain) ||
+      BigInt(chain).toString() !== this.config.approvedChainId
+    ) {
+      throw new ChainObservationError(
+        "UNAPPROVED_CHAIN",
+        "Wrong chain identity",
+      );
     }
     const genesis = await this.rpc("eth_getBlockByNumber", ["0x0", false]);
     if (
-      !genesis || typeof genesis !== "object" || !("hash" in genesis) ||
+      !genesis ||
+      typeof genesis !== "object" ||
+      !("hash" in genesis) ||
       genesis.hash !== this.config.approvedGenesisHash
     ) {
-      throw new ChainObservationError("UNAPPROVED_CHAIN", "Wrong chain genesis");
+      throw new ChainObservationError(
+        "UNAPPROVED_CHAIN",
+        "Wrong chain genesis",
+      );
     }
     const headValue = await this.rpc("eth_blockNumber");
     if (typeof headValue !== "string" || !NUMBER_HEX.test(headValue)) {
@@ -141,55 +165,91 @@ export class ReadOnlyEvmObserverV1 {
     }
     const observedHead = BigInt(headValue);
     if (BigInt(height) > observedHead) {
-      throw new ChainObservationError("PROVIDER_UNAVAILABLE", "Block is not yet available");
+      throw new ChainObservationError(
+        "PROVIDER_UNAVAILABLE",
+        "Block is not yet available",
+      );
     }
 
     const blockTag = `0x${height.toString(16)}`;
     const block = await this.rpc("eth_getBlockByNumber", [blockTag, false]);
     if (
-      !block || typeof block !== "object" ||
-      !("hash" in block) || typeof block.hash !== "string" || !HASH.test(block.hash) ||
-      !("parentHash" in block) || typeof block.parentHash !== "string" ||
+      !block ||
+      typeof block !== "object" ||
+      !("hash" in block) ||
+      typeof block.hash !== "string" ||
+      !HASH.test(block.hash) ||
+      !("parentHash" in block) ||
+      typeof block.parentHash !== "string" ||
       !HASH.test(block.parentHash) ||
-      !("number" in block) || block.number !== blockTag
+      !("number" in block) ||
+      block.number !== blockTag
     ) {
-      throw new ChainObservationError("MALFORMED_RPC", "Malformed block metadata");
+      throw new ChainObservationError(
+        "MALFORMED_RPC",
+        "Malformed block metadata",
+      );
     }
-    const logs = await this.rpc("eth_getLogs", [{
-      fromBlock: blockTag,
-      toBlock: blockTag,
-      address: this.config.contractAddresses,
-      topics: [this.config.eventTopic0],
-    }]);
+    const logs = await this.rpc("eth_getLogs", [
+      {
+        fromBlock: blockTag,
+        toBlock: blockTag,
+        address: this.config.contractAddresses,
+        topics: [this.config.eventTopic0],
+      },
+    ]);
     if (!Array.isArray(logs) || logs.length > 1000) {
-      throw new ChainObservationError("MALFORMED_RPC", "Malformed or excessive block logs");
+      throw new ChainObservationError(
+        "MALFORMED_RPC",
+        "Malformed or excessive block logs",
+      );
     }
     const unique = new Set<string>();
     const events: ObservedEvmLogV1[] = [];
     for (const raw of logs) {
       if (!raw || typeof raw !== "object") {
-        throw new ChainObservationError("MALFORMED_RPC", "Malformed log object");
+        throw new ChainObservationError(
+          "MALFORMED_RPC",
+          "Malformed log object",
+        );
       }
       const entry = raw as Record<string, unknown>;
       if (
         entry.removed === true ||
         entry.blockHash !== block.hash ||
         entry.blockNumber !== blockTag
-      ) throw new ChainObservationError("REORG", "Log does not belong to canonical observed block");
+      )
+        throw new ChainObservationError(
+          "REORG",
+          "Log does not belong to canonical observed block",
+        );
       if (
-        typeof entry.address !== "string" || !this.addressSet.has(entry.address) ||
+        typeof entry.address !== "string" ||
+        !this.addressSet.has(entry.address) ||
         !Array.isArray(entry.topics) ||
-        typeof entry.topics[0] !== "string" || !this.topicSet.has(entry.topics[0])
-      ) throw new ChainObservationError("UNAPPROVED_CONTRACT", "Unexpected contract event");
+        typeof entry.topics[0] !== "string" ||
+        !this.topicSet.has(entry.topics[0])
+      )
+        throw new ChainObservationError(
+          "UNAPPROVED_CONTRACT",
+          "Unexpected contract event",
+        );
       if (
-        typeof entry.transactionHash !== "string" || !HASH.test(entry.transactionHash) ||
-        typeof entry.logIndex !== "string" || !NUMBER_HEX.test(entry.logIndex) ||
+        typeof entry.transactionHash !== "string" ||
+        !HASH.test(entry.transactionHash) ||
+        typeof entry.logIndex !== "string" ||
+        !NUMBER_HEX.test(entry.logIndex) ||
         typeof entry.data !== "string" ||
         !/^0x(?:[a-f0-9]{2})*$/.test(entry.data) ||
         BigInt(entry.logIndex) > BigInt(2147483647)
-      ) throw new ChainObservationError("MALFORMED_RPC", "Invalid log identity");
+      )
+        throw new ChainObservationError(
+          "MALFORMED_RPC",
+          "Invalid log identity",
+        );
       const key = `${entry.transactionHash}:${entry.logIndex}`;
-      if (unique.has(key)) throw new ChainObservationError("MALFORMED_RPC", "Duplicate RPC log");
+      if (unique.has(key))
+        throw new ChainObservationError("MALFORMED_RPC", "Duplicate RPC log");
       unique.add(key);
       events.push({
         transactionHash: entry.transactionHash,
@@ -198,15 +258,26 @@ export class ReadOnlyEvmObserverV1 {
         logIndex: BigInt(entry.logIndex).toString(),
         address: entry.address,
         topic0: entry.topics[0],
-        dataSha256: "0x" + createHash("sha256").update(Buffer.from(entry.data.slice(2), "hex")).digest("hex"),
+        dataSha256:
+          "0x" +
+          createHash("sha256")
+            .update(Buffer.from(entry.data.slice(2), "hex"))
+            .digest("hex"),
       });
     }
 
     // Detect a reorg during the read interval, before committing any data.
     const confirmed = await this.rpc("eth_getBlockByNumber", [blockTag, false]);
-    if (!confirmed || typeof confirmed !== "object" ||
-      !("hash" in confirmed) || confirmed.hash !== block.hash) {
-      throw new ChainObservationError("REORG", "Observed block changed during RPC scan");
+    if (
+      !confirmed ||
+      typeof confirmed !== "object" ||
+      !("hash" in confirmed) ||
+      confirmed.hash !== block.hash
+    ) {
+      throw new ChainObservationError(
+        "REORG",
+        "Observed block changed during RPC scan",
+      );
     }
 
     return {

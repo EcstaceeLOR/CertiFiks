@@ -17,3 +17,4 @@ export type { components, paths } from "./generated/openapi.js";
 export * from "./manifest-admission.js";
 export * from "./validation.js";
 export * from "./verifier-vote.js";
+export * from "./wallet-transaction-status.js";

@@ -43,7 +43,7 @@ jobs:
       - name: Unit tests
         run: npm run test
       - name: Independent read-only manifest and evidence CLI acceptance
-        run: node --import tsx --test scripts/verify-manifest.test.mjs scripts/verify-evidence.test.mjs
+        run: node --import tsx --test scripts/verify-manifest.test.mjs scripts/verify-evidence.test.mjs scripts/check-public-api-contract.test.mjs
       - name: Build every workspace
         run: npm run build
 

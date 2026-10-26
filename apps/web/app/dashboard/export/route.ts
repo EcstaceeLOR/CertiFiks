@@ -3,7 +3,7 @@ import {
   historyQuery,
   parseHistoryFilters,
   safePublicApiOrigin,
-} from "../history.js";
+} from "../history";
 
 export const dynamic = "force-dynamic";
 

@@ -377,3 +377,79 @@ end;
 $$;
 reset request.jwt.claim.role;
 select 'PASS: verifier queue idempotency, lease fencing, backoff, dead-letter and no payout writes' as result;
+
+-- Issue #29: safe inbox delivery, opt-in and replay storm suppression.
+insert into public.certifiks_auth_role_memberships(user_id,organization_id,role)
+  values('10000000-0000-4000-8000-000000000001',
+         '20000000-0000-4000-8000-000000000001','sponsor');
+set request.jwt.claim.role='service_role';
+do $$
+declare first_id uuid; replay_id uuid; second_id uuid;
+begin
+  first_id:=public.certifiks_enqueue_notification(
+    '20000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001',
+    '30000000-0000-4000-8000-000000000001',
+    'submission','0x'||repeat('1',64),repeat('f',64)
+  );
+  replay_id:=public.certifiks_enqueue_notification(
+    '20000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001',
+    '30000000-0000-4000-8000-000000000001',
+    'submission','0x'||repeat('1',64),repeat('f',64)
+  );
+  if first_id<>replay_id then raise exception 'notification replay not idempotent'; end if;
+  if (select count(*) from public.certifiks_notification_outbox
+      where notification_id=first_id)<>1
+  then raise exception 'duplicate or missing in-app delivery'; end if;
+  begin
+    perform public.certifiks_enqueue_notification(
+      '20000000-0000-4000-8000-000000000001',
+      '10000000-0000-4000-8000-000000000001',
+      '30000000-0000-4000-8000-000000000001',
+      'submission','0x'||repeat('2',64),repeat('f',64)
+    );
+    raise exception 'same event id accepted different payload';
+  exception when raise_exception then
+    if sqlerrm<>'notification idempotency content conflict' then raise; end if;
+  end;
+  if public.certifiks_mark_notification_read(
+    '20000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000002',first_id
+  ) then raise exception 'unrelated user marked notification as read'; end if;
+  if not public.certifiks_mark_notification_read(
+    '20000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001',first_id
+  ) then raise exception 'authorized read did not persist'; end if;
+  insert into public.certifiks_notification_preferences(
+    organization_id,user_id,in_app_enabled,email_opt_in
+  ) values(
+    '20000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001',false,true
+  );
+  second_id:=public.certifiks_enqueue_notification(
+    '20000000-0000-4000-8000-000000000001',
+    '10000000-0000-4000-8000-000000000001',
+    '30000000-0000-4000-8000-000000000001',
+    'assignment','0x'||repeat('3',64),repeat('e',64)
+  );
+  if exists(select 1 from public.certifiks_notification_outbox
+      where notification_id=second_id)
+  then raise exception 'disabled inbox or unconfigured email was dispatched'; end if;
+  begin
+    perform public.certifiks_enqueue_notification(
+      '20000000-0000-4000-8000-000000000002',
+      '10000000-0000-4000-8000-000000000001',
+      '30000000-0000-4000-8000-000000000001',
+      'assignment','0x'||repeat('4',64),repeat('d',64)
+    );
+    raise exception 'cross-tenant notification was accepted';
+  exception when raise_exception then
+    if sqlerrm<>'recipient is not an active tenant member' then raise; end if;
+  end;
+  if has_table_privilege('anon','public.certifiks_notification_outbox','SELECT')
+  then raise exception 'anonymous user reads private outbox'; end if;
+end;
+$$;
+reset request.jwt.claim.role;
+select 'PASS: inbox replay/idempotency, tenant isolation, read owner, preference opt-out and no fake email' as result;

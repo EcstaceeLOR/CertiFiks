@@ -16,8 +16,7 @@ export const PUBLIC_BOUNTY_STATES = new Set([
 export const PUBLIC_HISTORY_SORTS = {
   newest: "created_at.desc,bounty_id.asc",
   oldest: "created_at.asc,bounty_id.asc",
-  reward_high: "reward_atoms.desc,bounty_id.asc",
-  reward_low: "reward_atoms.asc,bounty_id.asc",
+  repository: "repository_full_name.asc,bounty_id.asc",
 } as const;
 export type PublicHistorySort = keyof typeof PUBLIC_HISTORY_SORTS;
 

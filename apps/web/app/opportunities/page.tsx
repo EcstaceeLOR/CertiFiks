@@ -23,16 +23,18 @@ type Feed =
   | { kind: "available"; items: PublishedOpportunity[]; page: number; next: boolean };
 
 function canonical(params: Params): { state?: string; repo?: string; page: number } | null {
+  const state = params.state === "" ? undefined : params.state;
+  const repo = params.repo === "" ? undefined : params.repo;
   if (
     Array.isArray(params.state) || Array.isArray(params.repo) ||
     Array.isArray(params.page) ||
-    (params.state !== undefined && !STATES.includes(params.state as (typeof STATES)[number])) ||
-    (params.repo !== undefined && !REPO.test(params.repo)) ||
+    (state !== undefined && !STATES.includes(state as (typeof STATES)[number])) ||
+    (repo !== undefined && !REPO.test(repo)) ||
     (params.page !== undefined && !/^(0|[1-9][0-9]{0,2})$/.test(params.page))
   ) return null;
   const page = Number(params.page ?? "0");
   if (page > 100) return null;
-  return { state: params.state, repo: params.repo, page };
+  return { state, repo, page };
 }
 
 function isOpportunity(value: unknown): value is PublishedOpportunity {

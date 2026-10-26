@@ -145,6 +145,7 @@ jobs:
             supabase/migrations/202610260003_public_bounty_projection.sql \
             supabase/migrations/202610260004_chain_observation_ledger.sql \
             supabase/migrations/202610260005_verification_jobs.sql \
+            supabase/migrations/202610260006_notification_delivery.sql \
             scripts/db/ci_assertions.sql
           do
             docker run --rm --network host \

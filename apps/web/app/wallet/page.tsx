@@ -25,10 +25,16 @@ const states = [
 export default function WalletSafetyPage() {
   return (
     <main id="main-content" className={styles.page}>
-      <a className={styles.skip} href="#wallet-checks">Skip to wallet requirements</a>
+      <a className={styles.skip} href="#wallet-checks">
+        Skip to wallet requirements
+      </a>
       <header className={styles.header}>
         <div className={styles.headerInner}>
-          <Link className={styles.wordmark} href="/" aria-label="CertiFiks home">
+          <Link
+            className={styles.wordmark}
+            href="/"
+            aria-label="CertiFiks home"
+          >
             certi<span>fiks</span>.
           </Link>
           <nav aria-label="Wallet safety navigation" className={styles.nav}>
@@ -39,18 +45,21 @@ export default function WalletSafetyPage() {
       </header>
       <div className={styles.body}>
         <p className={styles.eyebrow}>WALLET SAFETY / CHAIN VERIFICATION</p>
-        <h1>Funds need <em>finality.</em></h1>
+        <h1>
+          Funds need <em>finality.</em>
+        </h1>
         <p className={styles.lead}>
           Wallet approval, transaction broadcast and actual escrow funding are
-          different states. CertiFiks will not call a reward paid or a bounty funded
-          until independent chain evidence agrees.
+          different states. CertiFiks will not call a reward paid or a bounty
+          funded until independent chain evidence agrees.
         </p>
         <div className={styles.warning} role="status">
           <strong>Wallet connection and transfers are disabled.</strong>
           <p>
-            Portaldot runtime compatibility, escrow deployment and supported wallet
-            providers are not yet independently verified. This page does not connect
-            a wallet, request a signature, accept a deposit or issue a payout.
+            Portaldot runtime compatibility, escrow deployment and supported
+            wallet providers are not yet independently verified. This page does
+            not connect a wallet, request a signature, accept a deposit or issue
+            a payout.
           </p>
         </div>
         <section id="wallet-checks" aria-labelledby="wallet-checks-title">
@@ -90,10 +99,15 @@ export default function WalletSafetyPage() {
             money-moving wallet actions. A transfer always requires explicit
             user authorization and independent post-transaction reconciliation.
           </p>
-          <Link className={styles.link} href="/onboarding">Review prerequisites ↗</Link>
-          <a className={styles.secondaryLink}
+          <Link className={styles.link} href="/onboarding">
+            Review prerequisites ↗
+          </Link>
+          <a
+            className={styles.secondaryLink}
             href="https://github.com/EcstaceeLOR/CertiFiks/issues/36"
-            target="_blank" rel="noreferrer">
+            target="_blank"
+            rel="noreferrer"
+          >
             Track wallet integration ↗
           </a>
         </section>

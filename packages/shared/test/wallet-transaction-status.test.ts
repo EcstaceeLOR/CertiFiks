@@ -26,9 +26,33 @@ test("no browser wallet status can assert escrow custody or payout", () => {
     { ...base, signatureRejected: true },
     { ...base, providerUnavailable: true },
     { ...base, replacementHash: "0x" + "d".repeat(64) },
-    { ...base, receipt: { transactionHash: TX, canonical: true, finalized: true, success: true } },
-    { ...base, receipt: { transactionHash: TX, canonical: false, finalized: false, success: true } },
-    { ...base, receipt: { transactionHash: TX, canonical: true, finalized: true, success: false } },
+    {
+      ...base,
+      receipt: {
+        transactionHash: TX,
+        canonical: true,
+        finalized: true,
+        success: true,
+      },
+    },
+    {
+      ...base,
+      receipt: {
+        transactionHash: TX,
+        canonical: false,
+        finalized: false,
+        success: true,
+      },
+    },
+    {
+      ...base,
+      receipt: {
+        transactionHash: TX,
+        canonical: true,
+        finalized: true,
+        success: false,
+      },
+    },
   ];
   for (const input of variations) {
     const state = assessWalletTransactionV1(input);
@@ -41,7 +65,8 @@ test("no browser wallet status can assert escrow custody or payout", () => {
 
 test("unapproved or Substrate-only runtime never enables EVM wallet transfers", () => {
   assert.equal(
-    assessWalletTransactionV1({ ...base, approvedProtocol: "substrate" }).status,
+    assessWalletTransactionV1({ ...base, approvedProtocol: "substrate" })
+      .status,
     "configuration_blocked",
   );
   assert.equal(
@@ -61,13 +86,18 @@ test("wallet disconnect, wrong chain and account switching invalidate display as
   );
   assert.equal(
     assessWalletTransactionV1({
-      ...base, currentWallet: { protocol: "evm", chainId: "1", account: ADDRESS },
+      ...base,
+      currentWallet: { protocol: "evm", chainId: "1", account: ADDRESS },
     }).status,
     "wrong_network",
   );
   const switched = assessWalletTransactionV1({
     ...base,
-    currentWallet: { protocol: "evm", chainId: "11155111", account: "0x" + "e".repeat(40) },
+    currentWallet: {
+      protocol: "evm",
+      chainId: "11155111",
+      account: "0x" + "e".repeat(40),
+    },
   });
   assert.equal(switched.status, "different_account");
   assert.equal(switched.evidenceTxHash, null);
@@ -80,19 +110,32 @@ test("rejected, reverted, replaced and pending transactions never appear paid", 
   );
   assert.equal(
     assessWalletTransactionV1({
-      ...base, receipt: { transactionHash: TX, canonical: true, finalized: true, success: false },
+      ...base,
+      receipt: {
+        transactionHash: TX,
+        canonical: true,
+        finalized: true,
+        success: false,
+      },
     }).status,
     "transaction_reverted",
   );
   assert.equal(
     assessWalletTransactionV1({
-      ...base, replacementHash: "0x" + "d".repeat(64),
+      ...base,
+      replacementHash: "0x" + "d".repeat(64),
     }).status,
     "transaction_replaced",
   );
   assert.equal(
     assessWalletTransactionV1({
-      ...base, receipt: { transactionHash: TX, canonical: false, finalized: false, success: true },
+      ...base,
+      receipt: {
+        transactionHash: TX,
+        canonical: false,
+        finalized: false,
+        success: true,
+      },
     }).status,
     "pending_finality",
   );
@@ -101,7 +144,12 @@ test("rejected, reverted, replaced and pending transactions never appear paid", 
 test("matching canonical receipt is still only an observation, not funding authorization", () => {
   const observed = assessWalletTransactionV1({
     ...base,
-    receipt: { transactionHash: TX, canonical: true, finalized: true, success: true },
+    receipt: {
+      transactionHash: TX,
+      canonical: true,
+      finalized: true,
+      success: true,
+    },
   });
   assert.equal(observed.status, "canonical_receipt_observed");
   assert.equal(observed.custodyVerified, false);
@@ -109,7 +157,13 @@ test("matching canonical receipt is still only an observation, not funding autho
   assert.equal(observed.allowTransfer, false);
   assert.equal(
     assessWalletTransactionV1({
-      ...base, receipt: { transactionHash: "0x" + "f".repeat(64), canonical: true, finalized: true, success: true },
+      ...base,
+      receipt: {
+        transactionHash: "0x" + "f".repeat(64),
+        canonical: true,
+        finalized: true,
+        success: true,
+      },
     }).status,
     "configuration_blocked",
   );

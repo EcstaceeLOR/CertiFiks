@@ -99,26 +99,31 @@ export function assessWalletTransactionV1(
   }
   const wallet = input.currentWallet;
   if (!wallet) {
-    return result("wallet_disconnected", "Connect the original wallet to inspect this transaction.");
+    return result(
+      "wallet_disconnected",
+      "Connect the original wallet to inspect this transaction.",
+    );
   }
-  if (
-    wallet.protocol !== "evm" ||
-    wallet.chainId !== input.approvedChainId
-  ) {
+  if (wallet.protocol !== "evm" || wallet.chainId !== input.approvedChainId) {
     return result(
       "wrong_network",
       "The connected wallet uses the wrong network. No transaction is authorized.",
     );
   }
-  if (!validAccount(wallet.account) ||
-      wallet.account.toLowerCase() !== input.originalAccount?.toLowerCase()) {
+  if (
+    !validAccount(wallet.account) ||
+    wallet.account.toLowerCase() !== input.originalAccount?.toLowerCase()
+  ) {
     return result(
       "different_account",
       "The connected account has changed. Prior transaction details remain private.",
     );
   }
   if (input.signatureRejected === true) {
-    return result("user_rejected", "The wallet signature was declined. No transfer was submitted.");
+    return result(
+      "user_rejected",
+      "The wallet signature was declined. No transfer was submitted.",
+    );
   }
   if (input.providerUnavailable === true) {
     return result(
@@ -128,15 +133,27 @@ export function assessWalletTransactionV1(
   }
   const txHash = input.txHash;
   if (!txHash) {
-    return result("signature_required", "No signed, broadcast transaction has been observed.");
+    return result(
+      "signature_required",
+      "No signed, broadcast transaction has been observed.",
+    );
   }
   if (!HEX_64.test(txHash)) {
-    return result("configuration_blocked", "The transaction identifier is malformed.");
+    return result(
+      "configuration_blocked",
+      "The transaction identifier is malformed.",
+    );
   }
   const replaced = input.replacementHash;
   if (replaced !== undefined && replaced !== null) {
-    if (!HEX_64.test(replaced) || replaced.toLowerCase() === txHash.toLowerCase()) {
-      return result("configuration_blocked", "The replacement transaction cannot be trusted.");
+    if (
+      !HEX_64.test(replaced) ||
+      replaced.toLowerCase() === txHash.toLowerCase()
+    ) {
+      return result(
+        "configuration_blocked",
+        "The replacement transaction cannot be trusted.",
+      );
     }
     return result(
       "transaction_replaced",
@@ -156,10 +173,17 @@ export function assessWalletTransactionV1(
     !HEX_64.test(receipt.transactionHash) ||
     receipt.transactionHash.toLowerCase() !== txHash.toLowerCase()
   ) {
-    return result("configuration_blocked", "Receipt identity does not match the submitted transaction.");
+    return result(
+      "configuration_blocked",
+      "Receipt identity does not match the submitted transaction.",
+    );
   }
   if (receipt.success === false) {
-    return result("transaction_reverted", "The transaction reverted. No successful payment is claimed.", txHash.toLowerCase());
+    return result(
+      "transaction_reverted",
+      "The transaction reverted. No successful payment is claimed.",
+      txHash.toLowerCase(),
+    );
   }
   if (!receipt.canonical || !receipt.finalized) {
     return result(

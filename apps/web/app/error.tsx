@@ -17,7 +17,7 @@ export default function PageError({
   }, [error]);
 
   return (
-    <main id="main-content" className="container recovery-page" role="main">
+    <main id="main-content" className="container recovery-page">
       <p className="eyebrow">SERVICE RESPONSE / CANNOT VERIFY</p>
       <h1>That page didn't load.</h1>
       <p role="alert" aria-live="assertive">

@@ -68,11 +68,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "newest",
-                "oldest",
-                "repository"
-              ],
+              "enum": ["newest", "oldest", "repository"],
               "default": "newest"
             }
           }
@@ -230,11 +226,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "newest",
-                "oldest",
-                "repository"
-              ],
+              "enum": ["newest", "oldest", "repository"],
               "default": "newest"
             }
           }
@@ -358,10 +350,7 @@
       },
       "PublicBountyPageV1": {
         "type": "object",
-        "required": [
-          "items",
-          "page"
-        ],
+        "required": ["items", "page"],
         "properties": {
           "items": {
             "type": "array",
@@ -371,11 +360,7 @@
           },
           "page": {
             "type": "object",
-            "required": [
-              "limit",
-              "offset",
-              "nextOffset"
-            ],
+            "required": ["limit", "offset", "nextOffset"],
             "properties": {
               "limit": {
                 "type": "integer"
@@ -384,10 +369,7 @@
                 "type": "integer"
               },
               "nextOffset": {
-                "type": [
-                  "integer",
-                  "null"
-                ]
+                "type": ["integer", "null"]
               }
             }
           },
@@ -402,9 +384,7 @@
       },
       "ErrorV1": {
         "type": "object",
-        "required": [
-          "error"
-        ],
+        "required": ["error"],
         "properties": {
           "error": {
             "type": "string"

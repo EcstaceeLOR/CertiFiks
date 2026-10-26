@@ -3,7 +3,10 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const document = JSON.parse(
-  readFileSync(new URL("../protocol/public-api.v1.json", import.meta.url), "utf8"),
+  readFileSync(
+    new URL("../protocol/public-api.v1.json", import.meta.url),
+    "utf8",
+  ),
 );
 const serverSource = readFileSync(
   new URL("../apps/api/src/app.ts", import.meta.url),

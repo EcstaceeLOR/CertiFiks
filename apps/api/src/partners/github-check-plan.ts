@@ -36,29 +36,43 @@ export interface PreparedGitHubCheckRunV1 {
  * This returns a payload, NOT approval to publish and NOT a real Check Run.
  * No auto-merge, funding or escrow effects occur.
  */
-export function prepareGitHubCheckV1(v: TrustedQualificationV1): PreparedGitHubCheckRunV1 {
+export function prepareGitHubCheckV1(
+  v: TrustedQualificationV1,
+): PreparedGitHubCheckRunV1 {
   if (
     !REPO.test(v.repositoryFullName) ||
-    !UINT.test(v.repositoryId) || !UINT.test(v.attemptId) ||
+    !UINT.test(v.repositoryId) ||
+    !UINT.test(v.attemptId) ||
     !SHA.test(v.headCommitSha) ||
-    !["pending", "inconclusive", "verified", "rejected", "disputed"].includes(v.state) ||
+    !["pending", "inconclusive", "verified", "rejected", "disputed"].includes(
+      v.state,
+    ) ||
     ![v.independentlyQualified, v.trustedQuorum, v.artifactIntegrity].every(
       (item) => typeof item === "boolean",
     ) ||
     (v.reportDigest !== null && !DIGEST.test(v.reportDigest))
-  ) throw new TypeError("GitHub Check: invalid or untrusted qualification binding");
+  )
+    throw new TypeError(
+      "GitHub Check: invalid or untrusted qualification binding",
+    );
 
   const documentedOutcome =
     v.reportDigest !== null && v.trustedQuorum && v.artifactIntegrity;
 
   if (["verified", "rejected"].includes(v.state) && !documentedOutcome) {
-    throw new TypeError("GitHub Check: signed independent evidence is required for terminal claim");
+    throw new TypeError(
+      "GitHub Check: signed independent evidence is required for terminal claim",
+    );
   }
   if (v.state === "verified" && !v.independentlyQualified) {
-    throw new TypeError("GitHub Check: cannot claim verified without independent qualification");
+    throw new TypeError(
+      "GitHub Check: cannot claim verified without independent qualification",
+    );
   }
   if (v.state === "rejected" && v.independentlyQualified) {
-    throw new TypeError("GitHub Check: contradictory independent qualification");
+    throw new TypeError(
+      "GitHub Check: contradictory independent qualification",
+    );
   }
 
   const common = {
@@ -73,7 +87,8 @@ export function prepareGitHubCheckV1(v: TrustedQualificationV1): PreparedGitHubC
       status: "in_progress",
       output: {
         title: "Verification pending",
-        summary: "Independent evidence has not yet been accepted. This is not an approval, merge or payout.",
+        summary:
+          "Independent evidence has not yet been accepted. This is not an approval, merge or payout.",
       },
     };
   }

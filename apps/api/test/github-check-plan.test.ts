@@ -57,7 +57,10 @@ test("verified status needs authentic accepted signed evidence and an exact comm
   });
   assert.equal(verified.status, "completed");
   assert.equal(verified.conclusion, "success");
-  assert.match(verified.output.summary, /payment is authorized by this Check Run/i);
+  assert.match(
+    verified.output.summary,
+    /payment is authorized by this Check Run/i,
+  );
   assert.ok(!JSON.stringify(verified).includes("merge_method"));
 });
 

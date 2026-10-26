@@ -40,7 +40,9 @@ if (
     );
   } catch {
     // Never echo repository-private manifest bytes or error data to stderr.
-    process.stderr.write("MANIFEST_REJECTED: canonical/schema/commitment mismatch or unreadable file\n");
+    process.stderr.write(
+      "MANIFEST_REJECTED: canonical/schema/commitment mismatch or unreadable file\n",
+    );
     process.exitCode = 1;
   }
 }

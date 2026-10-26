@@ -7,12 +7,21 @@ import test from "node:test";
 import canonicalize from "canonicalize";
 
 const manifestVector = JSON.parse(
-  await readFile(new URL("../protocol/vectors/manifest-v1.json", import.meta.url)),
+  await readFile(
+    new URL("../protocol/vectors/manifest-v1.json", import.meta.url),
+  ),
 );
 function run(path, digest) {
   return spawnSync(
     process.execPath,
-    ["--import", "tsx", "scripts/verify-manifest.mjs", path, "--expected-digest", digest],
+    [
+      "--import",
+      "tsx",
+      "scripts/verify-manifest.mjs",
+      path,
+      "--expected-digest",
+      digest,
+    ],
     { encoding: "utf8", timeout: 15000 },
   );
 }

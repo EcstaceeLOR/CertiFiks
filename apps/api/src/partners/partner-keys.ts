@@ -28,12 +28,19 @@ export class PartnerPublicKeyAuthorizer {
     if (
       url.protocol !== "https:" ||
       !url.hostname.endsWith(".supabase.co") ||
-      url.username || url.password || url.hash || url.search ||
-      !serverKey || serverKey.length < 16
+      url.username ||
+      url.password ||
+      url.hash ||
+      url.search ||
+      !serverKey ||
+      serverKey.length < 16
     ) {
       throw new PartnerAuthError("MISCONFIGURED");
     }
-    this.endpoint = new URL("/rest/v1/rpc/certifiks_authorize_partner_key", url).href;
+    this.endpoint = new URL(
+      "/rest/v1/rpc/certifiks_authorize_partner_key",
+      url,
+    ).href;
   }
 
   async requireBountyRead(rawKey: string | undefined): Promise<void> {

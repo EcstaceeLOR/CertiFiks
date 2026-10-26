@@ -25,11 +25,17 @@ test("scoped token requires transactional DB authorization and preserves precise
     supabaseUrl: "https://test-pub.supabase.co",
     supabaseServiceRoleKey: SERVICE,
     partnerAuthorizationFetch: (async (url: string, init?: RequestInit) => {
-      assert.equal(String(url), "https://test-pub.supabase.co/rest/v1/rpc/certifiks_authorize_partner_key");
+      assert.equal(
+        String(url),
+        "https://test-pub.supabase.co/rest/v1/rpc/certifiks_authorize_partner_key",
+      );
       assert.equal(init?.redirect, "error");
       const payload = JSON.parse(String(init?.body));
       authCalls.push(payload.p_sha256);
-      assert.equal(payload.p_sha256, createHash("sha256").update(API_KEY).digest("hex"));
+      assert.equal(
+        payload.p_sha256,
+        createHash("sha256").update(API_KEY).digest("hex"),
+      );
       assert.equal(payload.p_scope, "bounties:read");
       assert.equal(JSON.stringify(payload).includes(API_KEY), false);
       return new Response("true", { status: 200 });
@@ -103,7 +109,8 @@ test("service outage fails closed and strict filters reject injection after auth
   const app = buildApp({
     supabaseUrl: "https://test-pub.supabase.co",
     supabaseServiceRoleKey: SERVICE,
-    partnerAuthorizationFetch: (async () => new Response("true", { status: 200 })) as typeof fetch,
+    partnerAuthorizationFetch: (async () =>
+      new Response("true", { status: 200 })) as typeof fetch,
     publicBountyFetch: (async () => {
       fetched++;
       return new Response("[]", { status: 200 });
@@ -117,7 +124,11 @@ test("service outage fails closed and strict filters reject injection after auth
       "/v1/partner/bounties?repo=evil%2Fname%3Fselect%3D*",
       "/v1/partner/bounties?private=true",
     ]) {
-      const reply = await app.inject({ method: "GET", url, headers: { "x-certifiks-api-key": API_KEY } });
+      const reply = await app.inject({
+        method: "GET",
+        url,
+        headers: { "x-certifiks-api-key": API_KEY },
+      });
       assert.equal(reply.statusCode, 400, url);
     }
     assert.equal(fetched, 0);
@@ -127,7 +138,8 @@ test("service outage fails closed and strict filters reject injection after auth
   const outage = buildApp({
     supabaseUrl: "https://test-pub.supabase.co",
     supabaseServiceRoleKey: SERVICE,
-    partnerAuthorizationFetch: (async () => new Response("unavailable", { status: 503 })) as typeof fetch,
+    partnerAuthorizationFetch: (async () =>
+      new Response("unavailable", { status: 503 })) as typeof fetch,
   });
   try {
     const reply = await outage.inject({

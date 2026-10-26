@@ -7,8 +7,13 @@ const UUID = /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/;
 const DIGEST = /^0x[a-f0-9]{64}$/;
 const ERROR = /^[A-Z0-9_]{3,64}$/;
 const STAGES = new Set([
-  "checkout", "baseline", "candidate", "regression",
-  "review", "synchronize", "notify",
+  "checkout",
+  "baseline",
+  "candidate",
+  "regression",
+  "review",
+  "synchronize",
+  "notify",
 ]);
 
 export class VerificationQueueError extends Error {
@@ -44,10 +49,12 @@ function isLease(value: unknown): value is VerificationJobLeaseV1 {
     ) &&
     typeof row.manifest_digest === "string" &&
     DIGEST.test(row.manifest_digest) &&
-    typeof row.stage === "string" && STAGES.has(row.stage) &&
+    typeof row.stage === "string" &&
+    STAGES.has(row.stage) &&
     row.status === "running" &&
     typeof row.attempts === "number" &&
-    Number.isSafeInteger(row.attempts) && row.attempts >= 1 &&
+    Number.isSafeInteger(row.attempts) &&
+    row.attempts >= 1 &&
     row.attempts <= 8 &&
     typeof row.lease_until === "string" &&
     Number.isFinite(Date.parse(row.lease_until))
@@ -64,9 +71,13 @@ export class ServerVerificationQueueV1 {
     const parsed = new URL(supabaseUrl);
     assert(
       parsed.protocol === "https:" &&
-      parsed.hostname.endsWith(".supabase.co") &&
-      !parsed.username && !parsed.password && !parsed.search && !parsed.hash &&
-      typeof serverKey === "string" && serverKey.length >= 16,
+        parsed.hostname.endsWith(".supabase.co") &&
+        !parsed.username &&
+        !parsed.password &&
+        !parsed.search &&
+        !parsed.hash &&
+        typeof serverKey === "string" &&
+        serverKey.length >= 16,
       "Production server-only Supabase credentials required",
     );
     this.url = new URL("/rest/v1/rpc/", parsed);
@@ -92,7 +103,8 @@ export class ServerVerificationQueueV1 {
     } catch {
       throw new VerificationQueueError("Queue database is unavailable");
     }
-    if (!response.ok) throw new VerificationQueueError("Queue database rejected operation");
+    if (!response.ok)
+      throw new VerificationQueueError("Queue database rejected operation");
     try {
       return await response.json();
     } catch {
@@ -101,12 +113,16 @@ export class ServerVerificationQueueV1 {
   }
 
   async enqueue(
-    organizationId: string, bountyId: string, attemptId: string,
-    manifestDigest: string, stage: string,
+    organizationId: string,
+    bountyId: string,
+    attemptId: string,
+    manifestDigest: string,
+    stage: string,
   ): Promise<string> {
     assert(
       [organizationId, bountyId, attemptId].every((id) => UUID.test(id)) &&
-      DIGEST.test(manifestDigest) && STAGES.has(stage),
+        DIGEST.test(manifestDigest) &&
+        STAGES.has(stage),
       "Untrusted or malformed job identity",
     );
     const value = await this.rpc("certifiks_enqueue_verification_stage", {
@@ -116,14 +132,25 @@ export class ServerVerificationQueueV1 {
       p_manifest: manifestDigest,
       p_stage: stage,
     });
-    assert(typeof value === "string" && UUID.test(value), "Invalid enqueue receipt");
+    assert(
+      typeof value === "string" && UUID.test(value),
+      "Invalid enqueue receipt",
+    );
     return value;
   }
 
   async claim(limit = 5): Promise<VerificationJobLeaseV1[]> {
-    assert(Number.isSafeInteger(limit) && limit > 0 && limit <= 25, "Invalid claim batch size");
-    const value = await this.rpc("certifiks_claim_verification_jobs", { p_limit: limit });
-    assert(Array.isArray(value) && value.length <= limit, "Invalid claim result");
+    assert(
+      Number.isSafeInteger(limit) && limit > 0 && limit <= 25,
+      "Invalid claim batch size",
+    );
+    const value = await this.rpc("certifiks_claim_verification_jobs", {
+      p_limit: limit,
+    });
+    assert(
+      Array.isArray(value) && value.length <= limit,
+      "Invalid claim result",
+    );
     assert(value.every(isLease), "Invalid or unleased queue job");
     return value as VerificationJobLeaseV1[];
   }
@@ -131,7 +158,9 @@ export class ServerVerificationQueueV1 {
   async heartbeat(job: VerificationJobLeaseV1): Promise<boolean> {
     assert(isLease(job), "Job lease is invalid");
     const value = await this.rpc("certifiks_heartbeat_verification_job", {
-      p_job_id: job.job_id, p_lease: job.lease_id, p_attempt: job.attempts,
+      p_job_id: job.job_id,
+      p_lease: job.lease_id,
+      p_attempt: job.attempts,
     });
     assert(typeof value === "boolean", "Unconfirmed lease heartbeat");
     return value;
@@ -142,9 +171,16 @@ export class ServerVerificationQueueV1 {
     success: boolean,
     errorCode: string | null = null,
   ): Promise<boolean> {
-    assert(isLease(job) && typeof success === "boolean", "Job lease is invalid");
-    assert(success ? errorCode === null : errorCode === null || ERROR.test(errorCode),
-      "Invalid error code");
+    assert(
+      isLease(job) && typeof success === "boolean",
+      "Job lease is invalid",
+    );
+    assert(
+      success
+        ? errorCode === null
+        : errorCode === null || ERROR.test(errorCode),
+      "Invalid error code",
+    );
     const value = await this.rpc("certifiks_complete_verification_job", {
       p_job_id: job.job_id,
       p_lease: job.lease_id,
@@ -157,7 +193,10 @@ export class ServerVerificationQueueV1 {
   }
 
   async cancel(jobId: string, reason: string): Promise<boolean> {
-    assert(UUID.test(jobId) && ERROR.test(reason), "Invalid cancellation request");
+    assert(
+      UUID.test(jobId) && ERROR.test(reason),
+      "Invalid cancellation request",
+    );
     const value = await this.rpc("certifiks_cancel_verification_job", {
       p_job_id: jobId,
       p_error_code: reason,

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ConnectivityNotice } from "./connectivity-notice";
 import "./globals.css";
 export const metadata: Metadata = {
   title: "CertiFiks — Prove the Fix. Release the Reward.",
@@ -10,7 +11,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body><ConnectivityNotice />{children}</body>
     </html>
   );
 }

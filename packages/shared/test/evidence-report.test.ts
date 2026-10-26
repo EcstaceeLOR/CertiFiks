@@ -109,8 +109,9 @@ test("one-byte changes to report, signature and artifact always fail", () => {
     /tampering/,
   );
   const fakeSignature = deep(original);
-  fakeSignature.signatures[0].signatureBase64 =
-    (fakeSignature.signatures[0].signatureBase64[0] === "A" ? "B" : "A") +\n    fakeSignature.signatures[0].signatureBase64.slice(1);
+  const originalSignature = fakeSignature.signatures[0].signatureBase64;
+  const flipped = originalSignature.startsWith("A") ? "B" : "A";
+  fakeSignature.signatures[0].signatureBase64 = `${flipped}${originalSignature.slice(1)}`;
   assert.throws(() => verifyEvidenceBundleV1(fakeSignature, roster, files));
 });
 

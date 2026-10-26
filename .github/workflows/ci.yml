@@ -149,6 +149,7 @@ jobs:
             supabase/migrations/202610260007_workspace_delegation.sql \
             supabase/migrations/202610260008_sponsor_funding_intents.sql \
             supabase/migrations/202610260009_verifier_preflight.sql \
+            supabase/migrations/202610260010_dispute_timeline.sql \
             scripts/db/ci_assertions.sql
           do
             docker run --rm --network host \

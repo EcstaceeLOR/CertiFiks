@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
 import { validateLiveE2EIntakeV1 } from "./live-e2e-evidence.mjs";
 
 const path = process.argv[2];

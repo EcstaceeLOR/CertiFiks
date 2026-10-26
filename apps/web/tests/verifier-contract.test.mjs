@@ -10,7 +10,7 @@ test("reviewer route has a protected, truthful initial state without sign button
   const page = readFileSync(join(route, "page.tsx"), "utf8");
   assert.match(page, /Live reviewer sessions are not enabled/);
   assert.match(page, /Review disabled/);
-  assert.match(page, /No attestation or payout is performed here/);
+  assert.match(page, /No attestation or payout is performed\\s+here/);
   assert.match(page, /Nothing is signed automatically/);
   assert.match(page, /aria-label="Verifier navigation"/);
   assert.match(page, /href="#review-requirements"/);

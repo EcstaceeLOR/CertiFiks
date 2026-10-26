@@ -1,18 +1,18 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { generateKeyPairSync } from "node:crypto";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawnSync } from "node:child_process";
 import test from "node:test";
 import {
   assembleEvidenceBundleV1,
   createEvidenceReportV1,
-  signEvidenceReportV1,
-  verifyEvidenceBundleV1,
   type EvidenceArtifactBytesV1,
   type EvidenceReportV1,
+  signEvidenceReportV1,
   type TrustedEvidenceSignerV1,
+  verifyEvidenceBundleV1,
 } from "../src/evidence-report.js";
 
 const signerA = generateKeyPairSync("ed25519");
@@ -24,8 +24,16 @@ const pemPublic = (pair: typeof signerA) =>
   pair.publicKey.export({ format: "pem", type: "spki" }).toString();
 
 const roster: TrustedEvidenceSignerV1[] = [
-  { keyId: "key-one", organizationId: "org-one", publicKeyPem: pemPublic(signerA) },
-  { keyId: "key-two", organizationId: "org-two", publicKeyPem: pemPublic(signerB) },
+  {
+    keyId: "key-one",
+    organizationId: "org-one",
+    publicKeyPem: pemPublic(signerA),
+  },
+  {
+    keyId: "key-two",
+    organizationId: "org-two",
+    publicKeyPem: pemPublic(signerB),
+  },
 ];
 
 const files: EvidenceArtifactBytesV1 = {
@@ -51,10 +59,14 @@ function fixture() {
   const report = createEvidenceReportV1(inputs, files);
   const signatures = [
     signEvidenceReportV1(report, {
-      keyId: "key-one", organizationId: "org-one", privateKeyPem: pemPrivate(signerA),
+      keyId: "key-one",
+      organizationId: "org-one",
+      privateKeyPem: pemPrivate(signerA),
     }),
     signEvidenceReportV1(report, {
-      keyId: "key-two", organizationId: "org-two", privateKeyPem: pemPrivate(signerB),
+      keyId: "key-two",
+      organizationId: "org-two",
+      privateKeyPem: pemPrivate(signerB),
     }),
   ];
   return assembleEvidenceBundleV1(report, signatures);
@@ -78,51 +90,109 @@ test("one-byte changes to report, signature and artifact always fail", () => {
   const original = fixture();
   const modified = deep(original);
   modified.report.headCommitSha = "c".repeat(40);
-  assert.throws(() => verifyEvidenceBundleV1(modified, roster, files), /tampering/);
+  assert.throws(
+    () => verifyEvidenceBundleV1(modified, roster, files),
+    /tampering/,
+  );
   const fakeDigest = deep(original);
   fakeDigest.reportDigest = "0x" + "aa".repeat(32);
-  assert.throws(() => verifyEvidenceBundleV1(fakeDigest, roster, files), /tampering/);
-  const altered = { ...files, "baseline-log": Buffer.from("baseline failed: assertion 28\n") };
-  assert.throws(() => verifyEvidenceBundleV1(original, roster, altered), /tampering/);
+  assert.throws(
+    () => verifyEvidenceBundleV1(fakeDigest, roster, files),
+    /tampering/,
+  );
+  const altered = {
+    ...files,
+    "baseline-log": Buffer.from("baseline failed: assertion 28\n"),
+  };
+  assert.throws(
+    () => verifyEvidenceBundleV1(original, roster, altered),
+    /tampering/,
+  );
   const fakeSignature = deep(original);
-  fakeSignature.signatures[0].signatureBase64 = "A" + fakeSignature.signatures[0].signatureBase64.slice(1);
+  fakeSignature.signatures[0].signatureBase64 =
+    "A" + fakeSignature.signatures[0].signatureBase64.slice(1);
   assert.throws(() => verifyEvidenceBundleV1(fakeSignature, roster, files));
 });
 
 test("missing logs, untrusted keys, revoked identities and one-organization quorum fail closed", () => {
   const bundle = fixture();
-  const absent = { ...files, "candidate-log": undefined } as unknown as EvidenceArtifactBytesV1;
-  assert.throws(() => verifyEvidenceBundleV1(bundle, roster, absent), /missing private/);
-  assert.throws(() => verifyEvidenceBundleV1(bundle, [roster[0]], files), /untrusted/);
-  assert.throws(() => verifyEvidenceBundleV1(bundle, [
-    { ...roster[0], revoked: true }, roster[1],
-  ], files), /untrusted/);
+  const absent = {
+    ...files,
+    "candidate-log": undefined,
+  } as unknown as EvidenceArtifactBytesV1;
+  assert.throws(
+    () => verifyEvidenceBundleV1(bundle, roster, absent),
+    /missing private/,
+  );
+  assert.throws(
+    () => verifyEvidenceBundleV1(bundle, [roster[0]], files),
+    /untrusted/,
+  );
+  assert.throws(
+    () =>
+      verifyEvidenceBundleV1(
+        bundle,
+        [{ ...roster[0], revoked: true }, roster[1]],
+        files,
+      ),
+    /untrusted/,
+  );
   const duplicate = deep(bundle);
   duplicate.signatures[1].organizationId = "org-one";
-  assert.throws(() => verifyEvidenceBundleV1(duplicate, roster, files), /duplicate/);
-  assert.throws(() => verifyEvidenceBundleV1(
-    assembleEvidenceBundleV1(bundle.report, bundle.signatures.slice(0, 1)),
-    roster, files,
-  ), /two enrolled/);
-  assert.throws(() => signEvidenceReportV1(bundle.report, {
-    keyId: "key-evil", organizationId: "org-evil", privateKeyPem:
-      generateKeyPairSync("rsa", { modulusLength: 2048 })
-        .privateKey.export({ format: "pem", type: "pkcs8" }).toString(),
-  }), /Ed25519/);
+  assert.throws(
+    () => verifyEvidenceBundleV1(duplicate, roster, files),
+    /duplicate/,
+  );
+  assert.throws(
+    () =>
+      verifyEvidenceBundleV1(
+        assembleEvidenceBundleV1(bundle.report, bundle.signatures.slice(0, 1)),
+        roster,
+        files,
+      ),
+    /two enrolled/,
+  );
+  assert.throws(
+    () =>
+      signEvidenceReportV1(bundle.report, {
+        keyId: "key-evil",
+        organizationId: "org-evil",
+        privateKeyPem: generateKeyPairSync("rsa", { modulusLength: 2048 })
+          .privateKey.export({ format: "pem", type: "pkcs8" })
+          .toString(),
+      }),
+    /Ed25519/,
+  );
 });
 
 test("manifest, image, test plan, commit and strict private-log descriptors cannot be altered", () => {
-  for (const field of ["manifestDigest", "imageDigest", "testPlanDigest", "runnerResultDigest"] as const) {
+  for (const field of [
+    "manifestDigest",
+    "imageDigest",
+    "testPlanDigest",
+    "runnerResultDigest",
+  ] as const) {
     const tampered = deep(fixture());
     tampered.report[field] = "0x" + "ee".repeat(32);
     assert.throws(() => verifyEvidenceBundleV1(tampered, roster, files));
   }
   const publicLog = deep(fixture());
   publicLog.report.artifacts[0].visibility = "public" as "private";
-  assert.throws(() => verifyEvidenceBundleV1(publicLog, roster, files), /publicly disclosed/);
+  assert.throws(
+    () => verifyEvidenceBundleV1(publicLog, roster, files),
+    /publicly disclosed/,
+  );
   const extra = deep(fixture()) as unknown as Record<string, unknown>;
   extra.untrustedResult = true;
-  assert.throws(() => verifyEvidenceBundleV1(extra as unknown as ReturnType<typeof fixture>, roster, files), /unexpected/);
+  assert.throws(
+    () =>
+      verifyEvidenceBundleV1(
+        extra as unknown as ReturnType<typeof fixture>,
+        roster,
+        files,
+      ),
+    /unexpected/,
+  );
 });
 
 test("external verification CLI reproduces signed bundle offline and rejects absent private artifact", async () => {
@@ -135,11 +205,26 @@ test("external verification CLI reproduces signed bundle offline and rejects abs
     for (const [role, bytes] of Object.entries(files)) {
       await writeFile(join(folder, role + ".bin"), bytes);
     }
-    const cli = new URL("../../../scripts/verify-evidence.mjs", import.meta.url);
-    const run = () => spawnSync(process.execPath, [
-      "--import", "tsx", cli.pathname,
-      join(tmp, "bundle.json"), join(tmp, "trusted.json"), folder,
-    ], { encoding: "utf8", cwd: new URL("../../..", import.meta.url).pathname });
+    const cli = new URL(
+      "../../../scripts/verify-evidence.mjs",
+      import.meta.url,
+    );
+    const run = () =>
+      spawnSync(
+        process.execPath,
+        [
+          "--import",
+          "tsx",
+          cli.pathname,
+          join(tmp, "bundle.json"),
+          join(tmp, "trusted.json"),
+          folder,
+        ],
+        {
+          encoding: "utf8",
+          cwd: new URL("../../..", import.meta.url).pathname,
+        },
+      );
     let output = run();
     assert.equal(output.status, 0, output.stderr);
     assert.equal(JSON.parse(output.stdout).payoutAuthorized, false);

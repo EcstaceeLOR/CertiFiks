@@ -28,7 +28,10 @@ if (args.length !== 3) {
         readFile(join(artifactDirectory, "candidate-log.bin")),
         readFile(join(artifactDirectory, "regression-log.bin")),
       ]);
-    if (reportBytes.byteLength > 1024 * 1024 || rosterBytes.byteLength > 1024 * 1024) {
+    if (
+      reportBytes.byteLength > 1024 * 1024 ||
+      rosterBytes.byteLength > 1024 * 1024
+    ) {
       throw new Error("Bundle or trusted roster exceeds size limit");
     }
     const bundle = JSON.parse(reportBytes.toString("utf8"));
@@ -38,15 +41,20 @@ if (args.length !== 3) {
       "candidate-log": candidate,
       "regression-log": regressions,
     });
-    process.stdout.write(JSON.stringify({
-      reportDigest: bundle.reportDigest,
-      ...result,
-      note: "Cryptographic integrity only; does not establish real tests or payment eligibility",
-    }) + "\n");
+    process.stdout.write(
+      JSON.stringify({
+        reportDigest: bundle.reportDigest,
+        ...result,
+        note: "Cryptographic integrity only; does not establish real tests or payment eligibility",
+      }) + "\n",
+    );
   } catch (error) {
     // Never print private log contents or raw repository material.
-    process.stderr.write("EVIDENCE_REJECTED: " +
-      (error instanceof Error ? error.message : "unknown error") + "\n");
+    process.stderr.write(
+      "EVIDENCE_REJECTED: " +
+        (error instanceof Error ? error.message : "unknown error") +
+        "\n",
+    );
     process.exitCode = 1;
   }
 }

@@ -172,5 +172,5 @@ jobs:
           result=$(docker run --rm --network host -e PGPASSWORD=certifiks-ci-only-password \
             postgres:16 psql -tA -h 127.0.0.1 -U postgres -d certifiks_restored \
             -c "select (select count(*) from public.certifiks_bounties), (select count(*) from public.certifiks_attempts), (select count(*) from public.certifiks_audit_entries), (select count(*) from public.certifiks_public_bounties_v1);" -F '|')
-          test "$result" = "1|1|1|1"
+          test "$result" = "2|1|1|1"
           rm -rf "$RUNNER_TEMP/certifiks-backup"

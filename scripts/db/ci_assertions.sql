@@ -369,7 +369,7 @@ begin
   then raise exception 'failure acknowledgement rejected'; end if;
   if (select status from public.certifiks_verification_jobs where job_id=b)<>'dead_letter'
   then raise exception 'exhausted job did not dead-letter'; end if;
-  if (select count(*) from public.certifiks_payments)<>1 then
+  if (select count(*) from public.certifiks_payments)<>0 then
     raise exception 'verification jobs unexpectedly mutated payments'; end if;
   if has_table_privilege('anon','public.certifiks_verification_jobs','SELECT') then
     raise exception 'browser can access private queue'; end if;

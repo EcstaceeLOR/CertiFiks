@@ -151,3 +151,64 @@ test("upstream access failure, malformed rows and hidden bounty never return fak
     await app.close();
   }
 });
+
+test("developer search applies exact DB filters before pagination and never inflates public eligibility", async () => {
+  let called = 0;
+  const mock = (async (url: string, options?: RequestInit) => {
+    called++;
+    const u = new URL(String(url));
+    assert.equal(u.searchParams.get("state"), "eq.funded");
+    assert.equal(u.searchParams.get("repository_full_name"), "eq.maintainer/fix-repo");
+    assert.equal(u.searchParams.get("limit"), "12");
+    assert.equal(u.searchParams.get("offset"), "24");
+    assert.equal(new Headers(options?.headers).get("Authorization"), `Bearer ${serviceRole}`);
+    return new Response(JSON.stringify([record]), { status: 200 });
+  }) as typeof fetch;
+  const app = buildApp({
+    supabaseUrl: "https://public-example.supabase.co",
+    supabaseServiceRoleKey: serviceRole,
+    publicBountyFetch: mock,
+  });
+  try {
+    const res = await app.inject({
+      method: "GET",
+      url: "/v1/bounties?limit=12&offset=24&state=funded&repo=maintainer%2Ffix-repo",
+    });
+    assert.equal(res.statusCode, 200, res.body);
+    assert.equal(called, 1);
+    assert.equal(res.json().items[0].verificationProven, false);
+    assert.equal(res.json().items[0].rewardAtoms, record.reward_atoms);
+    assert.equal(res.json().page.offset, 24);
+  } finally {
+    await app.close();
+  }
+});
+
+test("developer search rejects unsupported states and dangerous repository filter syntax before DB", async () => {
+  let called = 0;
+  const app = buildApp({
+    supabaseUrl: "https://public-example.supabase.co",
+    supabaseServiceRoleKey: serviceRole,
+    publicBountyFetch: (async () => {
+      called++;
+      return new Response(JSON.stringify([]), { status: 200 });
+    }) as typeof fetch,
+  });
+  try {
+    for (const url of [
+      "/v1/bounties?state=verified",
+      "/v1/bounties?state=draft",
+      "/v1/bounties?repo=any%2Fteam%2Cstate.eq.funded",
+      "/v1/bounties?repo=%3D%3D%2Funsafe",
+      "/v1/bounties?repo=owner%2Frepo%2Cfoo",
+      "/v1/bounties?repo=owner%2Frepo&state=funded&state=settled",
+    ]) {
+      const result = await app.inject({ method: "GET", url });
+      assert.equal(result.statusCode, 400, url + " -> " + result.statusCode);
+      assert.equal(result.json().error, "PUBLIC_BOUNTY_INVALID_FILTER");
+    }
+    assert.equal(called, 0);
+  } finally {
+    await app.close();
+  }
+});

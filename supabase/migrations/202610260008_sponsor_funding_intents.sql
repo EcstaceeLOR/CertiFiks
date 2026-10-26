@@ -144,3 +144,29 @@ grant execute on function public.certifiks_prepare_sponsor_funding(
   uuid,uuid,uuid,text,numeric,numeric,text) to service_role;
 grant execute on function public.certifiks_cancel_sponsor_funding(
   uuid,uuid,uuid) to service_role;
+
+-- Freeze source bounty terms whenever a prepared intent exists. Cancellation
+-- must happen first; an expired clock alone never silently unfreezes terms
+-- that could have been signed externally.
+create function public.certifiks_guard_prepared_sponsor_terms()
+returns trigger language plpgsql set search_path = '' as $$
+begin
+  if exists(
+    select 1 from public.certifiks_sponsor_funding_intents
+      where organization_id=old.organization_id and bounty_id=old.bounty_id
+        and state='prepared'
+  ) and (
+     old.sponsor_user_id is distinct from new.sponsor_user_id or
+     old.repository_id is distinct from new.repository_id or
+     old.chain_id is distinct from new.chain_id or
+     old.reward_atoms is distinct from new.reward_atoms or
+     old.funded_manifest_digest is distinct from new.funded_manifest_digest
+  ) then
+    raise exception 'bounty financial terms locked by prepared sponsor intent';
+  end if;
+  return new;
+end; $$;
+create trigger certifiks_guard_prepared_sponsor_terms
+  before update of sponsor_user_id,repository_id,chain_id,reward_atoms,funded_manifest_digest
+  on public.certifiks_bounties
+  for each row execute function public.certifiks_guard_prepared_sponsor_terms();

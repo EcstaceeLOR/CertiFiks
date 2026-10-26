@@ -1,0 +1,27 @@
+name: Normalize Issue 41 Security Gate
+on:
+  push:
+    branches:
+      - feat/issue-41-signed-security-review-gate
+permissions:
+  contents: write
+jobs:
+  format:
+    if: ${{ !contains(github.event.head_commit.message, '[format-ci]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npx biome check --write scripts/security/independent-review-gate.mjs scripts/security/independent-review-gate.test.mjs scripts/security/check-independent-review.mjs
+      - name: Commit source-only formatting
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/security/independent-review-gate.mjs scripts/security/independent-review-gate.test.mjs scripts/security/check-independent-review.mjs
+          if ! git diff --cached --quiet; then
+            git commit -m "style(#41): canonical Biome formatting [format-ci]"
+            git push origin HEAD:feat/issue-41-signed-security-review-gate
+          fi

@@ -2,8 +2,15 @@ const ID = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/;
 const DECIMAL = /^(0|[1-9][0-9]*)$/;
 const SHA256 = /^0x[a-f0-9]{64}$/;
 const STATES = new Set([
-  "funded", "assigned", "submitted", "verifying", "review", "disputed",
-  "payable", "settled", "refunded",
+  "funded",
+  "assigned",
+  "submitted",
+  "verifying",
+  "review",
+  "disputed",
+  "payable",
+  "settled",
+  "refunded",
 ]);
 
 export interface PublicBountyV1 {
@@ -26,16 +33,30 @@ function assertField(condition: unknown): asserts condition {
 function parseRecord(row: unknown): PublicBountyV1 {
   assertField(row !== null && typeof row === "object" && !Array.isArray(row));
   const record = row as Record<string, unknown>;
-  assertField(typeof record.bounty_id === "string" && ID.test(record.bounty_id));
-  for (const key of ["repository_id", "chain_id", "onchain_bounty_id", "reward_atoms"]) {
+  assertField(
+    typeof record.bounty_id === "string" && ID.test(record.bounty_id),
+  );
+  for (const key of [
+    "repository_id",
+    "chain_id",
+    "onchain_bounty_id",
+    "reward_atoms",
+  ]) {
     assertField(typeof record[key] === "string" && DECIMAL.test(record[key]));
   }
-  assertField(typeof record.repository_full_name === "string" &&
-    /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(record.repository_full_name));
-  assertField(typeof record.manifest_digest === "string" && SHA256.test(record.manifest_digest));
+  assertField(
+    typeof record.repository_full_name === "string" &&
+      /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(record.repository_full_name),
+  );
+  assertField(
+    typeof record.manifest_digest === "string" &&
+      SHA256.test(record.manifest_digest),
+  );
   assertField(typeof record.state === "string" && STATES.has(record.state));
-  assertField(typeof record.created_at === "string" &&
-    Number.isFinite(Date.parse(record.created_at)));
+  assertField(
+    typeof record.created_at === "string" &&
+      Number.isFinite(Date.parse(record.created_at)),
+  );
   return {
     bountyId: record.bounty_id,
     repositoryId: record.repository_id as string,
@@ -59,12 +80,19 @@ export class PublicBountyClient {
     private readonly request: typeof fetch = fetch,
   ) {
     const base = new URL(supabaseUrl);
-    if (base.protocol !== "https:" || !base.hostname.endsWith(".supabase.co") ||
-        base.username || base.password || base.search || base.hash ||
-        typeof serverKey !== "string" || serverKey.length < 16) {
+    if (
+      base.protocol !== "https:" ||
+      !base.hostname.endsWith(".supabase.co") ||
+      base.username ||
+      base.password ||
+      base.search ||
+      base.hash ||
+      typeof serverKey !== "string" ||
+      serverKey.length < 16
+    ) {
       throw new Error("PUBLIC_BOUNTY_API_NOT_CONFIGURED");
     }
-    this.endpoint = new URL("/rest/v1/certifiks_public_bounties_v1",base);
+    this.endpoint = new URL("/rest/v1/certifiks_public_bounties_v1", base);
   }
 
   async list(
@@ -72,17 +100,25 @@ export class PublicBountyClient {
     offset: number,
     bountyId?: string,
   ): Promise<PublicBountyV1[]> {
-    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 50 ||
-        !Number.isSafeInteger(offset) || offset < 0 || offset > 10000 ||
-        (bountyId !== undefined && !ID.test(bountyId))) {
+    if (
+      !Number.isSafeInteger(limit) ||
+      limit < 1 ||
+      limit > 50 ||
+      !Number.isSafeInteger(offset) ||
+      offset < 0 ||
+      offset > 10000 ||
+      (bountyId !== undefined && !ID.test(bountyId))
+    ) {
       throw new TypeError("PUBLIC_BOUNTY_INVALID_QUERY");
     }
     const url = new URL(this.endpoint);
-    url.searchParams.set("select",
-      "bounty_id,repository_id,repository_full_name,chain_id,onchain_bounty_id,reward_atoms,manifest_digest,state,created_at");
+    url.searchParams.set(
+      "select",
+      "bounty_id,repository_id,repository_full_name,chain_id,onchain_bounty_id,reward_atoms,manifest_digest,state,created_at",
+    );
     url.searchParams.set("limit", String(limit));
     url.searchParams.set("offset", String(offset));
-    url.searchParams.set("order","created_at.desc,bounty_id.asc");
+    url.searchParams.set("order", "created_at.desc,bounty_id.asc");
     if (bountyId) url.searchParams.set("bounty_id", `eq.${bountyId}`);
     let response: Response;
     try {

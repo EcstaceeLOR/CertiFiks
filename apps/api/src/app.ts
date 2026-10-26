@@ -90,43 +90,60 @@ export function buildApp(config: AppConfiguration = {}) {
     }
   });
 
-
   // Read-only, opt-in PUBLIC metadata. No private artifacts or unverified
   // funding data are returned, and no fallback mock data exist.
   app.get("/v1/bounties", async (request, reply) => {
     if (!postgresConfigured) {
-      return reply.code(503).send({ error: "PUBLIC_BOUNTY_API_NOT_CONFIGURED" });
+      return reply
+        .code(503)
+        .send({ error: "PUBLIC_BOUNTY_API_NOT_CONFIGURED" });
     }
     const query = request.query as Record<string, unknown>;
     const parsePage = (value: unknown, fallback: number): number | null => {
       if (value === undefined) return fallback;
-      if (typeof value !== "string" || !/^(0|[1-9][0-9]*)$/.test(value)) return null;
+      if (typeof value !== "string" || !/^(0|[1-9][0-9]*)$/.test(value))
+        return null;
       const number = Number(value);
       return Number.isSafeInteger(number) ? number : null;
     };
     const limit = parsePage(query.limit, 20);
     const offset = parsePage(query.offset, 0);
-    if (limit === null || limit < 1 || limit > 50 ||
-        offset === null || offset > 10000) {
+    if (
+      limit === null ||
+      limit < 1 ||
+      limit > 50 ||
+      offset === null ||
+      offset > 10000
+    ) {
       return reply.code(400).send({ error: "PUBLIC_BOUNTY_INVALID_QUERY" });
     }
     try {
       const items = await new PublicBountyClient(
-        supabaseUrl!, supabaseKey!, config.publicBountyFetch ?? fetch,
+        supabaseUrl!,
+        supabaseKey!,
+        config.publicBountyFetch ?? fetch,
       ).list(limit, offset);
       return reply.send({
         items,
-        page: { limit, offset, nextOffset: items.length === limit ? offset + limit : null },
+        page: {
+          limit,
+          offset,
+          nextOffset: items.length === limit ? offset + limit : null,
+        },
         note: "Publication is not independent proof of bug verification or payment.",
       });
     } catch {
-      return reply.code(503).send({ error: "PUBLIC_BOUNTY_UPSTREAM_UNAVAILABLE" });
+      return reply
+        .code(503)
+        .send({ error: "PUBLIC_BOUNTY_UPSTREAM_UNAVAILABLE" });
     }
   });
 
   app.get("/v1/bounties/:bountyId", async (request, reply) => {
     if (!postgresConfigured) {
-      return reply.code(503).send({ error: "PUBLIC_BOUNTY_API_NOT_CONFIGURED" });
+      return reply
+        .code(503)
+        .send({ error: "PUBLIC_BOUNTY_API_NOT_CONFIGURED" });
     }
     const { bountyId } = request.params as { bountyId: string };
     if (!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/.test(bountyId)) {
@@ -134,13 +151,17 @@ export function buildApp(config: AppConfiguration = {}) {
     }
     try {
       const records = await new PublicBountyClient(
-        supabaseUrl!, supabaseKey!, config.publicBountyFetch ?? fetch,
+        supabaseUrl!,
+        supabaseKey!,
+        config.publicBountyFetch ?? fetch,
       ).list(1, 0, bountyId);
       return records[0]
         ? reply.send(records[0])
         : reply.code(404).send({ error: "PUBLIC_BOUNTY_NOT_FOUND" });
     } catch {
-      return reply.code(503).send({ error: "PUBLIC_BOUNTY_UPSTREAM_UNAVAILABLE" });
+      return reply
+        .code(503)
+        .send({ error: "PUBLIC_BOUNTY_UPSTREAM_UNAVAILABLE" });
     }
   });
 

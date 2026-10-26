@@ -1045,3 +1045,112 @@ h2 em {
     flex-basis: 100%;
   }
 }
+
+/* Issue #37: accessible, real-data-only searchable public history */
+.dashboard-search {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: end;
+  margin-block: 32px 26px;
+  padding: 23px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+.dashboard-search > div {
+  flex: 1 1 165px;
+}
+.dashboard-search label {
+  display: block;
+  font-size: 12px;
+  font-weight: 750;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.dashboard-search input,
+.dashboard-search select {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 13px;
+  background: var(--surface);
+  color: var(--ink);
+}
+.dashboard-views {
+  display: flex;
+  gap: 13px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.dashboard-views .mono {
+  color: var(--quiet);
+}
+.dashboard-views a {
+  border: 1px solid var(--line);
+  border-radius: 40px;
+  padding: 10px 13px;
+  font-weight: 650;
+  font-size: 13px;
+  text-decoration: none;
+  color: var(--ink);
+}
+.dashboard-views a:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.dashboard-results {
+  margin-top: 24px;
+}
+.dashboard-pagination {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  border-block: 1px solid var(--line);
+  padding-block: 25px;
+  margin-top: 28px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.dashboard-pagination a {
+  color: var(--accent);
+  font-weight: 700;
+  text-underline-offset: 4px;
+}
+.public-record-list {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.55fr) minmax(0, 1fr);
+  gap: 15px 22px;
+  overflow-wrap: anywhere;
+  margin-block: 28px;
+}
+.public-record-list dt {
+  color: var(--muted);
+  font-size: 13px;
+}
+.public-record-list dd {
+  margin: 0;
+  font:
+    600 14px ui-monospace,
+    monospace;
+}
+@media (max-width: 640px) {
+  .dashboard-search {
+    padding: 17px;
+  }
+  .dashboard-search > div,
+  .dashboard-search > button,
+  .dashboard-search > a {
+    flex: 1 1 100%;
+  }
+  .public-record-list {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-pagination {
+    justify-content: flex-start;
+  }
+}

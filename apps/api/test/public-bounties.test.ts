@@ -218,3 +218,89 @@ test("developer search rejects unsupported states and dangerous repository filte
     await app.close();
   }
 });
+
+test("public history uses only whitelisted deterministic sorting and returns bounded CSV", async () => {
+  const requests: URL[] = [];
+  const app = buildApp({
+    supabaseUrl: "https://public-example.supabase.co",
+    supabaseServiceRoleKey: serviceRole,
+    publicBountyFetch: (async (url: string, options?: RequestInit) => {
+      requests.push(new URL(url));
+      assert.equal(options?.method, "GET");
+      assert.equal(options?.redirect, "error");
+      assert.equal(
+        new Headers(options?.headers).get("Authorization"),
+        `Bearer ${serviceRole}`,
+      );
+      return new Response(JSON.stringify([record]), { status: 200 });
+    }) as typeof fetch,
+  });
+  try {
+    const older = await app.inject({
+      method: "GET",
+      url: "/v1/bounties?sort=oldest",
+    });
+    assert.equal(older.statusCode, 200, older.body);
+    assert.equal(
+      requests[0].searchParams.get("order"),
+      "created_at.asc,bounty_id.asc",
+    );
+    const alpha = await app.inject({
+      method: "GET",
+      url: "/v1/bounties?sort=repository",
+    });
+    assert.equal(alpha.statusCode, 200, alpha.body);
+    assert.equal(
+      requests[1].searchParams.get("order"),
+      "repository_full_name.asc,bounty_id.asc",
+    );
+
+    const csv = await app.inject({
+      method: "GET",
+      url: "/v1/bounties/export.csv?state=funded&repo=maintainer%2Ffix-repo&sort=newest&offset=20",
+    });
+    assert.equal(csv.statusCode, 200, csv.body);
+    assert.match(csv.headers["content-type"] as string, /^text\/csv/);
+    assert.match(csv.body, /bounty_id,repository,state,created_at/);
+    assert.match(csv.body, /maintainer\/fix-repo/);
+    assert.match(csv.body, /900719925474099312345678901234/);
+    assert.ok(!csv.body.includes(serviceRole));
+    assert.equal(requests[2].searchParams.get("state"), "eq.funded");
+    assert.equal(
+      requests[2].searchParams.get("repository_full_name"),
+      "eq.maintainer/fix-repo",
+    );
+    assert.equal(requests[2].searchParams.get("limit"), "50");
+    assert.equal(requests[2].searchParams.get("offset"), "20");
+  } finally {
+    await app.close();
+  }
+});
+
+test("public history rejects unknown sorting and CSV filter injection without querying DB", async () => {
+  let calls = 0;
+  const app = buildApp({
+    supabaseUrl: "https://public-example.supabase.co",
+    supabaseServiceRoleKey: serviceRole,
+    publicBountyFetch: (async () => {
+      calls++;
+      return new Response(JSON.stringify([]), { status: 200 });
+    }) as typeof fetch,
+  });
+  try {
+    for (const url of [
+      "/v1/bounties?sort=reward_atoms.desc",
+      "/v1/bounties?sort=reward_high",
+      "/v1/bounties/export.csv?sort=state.desc",
+      "/v1/bounties/export.csv?repo=x%2Fy%2Cor.%28true%29",
+      "/v1/bounties/export.csv?offset=-5",
+      "/v1/bounties/export.csv?limit=10000",
+    ]) {
+      const response = await app.inject({ method: "GET", url });
+      assert.equal(response.statusCode, 400, url + ": " + response.body);
+    }
+    assert.equal(calls, 0);
+  } finally {
+    await app.close();
+  }
+});

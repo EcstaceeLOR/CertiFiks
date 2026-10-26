@@ -120,6 +120,7 @@ export default async function HomePage() {
           <nav className="main-nav" aria-label="Primary navigation">
             <a href="#how-it-works">How it works</a>
             <Link href="/opportunities">Bounties</Link>
+            <Link href="/dashboard">Public history</Link>
             <Link href="/onboarding">
               Get oriented <span aria-hidden="true">↗</span>
             </Link>

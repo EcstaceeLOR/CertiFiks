@@ -1,0 +1,29 @@
+name: Normalize Issue 27 integration
+on:
+  push:
+    branches:
+      - feat/issue-27-canonical-indexer-ledger
+permissions:
+  contents: write
+jobs:
+  format:
+    if: ${{ !contains(github.event.head_commit.message, '[format-ci]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npx biome check --write apps/api/src/chain/evm-observer.ts apps/api/src/chain/durable-evm-step.ts apps/api/test/evm-observer.test.ts apps/api/test/durable-evm-step.test.ts
+      - name: Commit formatter changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/api/src/chain apps/api/test/evm-observer.test.ts apps/api/test/durable-evm-step.test.ts
+          if ! git diff --cached --quiet; then
+            git commit -m "style(#27): canonical formatting [format-ci]"
+            git push origin HEAD:feat/issue-27-canonical-indexer-ledger
+          fi

@@ -46,6 +46,8 @@ jobs:
         run: node --import tsx --test scripts/verify-manifest.test.mjs scripts/verify-evidence.test.mjs scripts/check-public-api-contract.test.mjs
       - name: Reject fabricated live end-to-end release evidence
         run: node --test scripts/quality/live-e2e-evidence.test.mjs
+      - name: Block unauthenticated security audit and unresolved high findings
+        run: node --test scripts/security/independent-review-gate.test.mjs
       - name: Build every workspace
         run: npm run build
 

@@ -2,8 +2,14 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const sponsor = readFileSync(new URL("../app/sponsor/page.tsx", import.meta.url), "utf8");
-const onboarding = readFileSync(new URL("../app/onboarding/page.tsx", import.meta.url), "utf8");
+const sponsor = readFileSync(
+  new URL("../app/sponsor/page.tsx", import.meta.url),
+  "utf8",
+);
+const onboarding = readFileSync(
+  new URL("../app/onboarding/page.tsx", import.meta.url),
+  "utf8",
+);
 
 test("sponsor view derives opportunities from real read-only backend, never local fixtures", () => {
   assert.match(sponsor, /process\.env\.CERTIFIKS_API_BASE_URL/);

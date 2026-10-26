@@ -5,7 +5,7 @@ import {
   PUBLIC_SORTS,
   PUBLIC_STATES,
   parseHistoryFilters,
-} from "./history.js";
+} from "./history";
 
 export const dynamic = "force-dynamic";
 

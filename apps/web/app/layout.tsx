@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: "CertiFiks — Engineering in progress",
+  title: "CertiFiks — Prove the Fix. Release the Reward.",
   description:
-    "Building verifiable software repair escrows. No live rewards or transactions are available.",
+    "Build independently reproducible software repairs with transparent proof. CertiFiks is under development; no live funding or payouts are available.",
 };
 export default function RootLayout({
   children,

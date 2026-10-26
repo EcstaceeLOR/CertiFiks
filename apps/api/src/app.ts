@@ -214,7 +214,7 @@ export function buildApp(config: AppConfiguration = {}) {
         .header("content-type", "text/csv; charset=utf-8")
         .header("cache-control", "no-store")
         .header("content-disposition", 'attachment; filename="certifiks-public-history.csv"')
-        .send(lines.join("\\r\\n") + "\\r\\n");
+        .send(lines.join("\r\n") + "\r\n");
     } catch {
       return reply.code(503).send({ error: "PUBLIC_BOUNTY_UPSTREAM_UNAVAILABLE" });
     }

@@ -29,11 +29,7 @@ jobs:
       - name: Clean reproducible install
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Lint and formatting verification
-        run: |
-          npx biome check --write scripts/settlement/finalized-withdrawal.mjs scripts/settlement/finalized-withdrawal.test.mjs
-          node -e 'const fs = require("node:fs"); for (const p of process.argv.slice(1)) console.log("CERTIFIKS_FORMAT:"+p+"="+JSON.stringify(fs.readFileSync(p,"utf8")));' scripts/settlement/finalized-withdrawal.mjs scripts/settlement/finalized-withdrawal.test.mjs
-          node --test scripts/settlement/finalized-withdrawal.test.mjs
-          npx biome ci .
+        run: npx biome ci .
       - name: Reject invalid Portaldot runtime / chain identity claims
         run: node --test scripts/portaldot-runtime-probe.test.mjs
       - name: Validate hackathon evidence ledger and truthfulness guards

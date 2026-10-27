@@ -6,7 +6,7 @@ const supabaseUrl = "https://certifiks-ci.supabase.co";
 const supabaseServiceRoleKey = "synthetic-ci-key-not-a-real-credential";
 const webhookSecret = "synthetic-webhook-secret-not-a-real-credential";
 
-test("readiness fails closed when durable upstreams are not configured", async () => {
+test("unconfigured transport is not ready", async () => {
   const app = buildApp({
     production: true,
     webhookJournalDirectory: "/tmp/not-durable",
@@ -33,7 +33,7 @@ test("readiness fails closed when durable upstreams are not configured", async (
   }
 });
 
-test("readiness probes a real authorized read-only projection, not the escrow", async () => {
+test("authorized public projection determines readiness", async () => {
   let calls = 0;
   const app = buildApp({
     production: true,
@@ -49,7 +49,10 @@ test("readiness probes a real authorized read-only projection, not the escrow", 
       assert.equal(target.searchParams.get("limit"), "1");
       assert.equal(init?.method, "GET");
       assert.equal(init?.redirect, "error");
-      assert.equal((init?.headers as Record<string, string>).apikey, supabaseServiceRoleKey);
+      assert.equal(
+        (init?.headers as Record<string, string>).apikey,
+        supabaseServiceRoleKey,
+      );
       return new Response("[]", { status: 200 });
     },
   });
@@ -70,10 +73,12 @@ test("readiness probes a real authorized read-only projection, not the escrow", 
   }
 });
 
-test("readiness does not disclose upstream errors, URLs, credentials or data", async () => {
+test("upstream faults do not leak internal details", async () => {
   for (const request of [
     async () => {
-      throw new Error("private-provider-error with secret " + supabaseServiceRoleKey);
+      throw new Error(
+        "private-provider-error with secret " + supabaseServiceRoleKey,
+      );
     },
     async () => new Response("access denied", { status: 401 }),
     async () => new Response('{"private":"tenant-data"}', { status: 200 }),
@@ -99,7 +104,7 @@ test("readiness does not disclose upstream errors, URLs, credentials or data", a
   }
 });
 
-test("readiness refuses unapproved PostgREST destinations and missing webhook secrets", async () => {
+test("invalid destinations and missing secrets block readiness", async () => {
   for (const config of [
     { supabaseUrl: "http://127.0.0.1:5432", webhookSecret },
     { supabaseUrl, webhookSecret: "" },

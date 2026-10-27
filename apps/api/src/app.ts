@@ -51,6 +51,52 @@ export function buildApp(config: AppConfiguration = {}) {
     note: "HTTP and webhook transport only; installation OAuth and escrow are not ready",
   }));
 
+  // This is a separate upstream READINESS check, not a liveness check or
+  // proof of a working escrow. Never expose provider errors or credentials.
+  // Production webhook delivery requires a durable PostgreSQL journal, not a
+  // local filesystem. A successful public projection query verifies that the
+  // configured PostgREST endpoint is currently reachable and authorized.
+  app.get("/readyz", async (_request, reply) => {
+    reply.header("cache-control", "no-store");
+    const webhookConfigured = Boolean(
+      secret && postgresConfigured && journalConfigured,
+    );
+    if (!webhookConfigured) {
+      return reply.code(503).send({
+        status: "not_ready",
+        transportReady: false,
+        productReady: false,
+        settlementReady: false,
+        checks: { publicProjection: "not_checked", webhookJournal: "blocked" },
+      });
+    }
+    try {
+      await new PublicBountyClient(
+        supabaseUrl!,
+        supabaseKey!,
+        config.publicBountyFetch ?? fetch,
+      ).list(1, 0);
+      return reply.send({
+        status: "ready",
+        transportReady: true,
+        productReady: false,
+        settlementReady: false,
+        checks: { publicProjection: "reachable", webhookJournal: "configured" },
+      });
+    } catch {
+      return reply.code(503).send({
+        status: "not_ready",
+        transportReady: false,
+        productReady: false,
+        settlementReady: false,
+        checks: {
+          publicProjection: "unavailable",
+          webhookJournal: "configured",
+        },
+      });
+    }
+  });
+
   // Exact raw request bytes are required for GitHub HMAC verification.
   // Never reconstruct JSON.stringify(req.body), which would change the digest.
   app.removeContentTypeParser("application/json");

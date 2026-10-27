@@ -44,6 +44,7 @@ const methods = [
   "state_getRuntimeVersion",
   "chain_getHeader",
   "chain_getBlockHash",
+  "chain_getFinalizedHead",
   "eth_chainId",
   "eth_blockNumber",
 ];
@@ -118,8 +119,11 @@ try {
     const requestId = id++;
     const promise = new Promise((resolve, reject) => {
       responses.set(requestId, { resolve, reject });
+      // A no-argument chain_getBlockHash returns the best block on many
+      // Substrate nodes, NOT the immutable genesis. Pin block zero explicitly.
+      const params = method === "chain_getBlockHash" ? [0] : [];
       socket.send(
-        JSON.stringify({ jsonrpc: "2.0", id: requestId, method, params: [] }),
+        JSON.stringify({ jsonrpc: "2.0", id: requestId, method, params }),
       );
     });
     try {
@@ -183,6 +187,7 @@ const outcome = {
     "Read-only probe; no real contract was deployed and no fees were spent.",
     "RPC method availability is not proof of compatible WASM/ink! ABI.",
     "EVM compatibility requires working eth RPC, EVM account model and successful deployment, not an unsupported method.",
+    "chain_getBlockHash is explicitly queried at height zero for read-only genesis identity.",
     "Hackathon eligibility requires current organizer confirmation.",
   ],
 };

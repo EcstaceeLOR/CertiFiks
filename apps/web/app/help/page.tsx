@@ -152,7 +152,11 @@ export default function HelpPage() {
           </div>
         </section>
 
-        <section id="support" className="container" aria-labelledby="support-title">
+        <section
+          id="support"
+          className="container"
+          aria-labelledby="support-title"
+        >
           <h2 id="support-title" className={styles.sectionTitle}>
             Support, abuse, and security
           </h2>
@@ -163,7 +167,8 @@ export default function HelpPage() {
                 Report a reproducible non-sensitive bug in the public issue
                 tracker. Include the public URL, expected result, browser, and
                 redacted steps. Do not include private repository content,
-                passwords, recovery phrases, wallet keys, tokens, or personal data.
+                passwords, recovery phrases, wallet keys, tokens, or personal
+                data.
               </p>
               <a
                 className={styles.link}
@@ -178,10 +183,10 @@ export default function HelpPage() {
               <h3>Security vulnerability or abuse</h3>
               <p>
                 Do not disclose exploit details in public issues. Follow the
-                repository security policy and use GitHub private
-                vulnerability reporting if enabled, or agree on a private
-                channel with the maintainer. No staffed incident hotline or
-                guaranteed response time has been established.
+                repository security policy and use GitHub private vulnerability
+                reporting if enabled, or agree on a private channel with the
+                maintainer. No staffed incident hotline or guaranteed response
+                time has been established.
               </p>
               <a
                 className={styles.link}

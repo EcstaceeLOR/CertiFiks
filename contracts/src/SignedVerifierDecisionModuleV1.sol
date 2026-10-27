@@ -152,7 +152,12 @@ abstract contract SignedVerifierDecisionModuleV1 is VerifierRegistryModuleV1 {
             latestAttemptId[vote.bountyId] != vote.attemptId ||
             _assignment[vote.bountyId].state != AssignmentState.Submitted
         ) revert MismatchedVerdictIdentity();
-        if (_decisions[vote.bountyId][vote.attemptId].status != ReviewStatus.Pending) {
+        ReviewDecision storage decision = _decisions[vote.bountyId][vote.attemptId];
+        bool challengerDissent =
+            decision.status == ReviewStatus.ChallengeWindow &&
+            vote.outcome != uint8(Outcome.Approved) &&
+            block.timestamp < decision.challengeUntil;
+        if (decision.status != ReviewStatus.Pending && !challengerDissent) {
             revert ReviewIsNotPending();
         }
         if (!reviewerRoster[vote.bountyId].configured ||
@@ -180,10 +185,15 @@ abstract contract SignedVerifierDecisionModuleV1 is VerifierRegistryModuleV1 {
             terms.manifestDigest != vote.manifestDigest ||
             terms.verifierPolicyDigest != vote.verifierPolicyDigest
         ) revert MismatchedVerdictIdentity();
+        // An already accepted/declared independent reviewer may submit
+        // an adverse signed finding during the funded challenge window even
+        // if the original job deadline elapsed. No new reviewer is admitted,
+        // and a second approval can never extend a reached quorum.
+        uint64 expiryCeiling = challengerDissent ? decision.challengeUntil : job.deadline;
         if (
             vote.expiresAt <= block.timestamp ||
-            vote.expiresAt > job.deadline ||
-            block.timestamp >= job.deadline
+            vote.expiresAt > expiryCeiling ||
+            (!challengerDissent && block.timestamp >= job.deadline)
         ) revert StaleOrExpiredVerdict();
         if (vote.outcome < uint8(Outcome.Approved) ||
             vote.outcome > uint8(Outcome.RunnerFailure)) revert InvalidVerdict();
@@ -223,7 +233,10 @@ abstract contract SignedVerifierDecisionModuleV1 is VerifierRegistryModuleV1 {
         if (vote.outcome == uint8(Outcome.Approved)) decision.positiveVotes += 1;
 
         if (vote.outcome != uint8(Outcome.Approved)) {
+            // Late conflicting evidence must stop the earlier challenge
+            // window; historical positive votes remain immutable for appeal.
             decision.status = ReviewStatus.EscalationRequired;
+            decision.challengeUntil = 0;
         } else if (decision.positiveVotes >= reviewerRoster[vote.bountyId].quorum) {
             uint256 until = block.timestamp + uint256(_fundingTerms[vote.bountyId].challengeSeconds);
             if (until > type(uint64).max) revert ChallengeTimeOverflow();

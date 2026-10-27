@@ -45,22 +45,27 @@ contract SignedVerifierDecisionModuleV1Test {
     uint256 private constant CHAIN = 31337;
     uint256 private constant KEY_A = 111;
     uint256 private constant KEY_B = 222;
+    uint256 private constant KEY_C = 333;
     uint256 private constant KEY_ATTACKER = 999;
     address private constant SPONSOR = address(0xA110);
     address private constant DEVELOPER = address(0xCAFE);
     address private constant ARBITRATOR = address(0xA4B);
     address private constant CONTROLLER_A = address(0xC111);
     address private constant CONTROLLER_B = address(0xC222);
+    address private constant CONTROLLER_C = address(0xC333);
     bytes32 private constant ORG_A = keccak256("independent-reviewer-A");
     bytes32 private constant ORG_B = keccak256("independent-reviewer-B");
+    bytes32 private constant ORG_C = keccak256("independent-reviewer-C");
     bytes20 private constant BASE_SHA = hex"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     bytes20 private constant FIRST_HEAD = hex"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
     bytes20 private constant SECOND_HEAD = hex"cccccccccccccccccccccccccccccccccccccccc";
     bytes32 private constant REPORT_A = keccak256("actual signed report A");
     bytes32 private constant REPORT_B = keccak256("actual signed report B");
+    bytes32 private constant REPORT_C = keccak256("actual signed report C");
     SignedDecisionHarness private escrow;
     address private signerA;
     address private signerB;
+    address private signerC;
 
     function setUp() public {
         vm.chainId(CHAIN);
@@ -68,6 +73,7 @@ contract SignedVerifierDecisionModuleV1Test {
         vm.deal(SPONSOR, 100 ether);
         signerA = vm.addr(KEY_A);
         signerB = vm.addr(KEY_B);
+        signerC = vm.addr(KEY_C);
         escrow = new SignedDecisionHarness(CHAIN, address(this));
         escrow.enrollReviewerOrganization(
             ORG_A, CONTROLLER_A, signerA, bytes32(uint256(11)),
@@ -81,6 +87,12 @@ contract SignedVerifierDecisionModuleV1Test {
         escrow.activateReviewerOrganization(ORG_A);
         vm.prank(CONTROLLER_B);
         escrow.activateReviewerOrganization(ORG_B);
+        escrow.enrollReviewerOrganization(
+            ORG_C, CONTROLLER_C, signerC, bytes32(uint256(31)),
+            bytes32(uint256(32)), bytes32(uint256(33))
+        );
+        vm.prank(CONTROLLER_C);
+        escrow.activateReviewerOrganization(ORG_C);
     }
 
     function _roster() internal pure returns (bytes32[] memory roster) {
@@ -109,6 +121,54 @@ contract SignedVerifierDecisionModuleV1Test {
         bountyId = escrow.testFund{value: 1 ether}(req);
         vm.prank(SPONSOR);
         escrow.registerCommittedReviewerRoster(bountyId, _roster(), 2);
+    }
+
+    function _rosterThree() internal pure returns (bytes32[] memory roster) {
+        roster = new bytes32[](3);
+        roster[0] = ORG_A;
+        roster[1] = ORG_B;
+        roster[2] = ORG_C;
+        if (roster[0] > roster[1]) (roster[0], roster[1]) = (roster[1], roster[0]);
+        if (roster[1] > roster[2]) (roster[1], roster[2]) = (roster[2], roster[1]);
+        if (roster[0] > roster[1]) (roster[0], roster[1]) = (roster[1], roster[0]);
+    }
+
+    function _submittedWithThreeReviewers() internal returns (uint256 bounty) {
+        bytes32[] memory roster = _rosterThree();
+        BountyFundingModuleV1.FundingRequest memory req =
+            BountyFundingModuleV1.FundingRequest({
+                repositoryId: 888,
+                baselineGitSha: BASE_SHA,
+                manifestDigest: bytes32(uint256(100)),
+                verifierPolicyDigest: sha256(
+                    abi.encode("CertiFiks:verifier-roster:v1", uint8(2), roster)
+                ),
+                disputePolicyDigest: bytes32(uint256(102)),
+                primaryArbitrator: ARBITRATOR,
+                submissionDeadline: uint64(block.timestamp + 10 days),
+                verificationSeconds: 2 days,
+                challengeSeconds: 1 days,
+                arbitrationSeconds: 2 days,
+                assetKind: 0
+            });
+        vm.prank(SPONSOR);
+        bounty = escrow.testFund{value: 1 ether}(req);
+        vm.prank(SPONSOR);
+        escrow.registerCommittedReviewerRoster(bounty, roster, 2);
+        vm.prank(DEVELOPER);
+        escrow.applyForBounty(bounty);
+        vm.prank(SPONSOR);
+        escrow.offerAssignment(bounty, DEVELOPER);
+        vm.prank(DEVELOPER);
+        escrow.acceptAssignment(bounty);
+        vm.prank(DEVELOPER);
+        escrow.submitCandidate(bounty, _candidate(FIRST_HEAD));
+        _assignAndDeclare(bounty, 1);
+        escrow.assignReviewerJob(bounty, ORG_C);
+        vm.prank(signerC);
+        escrow.acceptReviewerJob(bounty, 1, ORG_C);
+        vm.prank(signerC);
+        escrow.declareReviewerEvidence(bounty, 1, ORG_C, REPORT_C);
     }
 
     function _candidate(bytes20 head)
@@ -174,7 +234,7 @@ contract SignedVerifierDecisionModuleV1Test {
             manifestDigest: terms.manifestDigest,
             verifierPolicyDigest: terms.verifierPolicyDigest,
             headGitSha: attempt.candidate.headGitSha,
-            reportDigest: org == ORG_A ? REPORT_A : REPORT_B,
+            reportDigest: org == ORG_A ? REPORT_A : (org == ORG_B ? REPORT_B : REPORT_C),
             imageDigest: attempt.candidate.imageDigest,
             outcome: outcome,
             baselineFailed: true,
@@ -238,6 +298,51 @@ contract SignedVerifierDecisionModuleV1Test {
         require(SPONSOR.balance == initialSponsor && DEVELOPER.balance == initialDeveloper,
             "review moved user money");
         require(address(escrow).balance == escrow.totalReservedAtoms(), "review minted payout");
+    }
+
+    function testThirdIndependentDissentStopsEarlyQuorumDuringChallenge() public {
+        uint256 bounty = _submittedWithThreeReviewers();
+        VerifierRegistryModuleV1.ReviewerJob memory job =
+            escrow.getReviewerJob(bounty, 1, ORG_C);
+        vm.warp(uint256(job.deadline) - 3);
+
+        SignedVerifierDecisionModuleV1.SignedVerdict memory a = _vote(bounty, ORG_A, 1);
+        SignedVerifierDecisionModuleV1.SignedVerdict memory b = _vote(bounty, ORG_B, 1);
+        a.expiresAt = job.deadline - 1;
+        b.expiresAt = job.deadline - 1;
+        _submit(a, KEY_A);
+        _submit(b, KEY_B);
+        SignedVerifierDecisionModuleV1.ReviewDecision memory beforeDispute =
+            escrow.readReviewDecision(bounty, 1);
+        require(
+            beforeDispute.status == SignedVerifierDecisionModuleV1.ReviewStatus.ChallengeWindow,
+            "quorum did not open challenge"
+        );
+
+        // A third *approval* cannot extend a completed quorum, even from a
+        // committed reviewer. But its signed contradiction must be heard.
+        SignedVerifierDecisionModuleV1.SignedVerdict memory c = _vote(bounty, ORG_C, 1);
+        c.expiresAt = job.deadline - 1;
+        _reject(c, _sign(c, KEY_C));
+
+        vm.warp(uint256(job.deadline) + 10);
+        c = _vote(bounty, ORG_C, 2);
+        c.expiresAt = uint64(block.timestamp + 60);
+        _submit(c, KEY_C);
+        SignedVerifierDecisionModuleV1.ReviewDecision memory afterDispute =
+            escrow.readReviewDecision(bounty, 1);
+        require(
+            afterDispute.status == SignedVerifierDecisionModuleV1.ReviewStatus.EscalationRequired,
+            "conflicting independent finding failed to halt approval"
+        );
+        require(afterDispute.recordedVotes == 3 && afterDispute.positiveVotes == 2,
+            "signed dissent did not preserve the original quorum history");
+        require(afterDispute.challengeUntil == 0, "old challenge deadline remained payable");
+        require(afterDispute.triggeringVoteDigest == escrow.typedVerdictDigest(c),
+            "signed dissent was not audit-bound");
+        _reject(c, _sign(c, KEY_C));
+        require(address(escrow).balance == escrow.totalReservedAtoms(),
+            "post-quorum dissent moved protected funds");
     }
 
     function testOneSignedVoteCannotPassCommittedQuorum() public {

@@ -161,6 +161,7 @@ jobs:
             supabase/migrations/202610260009_verifier_preflight.sql \
             supabase/migrations/202610260010_dispute_timeline.sql \
             supabase/migrations/202610260011_partner_keys.sql \
+            supabase/migrations/202610270001_github_revision_receipts.sql \
             scripts/db/ci_assertions.sql
           do
             docker run --rm --network host \

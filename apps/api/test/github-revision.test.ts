@@ -65,6 +65,7 @@ test("exact authenticated snapshot produces repeatable evidence digest", () => {
   assert.equal(receipt.repositoryId, 314159);
   assert.equal(receipt.baseBranch, "main");
   assert.equal(receipt.fork, true);
+  assert.equal(receipt.sourceRepositoryId, 161803);
   assert.equal(receipt.commitSignatureVerified, true);
   assert.match(receipt.snapshotDigest, /^0x[a-f0-9]{64}$/);
   assert.equal(

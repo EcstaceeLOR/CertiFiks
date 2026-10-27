@@ -25,7 +25,9 @@
     "submission:status": "node scripts/check-submission-readiness.mjs",
     "submission:checkin": "node scripts/check-submission-readiness.mjs --require-checkin",
     "submission:final": "node scripts/check-submission-readiness.mjs --require-final",
-    "e2e:preflight": "node scripts/e2e/live-preflight.mjs"
+    "e2e:preflight": "node scripts/e2e/live-preflight.mjs",
+    "economics:plan": "node scripts/business/unit-economics.mjs scripts/business/unit-economics.example.json",
+    "economics:test": "node --test scripts/business/unit-economics.test.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

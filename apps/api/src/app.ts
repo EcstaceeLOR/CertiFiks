@@ -89,7 +89,10 @@ export function buildApp(config: AppConfiguration = {}) {
         transportReady: false,
         productReady: false,
         settlementReady: false,
-        checks: { publicProjection: "unavailable", webhookJournal: "configured" },
+        checks: {
+          publicProjection: "unavailable",
+          webhookJournal: "configured",
+        },
       });
     }
   });

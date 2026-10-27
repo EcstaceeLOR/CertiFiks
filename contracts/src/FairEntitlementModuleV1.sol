@@ -58,6 +58,35 @@ abstract contract FairEntitlementModuleV1 is BoundedArbitrationModuleV1 {
     {}
 
     /**
+     * Public read-only bookkeeping preview, NOT refund availability, an ETH
+     * credit, payout confirmation or a transfer. Any timely pinned fix is
+     * permanently ineligible for this sponsor-only shortcut.
+     */
+    function previewNoSubmissionEntitlement(uint256 bountyId)
+        external view returns (Reason reason, bool recordable, uint256 sponsorAtoms)
+    {
+        BountyTerms storage terms = _terms(bountyId);
+        reason = _noSubmissionReason(bountyId);
+        recordable = reason != Reason.None;
+        sponsorAtoms = recordable ? terms.rewardAtoms : 0;
+    }
+
+    function _noSubmissionReason(uint256 bountyId) internal view returns (Reason) {
+        BountyTerms storage terms = _terms(bountyId);
+        if (_entitlements[bountyId].reason != Reason.None ||
+            latestAttemptId[bountyId] != 0) return Reason.None;
+        AssignmentState state = _assignment[bountyId].state;
+        if (state == AssignmentState.CancelledPendingRefund) {
+            return Reason.UnassignedSponsorCancellation;
+        }
+        if (state == AssignmentState.ExpiredPendingRefund &&
+            block.timestamp > terms.submissionDeadline) {
+            return Reason.NoSubmissionAtDeadline;
+        }
+        return Reason.None;
+    }
+
+    /**
      * Pre-assignment sponsor cancellation or missed submission both
      * qualify ONLY if there is no pinned attempt and the assignment state
      * has already reached its immutable terminal eligibility condition.
@@ -68,18 +97,10 @@ abstract contract FairEntitlementModuleV1 is BoundedArbitrationModuleV1 {
         if (_entitlements[bountyId].reason != Reason.None) {
             revert EntitlementAlreadyRecorded();
         }
-        if (latestAttemptId[bountyId] != 0) revert NotEligibleForEntitlement();
-
-        AssignmentState state = _assignment[bountyId].state;
-        Reason reason;
-        if (state == AssignmentState.CancelledPendingRefund) {
-            reason = Reason.UnassignedSponsorCancellation;
-        } else if (state == AssignmentState.ExpiredPendingRefund &&
-                   block.timestamp > terms.submissionDeadline) {
-            reason = Reason.NoSubmissionAtDeadline;
-        } else {
-            revert NotEligibleForEntitlement();
-        }
+        // Preview and mutation share the exact same eligibility predicate;
+        // neither branch can overrule a timely submitted candidate.
+        Reason reason = _noSubmissionReason(bountyId);
+        if (reason == Reason.None) revert NotEligibleForEntitlement();
 
         // Write the single immutable accounting decision before any future
         // #16 contract is permitted to issue a credit or transfer.

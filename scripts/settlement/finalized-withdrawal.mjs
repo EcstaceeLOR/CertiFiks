@@ -104,10 +104,6 @@ async function rpc(config, request, id, method, params) {
   return data.result;
 }
 
-function addressTopic(address) {
-  return "0x" + "0".repeat(24) + address.slice(2);
-}
-
 function eventFields(log) {
   insist(Array.isArray(log?.topics) && log.topics.length === 4);
   insist(log.topics[0] === WITHDRAWN_TOPIC);

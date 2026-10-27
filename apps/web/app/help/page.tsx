@@ -108,7 +108,9 @@ export default function HelpPage() {
         </section>
 
         <section id="roles" className="container" aria-labelledby="roles-title">
-          <h2 id="roles-title" className={styles.sectionTitle}>Start with your role</h2>
+          <h2 id="roles-title" className={styles.sectionTitle}>
+            Start with your role
+          </h2>
           <div className={styles.grid}>
             {roles.map((role) => (
               <article key={role.id} className={styles.card}>
@@ -126,7 +128,9 @@ export default function HelpPage() {
         </section>
 
         <section id="faq" className="container" aria-labelledby="faq-title">
-          <h2 id="faq-title" className={styles.sectionTitle}>Frequently asked questions</h2>
+          <h2 id="faq-title" className={styles.sectionTitle}>
+            Frequently asked questions
+          </h2>
           <div className={styles.faq}>
             {questions.map((question) => (
               <details key={question.title}>
@@ -138,14 +142,20 @@ export default function HelpPage() {
           <div className={styles.contextLinks}>
             <Link href="/wallet">Wallet and finality guide ↗</Link>
             <Link href="/disputes">Dispute safeguards ↗</Link>
-            <a href="https://github.com/EcstaceeLOR/CertiFiks/blob/main/SECURITY.md" target="_blank" rel="noreferrer">
+            <a
+              href="https://github.com/EcstaceeLOR/CertiFiks/blob/main/SECURITY.md"
+              target="_blank"
+              rel="noreferrer"
+            >
               Security disclosure policy ↗
             </a>
           </div>
         </section>
 
         <section id="support" className="container" aria-labelledby="support-title">
-          <h2 id="support-title" className={styles.sectionTitle}>Support, abuse, and security</h2>
+          <h2 id="support-title" className={styles.sectionTitle}>
+            Support, abuse, and security
+          </h2>
           <div className={styles.supportGrid}>
             <div className={styles.card}>
               <h3>Public product problem</h3>
@@ -155,7 +165,12 @@ export default function HelpPage() {
                 redacted steps. Do not include private repository content,
                 passwords, recovery phrases, wallet keys, tokens, or personal data.
               </p>
-              <a className={styles.link} href="https://github.com/EcstaceeLOR/CertiFiks/issues/new/choose" target="_blank" rel="noreferrer">
+              <a
+                className={styles.link}
+                href="https://github.com/EcstaceeLOR/CertiFiks/issues/new/choose"
+                target="_blank"
+                rel="noreferrer"
+              >
                 Open GitHub issue tracker ↗
               </a>
             </div>
@@ -168,7 +183,12 @@ export default function HelpPage() {
                 channel with the maintainer. No staffed incident hotline or
                 guaranteed response time has been established.
               </p>
-              <a className={styles.link} href="https://github.com/EcstaceeLOR/CertiFiks/security/policy" target="_blank" rel="noreferrer">
+              <a
+                className={styles.link}
+                href="https://github.com/EcstaceeLOR/CertiFiks/security/policy"
+                target="_blank"
+                rel="noreferrer"
+              >
                 Read security reporting instructions ↗
               </a>
             </div>
@@ -186,7 +206,9 @@ export default function HelpPage() {
       <footer className="site-footer">
         <div className="container footer-content">
           <span className="brand footer-brand">certifiks.</span>
-          <p>In development. No live payments, audited escrow, or service SLA.</p>
+          <p>
+            In development. No live payments, audited escrow, or service SLA.
+          </p>
           <Link href="/">Home ↗</Link>
         </div>
       </footer>

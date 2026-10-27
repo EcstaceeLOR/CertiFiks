@@ -2,10 +2,22 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const help = readFileSync(new URL("../app/help/page.tsx", import.meta.url), "utf8");
-const css = readFileSync(new URL("../app/help/help.module.css", import.meta.url), "utf8");
-const homepage = readFileSync(new URL("../app/page.tsx", import.meta.url), "utf8");
-const onboarding = readFileSync(new URL("../app/onboarding/page.tsx", import.meta.url), "utf8");
+const help = readFileSync(
+  new URL("../app/help/page.tsx", import.meta.url),
+  "utf8",
+);
+const css = readFileSync(
+  new URL("../app/help/help.module.css", import.meta.url),
+  "utf8",
+);
+const homepage = readFileSync(
+  new URL("../app/page.tsx", import.meta.url),
+  "utf8",
+);
+const onboarding = readFileSync(
+  new URL("../app/onboarding/page.tsx", import.meta.url),
+  "utf8",
+);
 
 test("help is reachable and accessible with semantic topic navigation", () => {
   for (const page of [homepage, onboarding]) {

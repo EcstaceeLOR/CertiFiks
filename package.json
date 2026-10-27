@@ -27,7 +27,9 @@
     "submission:final": "node scripts/check-submission-readiness.mjs --require-final",
     "e2e:preflight": "node scripts/e2e/live-preflight.mjs",
     "economics:plan": "node scripts/business/unit-economics.mjs scripts/business/unit-economics.example.json",
-    "economics:test": "node --test scripts/business/unit-economics.test.mjs"
+    "economics:test": "node --test scripts/business/unit-economics.test.mjs",
+    "payout:proof:test": "node --test scripts/settlement/finalized-withdrawal.test.mjs",
+    "payout:proof": "node scripts/settlement/finalized-withdrawal.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

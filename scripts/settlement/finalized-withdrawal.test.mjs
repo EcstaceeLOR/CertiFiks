@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
 import {
-  parsePayoutProofConfig,
   PayoutProofError,
+  parsePayoutProofConfig,
   verifyFinalizedNativeWithdrawal,
   WITHDRAWN_TOPIC,
 } from "./finalized-withdrawal.mjs";

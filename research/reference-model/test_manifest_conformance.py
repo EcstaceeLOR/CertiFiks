@@ -1,7 +1,8 @@
-"""Manifest tampering conformance for the ASCII/I-JSON v1 fixture subset.
+"""Manifest hashing conformance across TypeScript and Python.
 
-The Python reference is intentionally not a general Unicode RFC8785 encoder.
-It independently tests the bytes/fields covered by published conformance data.
+The Python v1 reference supports Unicode and UTF-16 key ordering for the
+integer-only I-JSON schema subset. Floating-point serialization remains
+explicitly unsupported (it must fail, rather than silently diverge).
 """
 import copy
 import json

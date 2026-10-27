@@ -890,17 +890,13 @@ $$;
 reset request.jwt.claim.role;
 select 'PASS: immutable sponsored funding intent, replay, cancellation, no synthetic custody' as result;
 
--- Issue #34: one safe review case, no invented signature or paid vote.
-insert into public.certifiks_auth_users(user_id)
-values ('10000000-0000-4000-8000-000000000003');
+-- Issue #34: retain the existing read-only review preflight test with
+-- identities already initialized by the Issue #12 registry fixture.
 insert into public.certifiks_auth_role_memberships(user_id,organization_id,role)
 values
- ('10000000-0000-4000-8000-000000000003',
-  '20000000-0000-4000-8000-000000000001','verifier'),
- ('10000000-0000-4000-8000-000000000002',
-  '20000000-0000-4000-8000-000000000001','verifier'),
  ('10000000-0000-4000-8000-000000000001',
-  '20000000-0000-4000-8000-000000000001','verifier');
+  '20000000-0000-4000-8000-000000000001','verifier')
+on conflict (user_id,organization_id,role) do nothing;
 update public.certifiks_verification_runs
 set outcome='needs_review', result_digest='0x'||repeat('9',64),completed_at=now()
 where run_id='70000000-0000-4000-8000-000000000001';

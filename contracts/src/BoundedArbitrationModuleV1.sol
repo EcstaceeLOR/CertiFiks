@@ -222,6 +222,23 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
             if (policy.primaryDisqualified) revert ArbitratorAlreadyDisqualified();
             policy.primaryDisqualified = true;
             policy.primaryAccepted = false;
+
+            // A corrupt/disqualified primary must not win by doing nothing
+            // during the appeal window. Escalate to the sponsor-committed
+            // fallback, without rewriting the signed primary evidence.
+            uint64 attemptId = latestAttemptId[bountyId];
+            DisputeCase storage caseData = _cases[bountyId][attemptId];
+            if (attemptId != 0 && caseData.phase == CasePhase.PrimaryAppealWindow) {
+                caseData.phase = CasePhase.FallbackReview;
+                // Let both parties inspect the procedural intervention.
+                // Fixed fallback deadlines are NEVER prolonged.
+                uint256 grace = uint256(_fundingTerms[bountyId].arbitrationSeconds) / 3;
+                if (grace > 1 hours) grace = 1 hours;
+                uint256 cutoff = block.timestamp + grace;
+                if (cutoff > caseData.fallbackDeadline) cutoff = caseData.fallbackDeadline;
+                caseData.responseUntil = uint64(cutoff);
+                emit ArbitrationAdvanced(bountyId, attemptId, CasePhase.FallbackReview);
+            }
         } else if (arbitrator == policy.fallbackArbitrator) {
             if (policy.fallbackDisqualified) revert ArbitratorAlreadyDisqualified();
             policy.fallbackDisqualified = true;
@@ -490,6 +507,13 @@ abstract contract BoundedArbitrationModuleV1 is SignedVerifierDecisionModuleV1 {
         }
         // Neither an early primary nor a quick appeal may deprive the
         // opposing party of its precommitted response opportunity.
+        // If governance disqualified a primary AFTER it ruled, give the
+        // parties a bounded procedural-notice window before fallback rules.
+        if (phase == CasePhase.FallbackReview &&
+            caseData.primaryAward != Award.None &&
+            block.timestamp < caseData.responseUntil) {
+            revert EvidenceResponseWindowActive();
+        }
         if (primary && block.timestamp < caseData.responseUntil &&
             caseData.challenger == _fundingTerms[bountyId].sponsor &&
             caseData.developerResponseDigest == bytes32(0) ||

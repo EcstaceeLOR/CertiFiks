@@ -346,6 +346,68 @@ contract BoundedArbitrationModuleV1Test {
         require(address(escrow).balance == escrow.totalReservedAtoms(), "appeal moved funds");
     }
 
+    function testDisqualifiedPrimaryCannotBecomeFinalBySilence() public {
+        uint256 bounty = _approved();
+        _openChallenge(bounty);
+        vm.prank(ARBITRATOR);
+        escrow.ruleOnDispute(
+            bounty, 1, BoundedArbitrationModuleV1.Award.SponsorRefund,
+            keccak256("procedurally compromised review"),
+            keccak256("archived primary evidence")
+        );
+        BoundedArbitrationModuleV1.DisputeCase memory primary =
+            escrow.getDisputeCase(bounty, 1);
+        require(
+            primary.phase == BoundedArbitrationModuleV1.CasePhase.PrimaryAppealWindow,
+            "primary appeal period never opened"
+        );
+
+        // Governance cannot rewrite the prior signed ruling, but must not
+        // allow a now-disqualified arbiter's award to auto-finalize.
+        escrow.disqualifyArbitrator(
+            bounty, ARBITRATOR, keccak256("conflict disclosed after primary ruling")
+        );
+        BoundedArbitrationModuleV1.DisputeCase memory review =
+            escrow.getDisputeCase(bounty, 1);
+        require(
+            review.phase == BoundedArbitrationModuleV1.CasePhase.FallbackReview,
+            "disqualified primary remained finalizable"
+        );
+        require(
+            review.primaryAward == BoundedArbitrationModuleV1.Award.SponsorRefund &&
+            review.primaryReasonDigest == primary.primaryReasonDigest,
+            "immutable primary ruling evidence was rewritten"
+        );
+        require(review.fallbackDeadline == primary.fallbackDeadline,
+            "disqualification extended immutable fallback limit");
+        _failAs(FALLBACK, abi.encodeWithSelector(
+            escrow.ruleOnDispute.selector, bounty, uint64(1),
+            BoundedArbitrationModuleV1.Award.DeveloperReward,
+            bytes32(uint256(71)), bytes32(uint256(72))
+        ));
+
+        vm.warp(review.responseUntil);
+        vm.prank(FALLBACK);
+        escrow.ruleOnDispute(
+            bounty, 1, BoundedArbitrationModuleV1.Award.DeveloperReward,
+            bytes32(uint256(73)), bytes32(uint256(74))
+        );
+        BoundedArbitrationModuleV1.DisputeCase memory finished =
+            escrow.getDisputeCase(bounty, 1);
+        require(
+            finished.phase == BoundedArbitrationModuleV1.CasePhase.Resolved &&
+            finished.finalAward == BoundedArbitrationModuleV1.Award.DeveloperReward,
+            "independent fallback did not override compromised primary"
+        );
+        _failAs(FALLBACK, abi.encodeWithSelector(
+            escrow.ruleOnDispute.selector, bounty, uint64(1),
+            BoundedArbitrationModuleV1.Award.SponsorRefund,
+            bytes32(uint256(75)), bytes32(uint256(76))
+        ));
+        require(address(escrow).balance == escrow.totalReservedAtoms(),
+            "disqualification or fallback moved protected escrow");
+    }
+
     function testDeveloperCanAppealUnfavorablePrimaryRefundOnce() public {
         uint256 bounty = _ready();
         _submit(_vote(bounty, ORG_A, 2), KEY_A);

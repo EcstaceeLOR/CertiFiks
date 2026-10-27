@@ -49,10 +49,8 @@ test("authorized public projection determines readiness", async () => {
       assert.equal(target.searchParams.get("limit"), "1");
       assert.equal(init?.method, "GET");
       assert.equal(init?.redirect, "error");
-      assert.equal(
-        (init?.headers as Record<string, string>).apikey,
-        supabaseServiceRoleKey,
-      );
+      const headers = init?.headers as Record<string, string> | undefined;
+      assert.equal(headers?.apikey, supabaseServiceRoleKey);
       return new Response("[]", { status: 200 });
     },
   });
@@ -77,7 +75,7 @@ test("upstream faults do not leak internal details", async () => {
   for (const request of [
     async () => {
       throw new Error(
-        "private-provider-error with secret " + supabaseServiceRoleKey,
+        `private-provider-error with secret ${supabaseServiceRoleKey}`,
       );
     },
     async () => new Response("access denied", { status: 401 }),

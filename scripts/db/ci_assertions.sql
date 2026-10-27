@@ -82,7 +82,7 @@ insert into public.certifiks_github_revision_receipts (
   '0x'||repeat('f',64), true, false
 );
 
-do $
+do $github_receipt$
 begin
   if (select count(*) from public.certifiks_github_revision_receipts) <> 1 then
     raise exception 'authenticated revision snapshot not persisted';
@@ -161,7 +161,7 @@ begin
     raise exception 'browser principal can inspect or forge GitHub evidence';
   end if;
 end;
-$;
+$github_receipt$;
 
 insert into public.certifiks_verification_runs
   (organization_id,attempt_id,run_id,committed_plan_digest,image_digest,outcome)

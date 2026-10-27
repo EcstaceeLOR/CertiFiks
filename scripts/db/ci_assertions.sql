@@ -64,6 +64,105 @@ values (
   repeat('b',40),repeat('c',40)
 );
 
+-- Issue #11: durable provenance snapshot is coupled to an immutable
+-- tenant/attempt and exact GitHub installation, not independently signed.
+insert into public.certifiks_github_revision_receipts (
+  organization_id, bounty_id, attempt_id, repository_id,
+  source_repository_id, repository_full_name, installation_id,
+  pull_number, developer_github_user_id, base_commit_sha,
+  head_commit_sha, manifest_digest, image_digest, snapshot_digest,
+  fork, commit_signature_verified
+) values (
+  '20000000-0000-4000-8000-000000000001',
+  '30000000-0000-4000-8000-000000000001',
+  '60000000-0000-4000-8000-000000000001',
+  401, 999, 'sponsor-a/bugfix', 1234, 10, 4567,
+  repeat('b',40), repeat('c',40),
+  '0x'||repeat('a',64), '0x'||repeat('e',64),
+  '0x'||repeat('f',64), true, false
+);
+
+do $
+begin
+  if (select count(*) from public.certifiks_github_revision_receipts) <> 1 then
+    raise exception 'authenticated revision snapshot not persisted';
+  end if;
+
+  -- A second write cannot replace or replay an admitted attempt.
+  begin
+    insert into public.certifiks_github_revision_receipts (
+      organization_id, bounty_id, attempt_id, repository_id,
+      source_repository_id, repository_full_name, installation_id,
+      pull_number, developer_github_user_id, base_commit_sha,
+      head_commit_sha, manifest_digest, image_digest, snapshot_digest,
+      fork, commit_signature_verified
+    ) values (
+      '20000000-0000-4000-8000-000000000001',
+      '30000000-0000-4000-8000-000000000001',
+      '60000000-0000-4000-8000-000000000001',
+      401, 999, 'sponsor-a/bugfix', 1234, 10, 4567,
+      repeat('b',40), repeat('c',40),
+      '0x'||repeat('a',64), '0x'||repeat('e',64),
+      '0x'||repeat('f',64), true, false
+    );
+    raise exception 'duplicate GitHub revision admitted';
+  exception when unique_violation then null;
+  end;
+
+  -- A forged head cannot be admitted even with the same attempt ID.
+  begin
+    insert into public.certifiks_github_revision_receipts (
+      organization_id, bounty_id, attempt_id, repository_id,
+      source_repository_id, repository_full_name, installation_id,
+      pull_number, developer_github_user_id, base_commit_sha,
+      head_commit_sha, manifest_digest, image_digest, snapshot_digest,
+      fork, commit_signature_verified
+    ) values (
+      '20000000-0000-4000-8000-000000000001',
+      '30000000-0000-4000-8000-000000000001',
+      '60000000-0000-4000-8000-000000000001',
+      401, 999, 'sponsor-a/bugfix', 1234, 10, 4567,
+      repeat('b',40), repeat('d',40),
+      '0x'||repeat('a',64), '0x'||repeat('e',64),
+      '0x'||repeat('f',64), true, false
+    );
+    raise exception 'forged head accepted';
+  exception when raise_exception then
+    if sqlerrm <> 'github receipt disagrees with immutable tenant/attempt/installation'
+    then raise; end if;
+  end;
+
+  begin
+    update public.certifiks_github_revision_receipts
+       set snapshot_digest = '0x'||repeat('0',64);
+    raise exception 'recorded GitHub source was overwritten';
+  exception when raise_exception then
+    if sqlerrm <> 'immutable CertiFiks evidence/audit record' then raise; end if;
+  end;
+
+  begin
+    update public.certifiks_attempts
+       set head_commit_sha = repeat('d',40);
+    raise exception 'attempt head was rewritten after submission';
+  exception when raise_exception then
+    if sqlerrm <> 'immutable CertiFiks attempt identity' then raise; end if;
+  end;
+
+  begin
+    delete from public.certifiks_github_revision_receipts;
+    raise exception 'recorded GitHub source was deleted';
+  exception when raise_exception then
+    if sqlerrm <> 'immutable CertiFiks evidence/audit record' then raise; end if;
+  end;
+
+  if has_table_privilege('anon','public.certifiks_github_revision_receipts','SELECT')
+    or has_table_privilege('authenticated','public.certifiks_github_revision_receipts','INSERT')
+  then
+    raise exception 'browser principal can inspect or forge GitHub evidence';
+  end if;
+end;
+$;
+
 insert into public.certifiks_verification_runs
   (organization_id,attempt_id,run_id,committed_plan_digest,image_digest,outcome)
 values (

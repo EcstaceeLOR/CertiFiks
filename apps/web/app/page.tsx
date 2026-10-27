@@ -124,6 +124,7 @@ export default async function HomePage() {
             <Link href="/onboarding">
               Get oriented <span aria-hidden="true">↗</span>
             </Link>
+            <Link href="/help">Help and trust</Link>
           </nav>
         </div>
       </header>

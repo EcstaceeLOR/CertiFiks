@@ -1,0 +1,133 @@
+.main {
+  padding-block: clamp(52px, 7vw, 100px);
+}
+.heading {
+  max-width: 930px;
+  margin: 20px 0;
+  font-size: clamp(3rem, 6vw, 5.7rem);
+  letter-spacing: -0.065em;
+  line-height: 1.09;
+}
+.lead {
+  max-width: 760px;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.7;
+}
+.warning {
+  background: var(--panel);
+  border: 2px solid #ab8252;
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 30px 0 22px;
+  max-width: 900px;
+}
+.warning strong {
+  color: var(--ink);
+  font-size: 19px;
+}
+.warning p {
+  color: var(--muted);
+  line-height: 1.7;
+  margin-bottom: 0;
+}
+.jumpLinks,
+.contextLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin-top: 24px;
+}
+.jumpLinks a,
+.contextLinks a,
+.link {
+  color: var(--accent);
+  font-weight: 720;
+  line-height: 1.8;
+  text-underline-offset: 4px;
+}
+.main section + section {
+  margin-top: clamp(68px, 7vw, 110px);
+}
+.sectionTitle {
+  max-width: 850px;
+  font-size: clamp(2rem, 3.5vw, 3.5rem);
+  letter-spacing: -0.045em;
+  line-height: 1.2;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 25px 0;
+}
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 25px;
+  overflow-wrap: anywhere;
+}
+.card h3 {
+  font-size: 23px;
+  margin: 0 0 15px;
+  letter-spacing: -0.035em;
+}
+.card p,
+.disclosure {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.7;
+}
+.card .blocked {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  margin-top: 24px;
+}
+.blocked strong {
+  color: var(--ink);
+}
+.faq {
+  display: grid;
+  gap: 11px;
+}
+.faq details {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  padding: 18px 20px;
+}
+.faq summary {
+  cursor: pointer;
+  font-weight: 740;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.faq p {
+  color: var(--muted);
+  line-height: 1.75;
+  max-width: 800px;
+}
+.supportGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.disclosure {
+  max-width: 900px;
+  margin-top: 26px;
+}
+@media (max-width: 800px) {
+  .grid,
+  .supportGrid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .heading {
+    overflow-wrap: anywhere;
+  }
+  .card {
+    padding: 20px;
+  }
+}

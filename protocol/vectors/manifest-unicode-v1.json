@@ -1,0 +1,22 @@
+{
+  "version": "1",
+  "input": {
+    "version": "1",
+    "strings": {
+      "😀": "supplementary face",
+      "": "BMP private use",
+      "é": "café",
+      "A": "literal \"quote\" and slash /",
+      "𐐀": "Deseret"
+    },
+    "paths": [
+      "tests/🧪/fix.py",
+      "a\tb",
+      "line\nbreak"
+    ],
+    "check": true,
+    "nullValue": null,
+    "amount": 42
+  },
+  "expected": "0x143c7550ac090ba6fc2c5680a14b6df596aadc0a4e660d3d672dc694028a9b26"
+}

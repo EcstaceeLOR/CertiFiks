@@ -285,6 +285,44 @@ contract FairEntitlementModuleV1Test {
         require(escrow.unreservedNativeSurplus() == 0, "reserved assets called surplus");
     }
 
+    function testReadOnlyRefundPreviewMatchesActualImmutableDecision() public {
+        uint256 bounty = _fund();
+        (FairEntitlementModuleV1.Reason reason, bool ready, uint256 atoms) =
+            escrow.previewNoSubmissionEntitlement(bounty);
+        require(reason == FairEntitlementModuleV1.Reason.None &&
+            !ready && atoms == 0, "open bounty falsely called refundable");
+
+        vm.prank(SPONSOR);
+        escrow.cancelUnassignedBounty(bounty);
+        (reason, ready, atoms) = escrow.previewNoSubmissionEntitlement(bounty);
+        require(reason == FairEntitlementModuleV1.Reason.UnassignedSponsorCancellation &&
+            ready && atoms == 1 ether, "cancelled sponsor preview incorrect");
+        require(address(escrow).balance == escrow.totalReservedAtoms(),
+            "read-only preview modified liabilities");
+
+        escrow.recordNoSubmissionRefund(bounty);
+        (reason, ready, atoms) = escrow.previewNoSubmissionEntitlement(bounty);
+        require(reason == FairEntitlementModuleV1.Reason.None &&
+            !ready && atoms == 0, "recorded refund could be replayed");
+        require(address(escrow).balance == escrow.totalReservedAtoms(),
+            "refund bookkeeping transferred ETH");
+    }
+
+    function testTimelySubmittedFixNeverBecomesSponsorRefundPreview() public {
+        uint256 bounty = _submitted();
+        (FairEntitlementModuleV1.Reason reason, bool ready, uint256 atoms) =
+            escrow.previewNoSubmissionEntitlement(bounty);
+        require(reason == FairEntitlementModuleV1.Reason.None &&
+            !ready && atoms == 0, "timely submission is sponsor-refundable");
+        vm.warp(uint256(escrow.getFundingTerms(bounty).submissionDeadline) + 1);
+        (reason, ready, atoms) = escrow.previewNoSubmissionEntitlement(bounty);
+        require(reason == FairEntitlementModuleV1.Reason.None &&
+            !ready && atoms == 0, "timeout stole submitted developer entitlement");
+        _failedCall(SPONSOR, abi.encodeWithSelector(
+            escrow.recordNoSubmissionRefund.selector, bounty
+        ));
+    }
+
     function testSponsorCannotRefundAfterDeveloperSubmittedBeforeDeadline() public {
         uint256 bounty = _submitted();
         _failedCall(SPONSOR, abi.encodeWithSelector(escrow.cancelUnassignedBounty.selector, bounty));
@@ -302,12 +340,19 @@ contract FairEntitlementModuleV1Test {
         vm.prank(DEVELOPER);
         escrow.acceptAssignment(bounty);
         _failedCall(SPONSOR, abi.encodeWithSelector(escrow.recordNoSubmissionRefund.selector, bounty));
+        (, bool beforeDeadline, uint256 beforeAtoms) =
+            escrow.previewNoSubmissionEntitlement(bounty);
+        require(!beforeDeadline && beforeAtoms == 0, "accepted work treated as refundable");
         uint256 deadline = escrow.getFundingTerms(bounty).submissionDeadline;
         vm.warp(deadline);
         _failedCall(CONTROLLER_A, abi.encodeWithSelector(escrow.expireUnsubmittedBounty.selector, bounty));
         vm.warp(deadline + 1);
         vm.prank(CONTROLLER_A);
         escrow.expireUnsubmittedBounty(bounty);
+        (FairEntitlementModuleV1.Reason reason, bool ready, uint256 atoms) =
+            escrow.previewNoSubmissionEntitlement(bounty);
+        require(reason == FairEntitlementModuleV1.Reason.NoSubmissionAtDeadline &&
+            ready && atoms == 1 ether, "missed-deadline preview not supported");
         vm.prank(CONTROLLER_B);
         escrow.recordNoSubmissionRefund(bounty);
         require(_entitlement(bounty).reason == FairEntitlementModuleV1.Reason.NoSubmissionAtDeadline,

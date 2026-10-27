@@ -1,0 +1,11 @@
+# Issue #13 — Bounded late dissent from an independent reviewer
+
+**Previously:** as soon as two positive reviewer votes met the quorum, the contract entered a challenge window and rejected *every* remaining review vote. A third sponsor-committed reviewer who had already accepted the job and declared a report could not record a signed contradiction, even while the challenge remained open.
+
+**Now:** while the funded challenge window remains open, a previously assigned, accepted and evidence-declared reviewer may submit a signed **non-approval** EIP-712 verdict. The unchanged chain/contract/bounty/attempt/manifest/head/image/report/signer/epoch checks still apply. A contradictory finding atomically escalates the decision, zeros its previously open challenge deadline, and retains the earlier positive vote records; it cannot directly release or refund funds.
+
+A third positive verdict cannot change an already reached quorum or extend the deadline. A late dissent must be individually signed, unexpired, and have an expiry no later than the **original** challenge window end. After the challenge window expires, no new signed verdict is accepted through this path. Previously accepted and declared jobs remain required, so an attacker cannot enroll or appoint an extra reviewer after reaching quorum to manufacture a contradiction.
+
+A new Foundry scenario enrolls **three genuinely distinct signing keys and committed organization IDs**, uses a 2-of-3 funded roster, records early quorum near the original verification cutoff, advances beyond the initial job deadline but still within the challenge window, then tests the third reviewer's signed dissent, tampering/replay refusal, audit linkage and unchanged reserved escrow.
+
+**Limitations:** distinct wallets/organization labels in Foundry are **synthetic**, not proof of independent operators or uncompromised keys. A colluding reviewer can try to delay payout through adverse findings. A real appeal and bounded arbitration service in #14 is necessary. This change does not approve deployment, establish actual GitHub provenance, or authorize money movement. Issue #13 remains open pending live signed-report and independent reviewer E2E verification.

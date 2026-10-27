@@ -315,6 +315,63 @@ contract VerifierRegistryModuleV1Test {
         require(snapshot.declaredReportDigest == bytes32(uint256(1234)), "signed history rewritten");
     }
 
+    function testGovernanceSuspensionBlocksOldKeyAndControllerCannotSelfReactivate() public {
+        _admitBoth();
+        uint256 bounty = _submitted();
+        _assignBoth(bounty);
+        vm.prank(S1);
+        escrow.acceptReviewerJob(bounty, 1, ORG1);
+
+        escrow.suspendReviewerOrganization(ORG1);
+        require(escrow.getReviewerOrganization(ORG1).suspended, "suspension missing");
+        require(!escrow.getReviewerOrganization(ORG1).active, "signing still active");
+        _revertAs(C1, abi.encodeWithSelector(escrow.activateReviewerOrganization.selector, ORG1));
+        _revertAs(
+            S1,
+            abi.encodeWithSelector(
+                escrow.declareReviewerEvidence.selector, bounty, uint64(1), ORG1, bytes32(uint256(201))
+            )
+        );
+        _revertAs(
+            ATTACKER,
+            abi.encodeWithSelector(escrow.clearReviewerSuspension.selector, ORG1)
+        );
+        escrow.clearReviewerSuspension(ORG1);
+        require(!escrow.getReviewerOrganization(ORG1).active, "reactivated without controller");
+        _revertAs(
+            S1,
+            abi.encodeWithSelector(
+                escrow.declareReviewerEvidence.selector, bounty, uint64(1), ORG1, bytes32(uint256(201))
+            )
+        );
+
+        _activate(ORG1, C1);
+        vm.prank(S1);
+        escrow.declareReviewerEvidence(bounty, 1, ORG1, bytes32(uint256(201)));
+        require(
+            escrow.getReviewerJob(bounty, 1, ORG1).declaredReportDigest == bytes32(uint256(201)),
+            "already accepted evidence lost or overwritten"
+        );
+        require(address(escrow).balance == escrow.totalReservedAtoms(), "emergency action transferred funds");
+    }
+
+    function testSuspensionIsGovernanceOnlyAndDoesNotOverridePermanentRevocation() public {
+        _admitBoth();
+        uint256 bounty = _submitted();
+        _assignBoth(bounty);
+        _revertAs(ATTACKER, abi.encodeWithSelector(escrow.suspendReviewerOrganization.selector, ORG1));
+        escrow.suspendReviewerOrganization(ORG1);
+        _revertAs(address(this), abi.encodeWithSelector(escrow.suspendReviewerOrganization.selector, ORG1));
+        escrow.clearReviewerSuspension(ORG1);
+        _revertAs(address(this), abi.encodeWithSelector(escrow.clearReviewerSuspension.selector, ORG1));
+        _activate(ORG1, C1);
+        escrow.revokeReviewerOrganization(ORG1);
+        _revertAs(address(this), abi.encodeWithSelector(escrow.suspendReviewerOrganization.selector, ORG1));
+        _revertAs(address(this), abi.encodeWithSelector(escrow.clearReviewerSuspension.selector, ORG1));
+        _revertAs(C1, abi.encodeWithSelector(escrow.activateReviewerOrganization.selector, ORG1));
+        require(escrow.getReviewerOrganization(ORG1).revokedPermanently, "revocation not final");
+    }
+
     function testRevocationStopsNewSignaturesButDoesNotDeleteOldEvidence() public {
         _enroll(ORG1, C1, S1);
         _activate(ORG1, C1);

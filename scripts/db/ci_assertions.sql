@@ -2,7 +2,9 @@
 -- Uses synthetic metadata only, never real money or real repo secrets.
 insert into public.certifiks_auth_users (user_id) values
   ('10000000-0000-4000-8000-000000000001'),
-  ('10000000-0000-4000-8000-000000000002');
+  ('10000000-0000-4000-8000-000000000002'),
+  ('10000000-0000-4000-8000-000000000003'),
+  ('10000000-0000-4000-8000-000000000004');
 
 insert into public.certifiks_github_installations (installation_id) values (1234);
 
@@ -171,6 +173,154 @@ values (
   '70000000-0000-4000-8000-000000000001',
   '0x' || repeat('d',64),'0x' || repeat('e',64),'pending'
 );
+
+-- Issue #12: synthetic permissioned verifier eligibility and identity history.
+insert into public.certifiks_auth_role_memberships
+  (user_id,organization_id,role) values
+  ('10000000-0000-4000-8000-000000000003',
+   '20000000-0000-4000-8000-000000000001','verifier'),
+  ('10000000-0000-4000-8000-000000000004',
+   '20000000-0000-4000-8000-000000000001','operator'),
+  ('10000000-0000-4000-8000-000000000002',
+   '20000000-0000-4000-8000-000000000001','verifier');
+
+insert into public.certifiks_verifier_principals
+  (organization_id,principal_id,reviewer_user_id,control_digest,
+   independent_review_digest,approved_by)
+values (
+  '20000000-0000-4000-8000-000000000001',
+  '90000000-0000-4000-8000-000000000001',
+  '10000000-0000-4000-8000-000000000003',
+  '0x'||repeat('1',64),'0x'||repeat('2',64),
+  '10000000-0000-4000-8000-000000000004'
+);
+insert into public.certifiks_verifier_signing_keys
+  (organization_id,principal_id,signer_key_id)
+values (
+  '20000000-0000-4000-8000-000000000001',
+  '90000000-0000-4000-8000-000000000001','key-a'
+),(
+  '20000000-0000-4000-8000-000000000001',
+  '90000000-0000-4000-8000-000000000001','key-b'
+);
+insert into public.certifiks_verifier_review_assignments
+  (organization_id,bounty_id,run_id,principal_id,signer_key_id)
+values (
+  '20000000-0000-4000-8000-000000000001',
+  '30000000-0000-4000-8000-000000000001',
+  '70000000-0000-4000-8000-000000000001',
+  '90000000-0000-4000-8000-000000000001','key-a'
+);
+
+do $verifier_test$
+begin
+  if (select count(*) from public.certifiks_verifier_review_assignments)<>1 then
+    raise exception 'one enrolled reviewer was not recorded';
+  end if;
+  -- Different keys MUST NOT masquerade as two independent reviewers.
+  begin
+    insert into public.certifiks_verifier_review_assignments
+      (organization_id,bounty_id,run_id,principal_id,signer_key_id)
+    values (
+      '20000000-0000-4000-8000-000000000001',
+      '30000000-0000-4000-8000-000000000001',
+      '70000000-0000-4000-8000-000000000001',
+      '90000000-0000-4000-8000-000000000001','key-b'
+    );
+    raise exception 'same reviewer counted twice with another signing key';
+  exception when unique_violation then null;
+  end;
+
+  -- A second identity using the same vetted operator control tag cannot
+  -- claim to be an independent person.
+  begin
+    insert into public.certifiks_verifier_principals
+      (organization_id,principal_id,reviewer_user_id,control_digest,
+       independent_review_digest,approved_by)
+    values (
+      '20000000-0000-4000-8000-000000000001',
+      '90000000-0000-4000-8000-000000000002',
+      '10000000-0000-4000-8000-000000000002',
+      '0x'||repeat('1',64),'0x'||repeat('3',64),
+      '10000000-0000-4000-8000-000000000004'
+    );
+    raise exception 'same control identity enrolled twice';
+  exception when unique_violation then null;
+  end;
+
+  -- An accepted contributor cannot review the same bounty, regardless of
+  -- unrelated verifier enrollment.
+  insert into public.certifiks_verifier_principals
+    (organization_id,principal_id,reviewer_user_id,control_digest,
+     independent_review_digest,approved_by)
+  values (
+    '20000000-0000-4000-8000-000000000001',
+    '90000000-0000-4000-8000-000000000003',
+    '10000000-0000-4000-8000-000000000002',
+    '0x'||repeat('4',64),'0x'||repeat('5',64),
+    '10000000-0000-4000-8000-000000000004'
+  );
+  insert into public.certifiks_verifier_signing_keys
+    (organization_id,principal_id,signer_key_id)
+  values (
+    '20000000-0000-4000-8000-000000000001',
+    '90000000-0000-4000-8000-000000000003','dev-key'
+  );
+  begin
+    insert into public.certifiks_verifier_review_assignments
+      (organization_id,bounty_id,run_id,principal_id,signer_key_id)
+    values (
+      '20000000-0000-4000-8000-000000000001',
+      '30000000-0000-4000-8000-000000000001',
+      '70000000-0000-4000-8000-000000000001',
+      '90000000-0000-4000-8000-000000000003','dev-key'
+    );
+    raise exception 'developer was authorized as own verifier';
+  exception when raise_exception then
+    if sqlerrm <> 'verifier role conflict or enrollment revoked' then raise; end if;
+  end;
+
+  update public.certifiks_verifier_signing_keys
+    set revoked_at=now()
+    where signer_key_id='key-b';
+  begin
+    insert into public.certifiks_verifier_review_assignments
+      (organization_id,bounty_id,run_id,principal_id,signer_key_id)
+    values (
+      '20000000-0000-4000-8000-000000000001',
+      '30000000-0000-4000-8000-000000000001',
+      '70000000-0000-4000-8000-000000000001',
+      '90000000-0000-4000-8000-000000000001','key-b'
+    );
+    raise exception 'revoked key accepted';
+  exception when raise_exception then
+    if sqlerrm <> 'verifier principal or signing key revoked' then raise; end if;
+  end;
+
+  begin
+    update public.certifiks_verifier_signing_keys
+      set revoked_at=null where signer_key_id='key-b';
+    raise exception 'revoked key reactivated';
+  exception when raise_exception then
+    if sqlerrm <> 'verifier revocation is one-way' then raise; end if;
+  end;
+
+  begin
+    delete from public.certifiks_verifier_review_assignments;
+    raise exception 'historical verifier assignment was erased';
+  exception when raise_exception then
+    if sqlerrm <> 'immutable CertiFiks evidence/audit record' then raise; end if;
+  end;
+
+  if (select count(*) from public.certifiks_verifier_review_assignments)<>1
+     or has_table_privilege(
+       'anon','public.certifiks_verifier_principals','SELECT'
+     )
+  then
+    raise exception 'independent reviewer history or tenant privacy violated';
+  end if;
+end;
+$verifier_test$;
 
 insert into public.certifiks_audit_entries
   (organization_id,actor_user_id,entity_kind,entity_id,action,entry_digest)

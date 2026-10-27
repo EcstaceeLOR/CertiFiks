@@ -1,8 +1,8 @@
+import type { GitHubAppCredentials } from "./app-auth.js";
 import {
   getAuthenticatedRevisionReceiptV1,
   type VerifiedGitHubConnectionV1,
 } from "./authenticated-revision.js";
-import type { GitHubAppCredentials } from "./app-auth.js";
 import type {
   GitHubRevisionReceiptV1,
   PinnedRevisionPolicyV1,

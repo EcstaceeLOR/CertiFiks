@@ -50,6 +50,8 @@ jobs:
         run: node --test scripts/quality/live-e2e-evidence.test.mjs
       - name: Block unauthenticated security audit and unresolved high findings
         run: node --test scripts/security/independent-review-gate.test.mjs
+      - name: Verify conservative unit economics and break-even model
+        run: npm run economics:test && npm run economics:plan
       - name: Build every workspace
         run: npm run build
 

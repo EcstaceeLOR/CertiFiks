@@ -12,6 +12,20 @@ The Portaldot Devs updates dated **October 17 and October 23, 2026** have been r
 - Historical mainnet `wss://mainnet.portaldot.io` remains a separate comparison endpoint; never treat it as the new testnet.
 - Even if the testnet is live, published token decimals from older Substrate documentation (14) cannot be safely assumed for the new EVM lane or native wallet withdrawal amounts.
 
+## Actual read-only GitHub Actions observations — October 27, 2026
+
+The exploratory CI [run #40577273797](https://github.com/EcstaceeLOR/CertiFiks/actions/runs/40577273797) saved unmodified 14-day JSON artifacts for all three endpoints:
+
+| Endpoint | Result from GitHub hosted runner | What it does NOT prove |
+| --- | --- | --- |
+| `wss://test-node-v3.portaldot.dev` | **Connected**. `system_chain=PortaldotV3 Test`, `specName=portaldot-v3`, `specVersion=3002`, `tokenSymbol=tPOT`, `tokenDecimals=14`, and SS58=42; no `contracts_*` methods advertised. | Specific contract VM, whether testnet deposits/withdrawals are safe, and authorization for a production escrow |
+| `https://test-evm-rpc-v3.portaldot.dev` | **Connected**. `eth_chainId=0x190f1ca9` (`420420777` decimal); `net_version=420420777`; head and `web3_clientVersion` returned. | EVM bytecode deployability, real escrow tx success, finality guarantees and independently verified code |
+| `wss://mainnet.portaldot.io` | **Connected** as older `Portaldot Mainnet`, `specVersion=1002`, token `POT`; historic `contracts_*` RPCs advertised. | That this mainnet is the correct V3 testnet or that its old ABI can safely run this Solidity escrow |
+
+**Caution:** the first probe queried `chain_getBlockHash` without a height (which typically reports the best block), and the first EVM probe queried only the latest EVM block. This PR subsequently corrected the tools to fetch **explicit block zero (genesis)** and the Substrate finalized head; the original artifacts **must not** be retroactively labeled genesis or finality evidence. Re-run the updated probes and independently cross-check returned genesis hashes before pinning a network manifest.
+
+All three tests used read-only RPC calls. They did not send tokens, interact with a deployed CertiFiks contract, authorize private wallets, use a real sponsor or developer, or certify hackathon compliance. They are genuine *connectivity observations only*.
+
 ## Repeatable discovery workflow
 
 `.github/workflows/portaldot-network-probe.yml` now defaults to the announced public V3 testnet WebSocket RPC on manual dispatch. The exploratory feature branch additionally collects **read-only** automated WebSocket and EVM-JSON-RPC observations, with explicit labeling and a 14-day artifact retention period.

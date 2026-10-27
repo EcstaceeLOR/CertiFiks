@@ -591,6 +591,74 @@ contract PullWithdrawalModuleV1Test {
         _assertLedger(0, 0);
     }
 
+    /**
+     * No beneficiary may spend somebody else's accrued reward, even while an
+     * unresolved third bounty reserves funds and both beneficiaries partially
+     * withdraw in an arbitrary order. Deterministic seeded fuzz in CI.
+     */
+    function testFuzzMixedSponsorAndDeveloperCreditsCannotCrossCharge(
+        uint96 sponsorSeed, uint96 developerSeed, bool sponsorFirst
+    ) public {
+        uint256 refund = _fund(3 ether);
+        _creditRefund(refund);
+        uint256 pending = _fund(2 ether);
+        uint256 reward = _approved();
+        escrow.accrueFinalCredits(reward);
+        _assertLedger(6 ether, 4 ether);
+        require(!escrow.bountyCreditsAccrued(pending), "unverified reward credited");
+
+        uint256 sponsorPart = uint256(sponsorSeed) % (3 ether) + 1;
+        uint256 developerPart = uint256(developerSeed) % (1 ether) + 1;
+
+        if (sponsorFirst) {
+            vm.prank(SPONSOR);
+            escrow.withdrawBountyCredit(refund, payable(OUTSIDER), sponsorPart);
+            vm.prank(DEVELOPER);
+            escrow.withdrawBountyCredit(reward, payable(DEVELOPER), developerPart);
+        } else {
+            vm.prank(DEVELOPER);
+            escrow.withdrawBountyCredit(reward, payable(DEVELOPER), developerPart);
+            vm.prank(SPONSOR);
+            escrow.withdrawBountyCredit(refund, payable(OUTSIDER), sponsorPart);
+        }
+        uint256 remainder = (3 ether - sponsorPart) + (1 ether - developerPart);
+        _assertLedger(2 ether + remainder, remainder);
+        require(escrow.claimableByBounty(refund, SPONSOR) == 3 ether - sponsorPart,
+            "sponsor's own credit changed unexpectedly");
+        require(escrow.claimableByBounty(reward, DEVELOPER) == 1 ether - developerPart,
+            "developer's earned reward changed unexpectedly");
+        require(escrow.claimableByBounty(reward, SPONSOR) == 0,
+            "sponsor inherited developer reward");
+        require(escrow.claimableByBounty(refund, DEVELOPER) == 0,
+            "developer inherited sponsor refund");
+
+        _reject(SPONSOR, abi.encodeWithSelector(
+            escrow.withdrawBountyCredit.selector, reward, payable(SPONSOR), 1 wei
+        ));
+        _reject(DEVELOPER, abi.encodeWithSelector(
+            escrow.withdrawBountyCredit.selector, refund, payable(DEVELOPER), 1 wei
+        ));
+        _reject(OUTSIDER, abi.encodeWithSelector(
+            escrow.accrueFinalCredits.selector, pending
+        ));
+
+        if (sponsorPart < 3 ether) {
+            vm.prank(SPONSOR);
+            escrow.withdrawBountyCredit(
+                refund, payable(SPONSOR), 3 ether - sponsorPart
+            );
+        }
+        if (developerPart < 1 ether) {
+            vm.prank(DEVELOPER);
+            escrow.withdrawBountyCredit(
+                reward, payable(DEVELOPER), 1 ether - developerPart
+            );
+        }
+        _assertLedger(2 ether, 0);
+        require(address(escrow).balance == 2 ether,
+            "other user's unfinalized bounty backing was spent");
+    }
+
     function testFuzzPartialNativeWithdrawalConservesAccounting(uint96 randomPart) public {
         uint256 bounty = _fund(1 ether);
         _creditRefund(bounty);

@@ -15,9 +15,18 @@ const ADDRESS = /^0x[0-9a-f]{40}$/;
 const QUANTITY = /^0x(?:0|[1-9a-f][0-9a-f]*)$/;
 const UINT256 = (1n << 256n) - 1n;
 const OUTPUT_KEYS = [
-  "chainId", "genesisHash", "escrowAddress", "escrowCodeSha256",
-  "transactionHash", "logIndex", "bountyId", "beneficiary",
-  "recipient", "amountAtoms", "remainingAtoms", "rpcOrigin",
+  "chainId",
+  "genesisHash",
+  "escrowAddress",
+  "escrowCodeSha256",
+  "transactionHash",
+  "logIndex",
+  "bountyId",
+  "beneficiary",
+  "recipient",
+  "amountAtoms",
+  "remainingAtoms",
+  "rpcOrigin",
 ];
 
 export class PayoutProofError extends Error {
@@ -50,7 +59,9 @@ function cleanAddress(value) {
 
 export function parsePayoutProofConfig(input) {
   insist(input !== null && typeof input === "object" && !Array.isArray(input));
-  insist(Object.keys(input).sort().join("|") === [...OUTPUT_KEYS].sort().join("|"));
+  insist(
+    Object.keys(input).sort().join("|") === [...OUTPUT_KEYS].sort().join("|"),
+  );
   let url;
   try {
     url = new URL(input.rpcOrigin);
@@ -59,15 +70,25 @@ export function parsePayoutProofConfig(input) {
   }
   insist(
     url.protocol === "https:" &&
-    url.origin === url.href.replace(/\/$/, "") &&
-    url.pathname === "/" &&
-    !url.username && !url.password && !url.search && !url.hash &&
-    !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname),
+      url.origin === url.href.replace(/\/$/, "") &&
+      url.pathname === "/" &&
+      !url.username &&
+      !url.password &&
+      !url.search &&
+      !url.hash &&
+      !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname),
   );
-  insist(typeof input.genesisHash === "string" && HEX_32.test(input.genesisHash));
-  insist(typeof input.transactionHash === "string" && HEX_32.test(input.transactionHash));
-  insist(typeof input.escrowCodeSha256 === "string" &&
-    /^[a-f0-9]{64}$/.test(input.escrowCodeSha256));
+  insist(
+    typeof input.genesisHash === "string" && HEX_32.test(input.genesisHash),
+  );
+  insist(
+    typeof input.transactionHash === "string" &&
+      HEX_32.test(input.transactionHash),
+  );
+  insist(
+    typeof input.escrowCodeSha256 === "string" &&
+      /^[a-f0-9]{64}$/.test(input.escrowCodeSha256),
+  );
   insist(typeof input.logIndex === "string" && QUANTITY.test(input.logIndex));
   cleanAddress(input.escrowAddress);
   cleanAddress(input.beneficiary);
@@ -98,8 +119,10 @@ async function rpc(config, request, id, method, params) {
     throw new PayoutProofError();
   }
   insist(
-    data?.jsonrpc === "2.0" && data.id === id &&
-    !Object.hasOwn(data, "error") && Object.hasOwn(data, "result"),
+    data?.jsonrpc === "2.0" &&
+      data.id === id &&
+      !Object.hasOwn(data, "error") &&
+      Object.hasOwn(data, "result"),
   );
   return data.result;
 }
@@ -123,56 +146,75 @@ function eventFields(log) {
 /** All RPC data is untrusted until chain identity, canonical block and
  * exact receipt event are checked. Requires a node supporting "finalized".
  */
-export async function verifyFinalizedNativeWithdrawal(rawConfig, request = fetch) {
+export async function verifyFinalizedNativeWithdrawal(
+  rawConfig,
+  request = fetch,
+) {
   const config = parsePayoutProofConfig(rawConfig);
   const chain = await rpc(config, request, 1, "eth_chainId", []);
   insist(hexQuantity(chain) === uint(config.chainId));
   const genesis = await rpc(config, request, 2, "eth_getBlockByNumber", [
-    "0x0", false,
+    "0x0",
+    false,
   ]);
   insist(genesis?.number === "0x0" && genesis.hash === config.genesisHash);
 
   const receipt = await rpc(config, request, 3, "eth_getTransactionReceipt", [
     config.transactionHash,
   ]);
-  insist(receipt?.transactionHash === config.transactionHash &&
-    receipt.status === "0x1" &&
-    receipt.to === config.escrowAddress &&
-    typeof receipt.blockHash === "string" && HEX_32.test(receipt.blockHash) &&
-    Array.isArray(receipt.logs) && receipt.logs.length <= 500);
+  insist(
+    receipt?.transactionHash === config.transactionHash &&
+      receipt.status === "0x1" &&
+      receipt.to === config.escrowAddress &&
+      typeof receipt.blockHash === "string" &&
+      HEX_32.test(receipt.blockHash) &&
+      Array.isArray(receipt.logs) &&
+      receipt.logs.length <= 500,
+  );
   const number = hexQuantity(receipt.blockNumber);
   const finalized = await rpc(config, request, 4, "eth_getBlockByNumber", [
-    "finalized", false,
+    "finalized",
+    false,
   ]);
   insist(typeof finalized?.hash === "string" && HEX_32.test(finalized.hash));
   insist(hexQuantity(finalized.number) >= number);
   const canonical = await rpc(config, request, 5, "eth_getBlockByNumber", [
-    receipt.blockNumber, false,
+    receipt.blockNumber,
+    false,
   ]);
-  insist(canonical?.hash === receipt.blockHash &&
-    hexQuantity(canonical.number) === number);
+  insist(
+    canonical?.hash === receipt.blockHash &&
+      hexQuantity(canonical.number) === number,
+  );
   const bytecode = await rpc(config, request, 6, "eth_getCode", [
-    config.escrowAddress, receipt.blockNumber,
+    config.escrowAddress,
+    receipt.blockNumber,
   ]);
-  insist(typeof bytecode === "string" && /^0x(?:[a-f0-9]{2})+$/i.test(bytecode));
-  insist(createHash("sha256").update(Buffer.from(bytecode.slice(2), "hex"))
-    .digest("hex") === config.escrowCodeSha256);
+  insist(
+    typeof bytecode === "string" && /^0x(?:[a-f0-9]{2})+$/i.test(bytecode),
+  );
+  insist(
+    createHash("sha256")
+      .update(Buffer.from(bytecode.slice(2), "hex"))
+      .digest("hex") === config.escrowCodeSha256,
+  );
 
-  const match = receipt.logs.filter((log) =>
-    log?.address === config.escrowAddress &&
-    log?.transactionHash === config.transactionHash &&
-    log?.blockHash === receipt.blockHash &&
-    log?.blockNumber === receipt.blockNumber &&
-    log?.logIndex === config.logIndex
+  const match = receipt.logs.filter(
+    (log) =>
+      log?.address === config.escrowAddress &&
+      log?.transactionHash === config.transactionHash &&
+      log?.blockHash === receipt.blockHash &&
+      log?.blockNumber === receipt.blockNumber &&
+      log?.logIndex === config.logIndex,
   );
   insist(match.length === 1 && match[0].removed !== true);
   const fields = eventFields(match[0]);
   insist(
     fields.bountyId === uint(config.bountyId) &&
-    fields.beneficiary === config.beneficiary &&
-    fields.recipient === config.recipient &&
-    fields.amountAtoms === uint(config.amountAtoms) &&
-    fields.remainingAtoms === uint(config.remainingAtoms, true),
+      fields.beneficiary === config.beneficiary &&
+      fields.recipient === config.recipient &&
+      fields.amountAtoms === uint(config.amountAtoms) &&
+      fields.remainingAtoms === uint(config.remainingAtoms, true),
   );
   // A finalized event proves a successful on-chain transfer call emitted
   // by this bytecode. It does not prove the real-world recipient's identity.
@@ -196,7 +238,10 @@ export async function verifyFinalizedNativeWithdrawal(rawConfig, request = fetch
   };
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href
+) {
   try {
     insist(process.argv.length === 3);
     const { readFile } = await import("node:fs/promises");

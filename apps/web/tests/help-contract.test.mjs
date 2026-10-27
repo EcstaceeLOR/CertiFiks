@@ -48,6 +48,6 @@ test("help does not fabricate custody, audit, fees, retention promises, or SLA",
 test("security escalation uses an existing policy, never a public exploit report", () => {
   assert.match(help, /Do not disclose exploit details in public issues/);
   assert.match(help, /CertiFiks\/security\/policy/);
-  assert.match(help, /private vulnerability reporting if enabled/);
+  assert.match(help, /private\\s+vulnerability reporting if enabled/);
   assert.match(help, /Do not include private repository content/);
 });

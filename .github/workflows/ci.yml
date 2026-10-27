@@ -52,6 +52,8 @@ jobs:
         run: node --test scripts/security/independent-review-gate.test.mjs
       - name: Verify conservative unit economics and break-even model
         run: npm run economics:test && npm run economics:plan
+      - name: Fail-closed finalized native payout receipt validation
+        run: npm run payout:proof:test
       - name: Build every workspace
         run: npm run build
 

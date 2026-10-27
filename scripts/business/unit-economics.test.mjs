@@ -58,11 +58,29 @@ test("reject invalid, untrusted or misleading measured-pricing inputs", () => {
     { ...sample, version: "2" },
     { ...sample, secret: "unreviewed" },
     { ...sample, assumptions: { ...sample.assumptions, futureFeature: 1 } },
-    { ...sample, assumptions: { ...sample.assumptions, monthlyHostingCents: -1 } },
-    { ...sample, assumptions: { ...sample.assumptions, monthlyHostingCents: 0.01 } },
-    { ...sample, assumptions: { ...sample.assumptions, monthlyHostingCents: Number.MAX_SAFE_INTEGER } },
-    { ...sample, assumptions: { ...sample.assumptions, disputeRateBasisPoints: 10001 } },
-    { ...sample, assumptions: { ...sample.assumptions, timeoutRateBasisPoints: 9500 } },
+    {
+      ...sample,
+      assumptions: { ...sample.assumptions, monthlyHostingCents: -1 },
+    },
+    {
+      ...sample,
+      assumptions: { ...sample.assumptions, monthlyHostingCents: 0.01 },
+    },
+    {
+      ...sample,
+      assumptions: {
+        ...sample.assumptions,
+        monthlyHostingCents: Number.MAX_SAFE_INTEGER,
+      },
+    },
+    {
+      ...sample,
+      assumptions: { ...sample.assumptions, disputeRateBasisPoints: 10001 },
+    },
+    {
+      ...sample,
+      assumptions: { ...sample.assumptions, timeoutRateBasisPoints: 9500 },
+    },
   ];
   for (const value of cases) {
     assert.throws(

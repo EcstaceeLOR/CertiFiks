@@ -144,7 +144,8 @@ test("database failure or replay never gets reported as admitted evidence", asyn
       ),
       (error: unknown) =>
         error instanceof GitHubReceiptPersistenceError &&
-        error.code === (status === 409 ? "ALREADY_PINNED" : "PERSISTENCE_UNAVAILABLE"),
+        error.code ===
+          (status === 409 ? "ALREADY_PINNED" : "PERSISTENCE_UNAVAILABLE"),
     );
   }
 });

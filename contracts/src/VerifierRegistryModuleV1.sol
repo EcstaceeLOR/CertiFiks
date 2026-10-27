@@ -36,6 +36,7 @@ abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
         uint64 acceptedJobCount;
         uint64 declaredEvidenceCount;
         bool active;
+        bool suspended;
         bool revokedPermanently;
         bool everRegistered;
     }
@@ -60,6 +61,8 @@ abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
     error WalletBelongsToAnotherOrganization();
     error NotOrganizationController();
     error OrganizationInactive();
+    error OrganizationSuspended();
+    error OrganizationNotSuspended();
     error OrganizationAlreadyActive();
     error OrganizationPermanentlyRevoked();
     error ConflictingBountyRole();
@@ -87,6 +90,8 @@ abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
     );
     event ReviewerOrganizationActivated(bytes32 indexed organizationId, uint64 signerEpoch);
     event ReviewerOrganizationRevoked(bytes32 indexed organizationId, uint64 signerEpoch);
+    event ReviewerOrganizationSuspended(bytes32 indexed organizationId, uint64 signerEpoch);
+    event ReviewerOrganizationSuspensionCleared(bytes32 indexed organizationId, uint64 signerEpoch);
     event ReviewerSignerRotationProposed(bytes32 indexed organizationId, address indexed proposedSigner);
     event ReviewerSignerRotated(bytes32 indexed organizationId, address indexed newSigner, uint64 epoch);
     event ReviewerCapabilityUpdated(bytes32 indexed organizationId, bytes32 profileDigest);
@@ -177,6 +182,7 @@ abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
         ReviewerOrganization storage organization = _registered(organizationId);
         if (organization.controller != msg.sender) revert NotOrganizationController();
         if (organization.active) revert OrganizationAlreadyActive();
+        if (organization.suspended) revert OrganizationSuspended();
         if (organization.revokedPermanently) revert OrganizationPermanentlyRevoked();
         organization.active = true;
         emit ReviewerOrganizationActivated(organizationId, organization.signerEpoch);
@@ -191,6 +197,35 @@ abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
         organization.proposedSigner = address(0);
         emit ReviewerOrganizationRevoked(organizationId, organization.signerEpoch);
         // Do NOT delete historic job snapshots or past declarations.
+    }
+
+    /**
+     * @notice Emergency isolation for an organization under investigation.
+     * Only governance may lift the suspension; the controller must then
+     * separately reactivate. An old key and accepted report stay recorded.
+     * No arbitrary admin signature can count as an independent verdict.
+     */
+    function suspendReviewerOrganization(bytes32 organizationId)
+        external onlyCorrectChain onlyRegistryGovernance
+    {
+        ReviewerOrganization storage organization = _registered(organizationId);
+        if (organization.revokedPermanently) revert OrganizationPermanentlyRevoked();
+        if (organization.suspended) revert OrganizationSuspended();
+        organization.active = false;
+        organization.suspended = true;
+        organization.proposedSigner = address(0);
+        emit ReviewerOrganizationSuspended(organizationId, organization.signerEpoch);
+    }
+
+    function clearReviewerSuspension(bytes32 organizationId)
+        external onlyCorrectChain onlyRegistryGovernance
+    {
+        ReviewerOrganization storage organization = _registered(organizationId);
+        if (organization.revokedPermanently) revert OrganizationPermanentlyRevoked();
+        if (!organization.suspended) revert OrganizationNotSuspended();
+        organization.suspended = false;
+        emit ReviewerOrganizationSuspensionCleared(organizationId, organization.signerEpoch);
+        // Never auto-reactivate or silently refresh an existing job signer.
     }
 
     function proposeReviewerSigner(bytes32 organizationId, address newSigner) external onlyCorrectChain {
@@ -244,6 +279,7 @@ abstract contract VerifierRegistryModuleV1 is BountySubmissionModuleV1 {
         internal view returns (ReviewerOrganization storage organization)
     {
         organization = _registered(organizationId);
+        if (organization.suspended) revert OrganizationSuspended();
         if (!organization.active) revert OrganizationInactive();
     }
 

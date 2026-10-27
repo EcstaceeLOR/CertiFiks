@@ -1,0 +1,24 @@
+{
+  "version": "1",
+  "claim": "synthetic_planning_only",
+  "currency": "USD",
+  "assumptions": {
+    "completedBountiesPerMonth": 40,
+    "sponsorFeeCentsPerCompletedBounty": 1800,
+    "monthlyHostingCents": 8000,
+    "monthlyMonitoringCents": 3000,
+    "monthlyBackupCents": 2000,
+    "monthlyComplianceCents": 6000,
+    "verificationRunsPerCompleted": 2,
+    "retryRunsPerCompleted": 0,
+    "verificationRunCents": 100,
+    "independentReviewerCentsPerCompleted": 600,
+    "artifactRetentionCentsPerCompleted": 40,
+    "rpcCentsPerCompleted": 40,
+    "supportCentsPerCompleted": 200,
+    "disputeRateBasisPoints": 1000,
+    "disputeCentsPerCase": 1500,
+    "timeoutRateBasisPoints": 500,
+    "timeoutCentsPerCase": 500
+  }
+}

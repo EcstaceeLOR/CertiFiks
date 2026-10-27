@@ -36,15 +36,11 @@ function failUnless(ok) {
 
 function exactKeys(obj, keys) {
   failUnless(obj !== null && typeof obj === "object" && !Array.isArray(obj));
-  failUnless(
-    Object.keys(obj).sort().join("|") === [...keys].sort().join("|"),
-  );
+  failUnless(Object.keys(obj).sort().join("|") === [...keys].sort().join("|"));
 }
 
 function cents(value) {
-  failUnless(
-    Number.isSafeInteger(value) && value >= 0 && value <= MAX,
-  );
+  failUnless(Number.isSafeInteger(value) && value >= 0 && value <= MAX);
   return BigInt(value);
 }
 
@@ -128,7 +124,9 @@ export function calculateUnitEconomics(input) {
 
 async function main() {
   if (process.argv.length !== 3) {
-    process.stderr.write("Usage: node scripts/business/unit-economics.mjs INPUT.json\n");
+    process.stderr.write(
+      "Usage: node scripts/business/unit-economics.mjs INPUT.json\n",
+    );
     process.exitCode = 2;
     return;
   }

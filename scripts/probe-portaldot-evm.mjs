@@ -35,6 +35,7 @@ const methods = [
   ["eth_chainId", []],
   ["eth_blockNumber", []],
   ["eth_getBlockByNumber", ["latest", false]],
+  ["eth_getGenesisBlock", ["0x0", false]],
   ["net_version", []],
 ];
 const report = {
@@ -46,13 +47,16 @@ const report = {
   warnings: [
     "eth_chainId alone is not proof of Portaldot or contract deployability.",
     "No fee estimate, contract bytecode deployment, wallet balance transfer, or signature is performed.",
+    "Genesis block 0x0 is fetched separately from latest head and remains an RPC observation, not independent identity certification.",
     "Confirm genesis/block hash, chain ID and endpoint ownership with event organizers before accepting RPC as Portaldot V3.",
     "A local/dev Ethereum RPC returning success does not qualify as a Portaldot deployment.",
   ],
 };
 
 for (let i = 0; i < methods.length; i++) {
-  const [method, params] = methods[i];
+  const [label, params] = methods[i];
+  const method =
+    label === "eth_getGenesisBlock" ? "eth_getBlockByNumber" : label;
   try {
     const response = await fetch(candidate, {
       method: "POST",
@@ -64,7 +68,7 @@ for (let i = 0; i < methods.length; i++) {
     if (!response.ok) throw new Error("HTTP " + response.status);
     const payload = await response.json();
     if (payload.error) {
-      report.methods[method] = {
+      report.methods[label] = {
         status: payload.error.code === -32601 ? "unsupported" : "rpc_error",
         code: payload.error.code,
         message: String(payload.error.message || "").slice(0, 160),
@@ -82,10 +86,10 @@ for (let i = 0; i < methods.length; i++) {
             : null,
         };
       }
-      report.methods[method] = { status: "ok", result };
+      report.methods[label] = { status: "ok", result };
     }
   } catch (err) {
-    report.methods[method] = {
+    report.methods[label] = {
       status: "failed",
       error: String(err.message || err).slice(0, 160),
     };

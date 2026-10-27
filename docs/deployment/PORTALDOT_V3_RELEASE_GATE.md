@@ -1,5 +1,7 @@
 # Portaldot network release gate — Issue #18
 
+**October 27, 2026 network notice:** newer public V3 testnet endpoints and a reported chain ID are documented in [the V3 testnet update](./ISSUE_18_OCT_2026_TESTNET_UPDATE.md). They are candidates for read-only investigation, **not** a certified chain identity or live deployment. The release gate below remains BLOCKED.
+
 **Status: BLOCKED — no qualifying deployment or escrow settlement verified.**
 
 ## Why this gate exists

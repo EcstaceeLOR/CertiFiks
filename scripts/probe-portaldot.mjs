@@ -8,8 +8,10 @@
  * hackathon eligibility, EVM compatibility or live safety.
  */
 
+// This public V3 testnet URL is a read-only discovery candidate from the
+// October 2026 network announcement, not independently approved by CertiFiks.
 const candidate =
-  process.env.PORTALDOT_WS_RPC || "wss://portaldot.philotheephilix.in";
+  process.env.PORTALDOT_WS_RPC || "wss://test-node-v3.portaldot.dev";
 const timeoutMs = Math.min(
   30000,
   Math.max(2000, Number(process.env.RPC_TIMEOUT_MS || 12000)),

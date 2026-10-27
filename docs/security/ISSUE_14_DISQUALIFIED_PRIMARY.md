@@ -1,0 +1,11 @@
+# Issue #14 — Revoked primary arbitration after an initial ruling
+
+**Status: local protocol safeguard with seeded Foundry regression; not an independent arbitration service, not final settlement, and not proof of any real contested fix.**
+
+The arbitration module already provides sponsor-committed primary/fallback adjudicators, independent acceptance, human evidence digests, a single losing-party appeal, immutable deadlines and a permissionless fallback path. A gap remained: if a primary arbitrator was disqualified for a conflict **after** ruling but during its original appeal window, an unanswered appeal window could still mature that untrusted award without an independent procedural review.
+
+This change preserves the earlier signed primary award and evidence but routes that pending case to the **precommitted fallback arbitrator**, without introducing a new judge or extending the funded fallback deadline. A bounded grace period (capped at one hour and the immutable fallback deadline) stops immediate fallback judgment after disqualification, allowing both parties to inspect the public disqualification event. It does not enlarge the original financial liability or enable custody settlement. Only the already authorized registry governance may disqualify; a sponsor or developer cannot trigger this reroute themselves.
+
+The adversarial Foundry regression exercises a fully funded **synthetic harness**, signed reviewer quorum, sponsor dispute, primary refund ruling, governance disqualification, premature fallback rejection, subsequent developer award, repeated resolution rejection and unchanged reserved balance. Test-only funding in Foundry is not a deployed payment service.
+
+**Residual risks:** governance is a trusted centralized party, and malicious governance could disqualify an honest adjudicator opportunistically. Fallback may itself be unavailable, in which case the already defined fixed deadline/default applies. The protocol has no external identity-validation or professional judicial review guarantee; storing reason/evidence digests alone does not prove correctness. Human process, legally reviewed dispute terms, real third-party live testnet trials, appeal fairness and an independent security audit are required before Issue #14 can close or any real-value service can launch.

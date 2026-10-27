@@ -86,6 +86,7 @@ export interface GitHubRevisionReceiptV1 {
   repositoryId: number;
   repositoryFullName: string;
   pullNumber: number;
+  sourceRepositoryId: number;
   fork: boolean;
   baseCommitSha: string;
   baseBranch: string;
@@ -302,6 +303,7 @@ export function verifyGitHubRevisionSnapshotV1(
     repositoryId: fields.repositoryId,
     repositoryFullName: fields.repositoryFullName,
     pullNumber: fields.pullNumber,
+    sourceRepositoryId: fields.sourceRepositoryId,
     fork: fields.fork,
     baseCommitSha: fields.baseCommitSha,
     baseBranch: fields.baseBranch,

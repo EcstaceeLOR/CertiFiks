@@ -7,7 +7,7 @@ on:
         description: "Candidate public Portaldot websocket RPC (no tokens/secrets)"
         type: string
         required: false
-        default: "wss://portaldot.philotheephilix.in"
+        default: "wss://test-node-v3.portaldot.dev"
   push:
     paths:
       - "scripts/probe-portaldot*.mjs"
@@ -61,19 +61,19 @@ jobs:
           exit 1
 
   candidate-rpc-diagnostics:
-    # This runs on the exploratory feature branch only. It is advisory;
-    # community-reported and old mainnet nodes are NOT presumed to be V3.
-    if: github.event_name == 'push' && github.ref_name == 'feat/issue-2-portaldot-environment'
+    # Advisory V3 testnet read-only discovery only. No deployment, wallet,
+    # gas payment, or organizer-attested chain identity is claimed.
+    if: github.event_name == 'push' && github.ref_name == 'feat/issue-18-v3-testnet-discovery'
     runs-on: ubuntu-latest
     timeout-minutes: 3
     strategy:
       fail-fast: false
       matrix:
         include:
-          - label: published-mainnet
+          - label: announced-v3-testnet
+            url: wss://test-node-v3.portaldot.dev
+          - label: historical-mainnet-comparison
             url: wss://mainnet.portaldot.io
-          - label: community-reported
-            url: wss://portaldot.philotheephilix.in
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -100,4 +100,37 @@ jobs:
         with:
           name: rpc-probe-${{ matrix.label }}
           path: rpc-result.json
+          retention-days: 14
+
+  v3-evm-rpc-candidate:
+    # The published 2026 developer announcement names this V3 testnet host;
+    # the scheme, availability and RPC behavior remain observational.
+    if: github.event_name == 'push' && github.ref_name == 'feat/issue-18-v3-testnet-discovery'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Read-only announced EVM testnet candidate probe
+        env:
+          PORTALDOT_EVM_RPC: https://test-evm-rpc-v3.portaldot.dev
+          RPC_TIMEOUT_MS: "3500"
+        run: |
+          set +e
+          timeout 65s node scripts/probe-portaldot-evm.mjs > portaldot-v3-evm-probe.json
+          code=$?
+          if [ ! -s portaldot-v3-evm-probe.json ]; then
+            printf '{"probe_status":"no_json_evidence","exit_code":%s,"status":"blocked"}\n' "$code" > portaldot-v3-evm-probe.json
+          fi
+          printf 'EVM read-only candidate probe exit code: %s\n' "$code" >> "$GITHUB_STEP_SUMMARY"
+          echo "Chain ID or RPC availability is NOT proof of deployability, finality, contract audit or eligibility." >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+      - name: Keep temporary observational RPC evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: portaldot-v3-evm-rpc-observation
+          path: portaldot-v3-evm-probe.json
           retention-days: 14

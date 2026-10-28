@@ -29,8 +29,7 @@ test("public bounty list fetches server-filtered finalized projection with preci
     assert.equal(opts?.redirect, "error");
     assert.equal(
       new Headers(opts?.headers).get("Authorization"),
-      `Bearer ${serviceRole}`,
-    );
+      `***    );
     return new Response(JSON.stringify([record]), { status: 200 });
   }) as typeof fetch;
   const app = buildApp({
@@ -166,8 +165,7 @@ test("developer search applies exact DB filters before pagination and never infl
     assert.equal(u.searchParams.get("offset"), "24");
     assert.equal(
       new Headers(options?.headers).get("Authorization"),
-      `Bearer ${serviceRole}`,
-    );
+      `***    );
     return new Response(JSON.stringify([record]), { status: 200 });
   }) as typeof fetch;
   const app = buildApp({
@@ -230,8 +228,7 @@ test("public history uses only whitelisted deterministic sorting and returns bou
       assert.equal(options?.redirect, "error");
       assert.equal(
         new Headers(options?.headers).get("Authorization"),
-        `Bearer ${serviceRole}`,
-      );
+        `***      );
       return new Response(JSON.stringify([record]), { status: 200 });
     }) as typeof fetch,
   });
@@ -329,9 +326,10 @@ test("public lifecycle query allowlists reject inherited sort names and unknown 
       const response = await app.inject({ method: "GET", url });
       assert.equal(response.statusCode, 400, url + ": " + response.body);
       assert.ok(
-        ["PUBLIC_BOUNTY_INVALID_QUERY", "PUBLIC_BOUNTY_INVALID_FILTER"].includes(
-          response.json().error,
-        ),
+        [
+          "PUBLIC_BOUNTY_INVALID_QUERY",
+          "PUBLIC_BOUNTY_INVALID_FILTER",
+        ].includes(response.json().error),
       );
     }
     assert.equal(dbCalls, 0);
@@ -375,7 +373,10 @@ test("capability states distinguish configured transport from unavailable money 
       assert.equal(body.version, "1");
       assert.equal(body.productReady, false);
       assert.equal(body.settlementReady, false);
-      assert.equal(body.capabilities.publicBounties.state, scenario.bountyState);
+      assert.equal(
+        body.capabilities.publicBounties.state,
+        scenario.bountyState,
+      );
       assert.equal(
         body.capabilities.githubWebhookIngestion.state,
         scenario.webhookState,

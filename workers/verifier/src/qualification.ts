@@ -144,7 +144,8 @@ function classify(
   if (
     value.stdout.includes("[output truncated]") ||
     value.stderr.includes("[output truncated]")
-  ) return "uncertain";
+  )
+    return "uncertain";
   // A green exit with no executed tests or a skipped suite is not acceptance
   // evidence. These common framework markers are only a first defense:
   // trusted adapters must independently bind test identities/counts.

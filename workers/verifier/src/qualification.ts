@@ -8,6 +8,8 @@ import {
 
 const SHA1 = /^[a-f0-9]{40}$/;
 const SHA256 = /^0x[a-f0-9]{64}$/;
+const EMPTY_OR_SKIPPED_TESTS =
+  /(?:^|\n)\s*(?:0 tests?\b|no tests? (?:ran|collected|found|discovered)\b|all tests? skipped\b|\d+ skipped\b)/i;
 
 export interface QualificationPolicyV1 {
   baseCommitSha: string;
@@ -147,11 +149,7 @@ function classify(
   // evidence. These common framework markers are only a first defense:
   // trusted adapters must independently bind test identities/counts.
   const output = `${value.stdout}\n${value.stderr}`;
-  if (
-    /(?:^|\n)\s*(?:0 tests?\b|no tests? (?:ran|collected|found|discovered)\b|all tests? skipped\b|\d+ skipped\b)/i.test(
-      output,
-    )
-  ) return "uncertain";
+  if (EMPTY_OR_SKIPPED_TESTS.test(output)) return "uncertain";
   if (value.status === "passed" && value.exitCode === 0) return "success";
   if (
     value.status === "failed" &&

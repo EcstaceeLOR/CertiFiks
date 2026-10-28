@@ -108,6 +108,16 @@ test("canonical RFC8785 manifest hash matches published cross-language fixture",
   };
   assert.notEqual(digestManifestV1(changed), fixture.expected);
 });
+test("Unicode and control escapes match the cross-language UTF-16 golden vector", () => {
+  // Canonical JSON key ordering follows JavaScript UTF-16 units, not Python
+  // Unicode scalar-value ordering. This vector exercises both paths.
+  const fixture = json("vectors/manifest-unicode-v1.json");
+  assert.equal(digestManifestV1(fixture.input), fixture.expected);
+  const changed = structuredClone(fixture.input);
+  changed.strings["😀"] = "forged proof";
+  assert.notEqual(digestManifestV1(changed), fixture.expected);
+});
+
 test("funded GitHub signature, fork and base-branch rules must be explicit", () => {
   const manifest = json("examples/v1/bounty-manifest.json");
   validateProtocolDocument("manifest", manifest);

@@ -49,7 +49,6 @@ const policy: QualificationPolicyV1 = {
   baselineWorkspace: "/tmp/pinned-base",
   candidateWorkspace: "/tmp/pinned-head",
 };
-const source = <T>(value: T): T => structuredClone(value);
 function scripted(runs: VerifierRunResult[]): {
   executor: RunnerExecutorV1;
   history: string[];
@@ -194,14 +193,16 @@ test("forged runner evidence hashes cannot qualify a baseline failure or a green
 });
 
 test("empty or skipped test suites cannot satisfy a candidate pass", async () => {
-  for (const line of ["no tests ran", "0 tests passed", "2 skipped", "all tests skipped"]) {
+  for (const line of [
+    "no tests ran",
+    "0 tests passed",
+    "2 skipped",
+    "all tests skipped",
+  ]) {
     const result = await qualifyCandidateV1(
       policy,
-      scripted([
-        baseline,
-        baseline,
-        { ...passed, stdout: line + "\n" },
-      ]).executor,
+      scripted([baseline, baseline, { ...passed, stdout: line + "\n" }])
+        .executor,
     );
     assert.equal(result.outcome, "inconclusive", line);
     assert.equal(result.payoutAuthorized, false);

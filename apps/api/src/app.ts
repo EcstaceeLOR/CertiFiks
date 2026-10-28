@@ -51,6 +51,41 @@ export function buildApp(config: AppConfiguration = {}) {
     note: "HTTP and webhook transport only; installation OAuth and escrow are not ready",
   }));
 
+  // A read-only capability contract for honest onboarding/UI decisions.
+  // "configured_unverified" reflects server configuration only: real chain,
+  // provider, customer authentication and custody MUST be proven separately.
+  app.get("/v1/capabilities", async (_request, reply) => {
+    reply.header("cache-control", "no-store");
+    return reply.send({
+      version: "1",
+      productReady: false,
+      settlementReady: false,
+      capabilities: {
+        publicBounties: {
+          state: postgresConfigured ? "configured_unverified" : "not_configured",
+          readOnly: true,
+        },
+        githubWebhookIngestion: {
+          state:
+            secret && journalConfigured
+              ? "configured_unverified"
+              : "not_configured",
+          readOnly: false,
+          verifiedFix: false,
+        },
+        walletSignIn: { state: "not_available" },
+        githubOAuth: { state: "not_available" },
+        bountyFunding: { state: "not_available" },
+        candidateSubmission: { state: "not_available" },
+        signedVerification: { state: "not_available" },
+        disputes: { state: "not_available" },
+        withdrawals: { state: "not_available" },
+        privateEvidence: { state: "not_available" },
+      },
+      note: "Server configuration is not proof of authenticated service availability, settlement finality or production readiness.",
+    });
+  });
+
   // This is a separate upstream READINESS check, not a liveness check or
   // proof of a working escrow. Never expose provider errors or credentials.
   // Production webhook delivery requires a durable PostgreSQL journal, not a
@@ -155,6 +190,13 @@ export function buildApp(config: AppConfiguration = {}) {
         .send({ error: "PUBLIC_BOUNTY_API_NOT_CONFIGURED" });
     }
     const query = request.query as Record<string, unknown>;
+    if (
+      !Object.keys(query).every((key) =>
+        ["limit", "offset", "state", "repo", "sort"].includes(key),
+      )
+    ) {
+      return reply.code(400).send({ error: "PUBLIC_BOUNTY_INVALID_FILTER" });
+    }
     const parsePage = (value: unknown, fallback: number): number | null => {
       if (value === undefined) return fallback;
       if (typeof value !== "string" || !/^(0|[1-9][0-9]*)$/.test(value))
@@ -180,7 +222,7 @@ export function buildApp(config: AppConfiguration = {}) {
     const sort = query.sort ?? "newest";
     if (
       typeof sort !== "string" ||
-      !(sort in PUBLIC_HISTORY_SORTS) ||
+      !Object.hasOwn(PUBLIC_HISTORY_SORTS, sort) ||
       (state !== undefined &&
         (typeof state !== "string" || !PUBLIC_BOUNTY_STATES.has(state))) ||
       (repositoryFullName !== undefined &&
@@ -224,6 +266,13 @@ export function buildApp(config: AppConfiguration = {}) {
         .send({ error: "PUBLIC_BOUNTY_API_NOT_CONFIGURED" });
     }
     const query = request.query as Record<string, unknown>;
+    if (
+      !Object.keys(query).every((key) =>
+        ["offset", "state", "repo", "sort"].includes(key),
+      )
+    ) {
+      return reply.code(400).send({ error: "PUBLIC_BOUNTY_INVALID_FILTER" });
+    }
     const parseOffset = (value: unknown): number | null => {
       if (value === undefined) return 0;
       if (typeof value !== "string" || !/^(0|[1-9][0-9]*)$/.test(value))
@@ -243,7 +292,7 @@ export function buildApp(config: AppConfiguration = {}) {
         (typeof repo !== "string" ||
           !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo))) ||
       typeof sort !== "string" ||
-      !(sort in PUBLIC_HISTORY_SORTS) ||
+      !Object.hasOwn(PUBLIC_HISTORY_SORTS, sort) ||
       query.limit !== undefined
     ) {
       return reply.code(400).send({ error: "PUBLIC_BOUNTY_INVALID_FILTER" });
@@ -308,6 +357,9 @@ export function buildApp(config: AppConfiguration = {}) {
         .send({ error: "PUBLIC_BOUNTY_API_NOT_CONFIGURED" });
     }
     const { bountyId } = request.params as { bountyId: string };
+    if (Object.keys(request.query as Record<string, unknown>).length !== 0) {
+      return reply.code(400).send({ error: "PUBLIC_BOUNTY_INVALID_QUERY" });
+    }
     if (!/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/.test(bountyId)) {
       return reply.code(400).send({ error: "PUBLIC_BOUNTY_INVALID_ID" });
     }

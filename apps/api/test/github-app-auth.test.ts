@@ -91,6 +91,8 @@ test("rejects wrong repository, absent scopes, rejected installation and near ex
     tokenResponse({ repositories: [{ id: 778 }] }),
     tokenResponse({ repositories: [{ id: 777 }, { id: 778 }] }),
     tokenResponse({ permissions: { contents: "none", pull_requests: "read" } }),
+    tokenResponse({ permissions: { contents: "write", pull_requests: "read" } }),
+    tokenResponse({ permissions: { contents: "read", pull_requests: "write" } }),
     tokenResponse({ expires_at: "2026-10-15T14:00:30.000Z" }),
     tokenResponse({}, 403),
   ]) {

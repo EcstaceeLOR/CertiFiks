@@ -85,7 +85,7 @@ export function classifyContainerExitCode(
 ): "failed" | "runner_error" {
   return Number.isSafeInteger(code) &&
     code > 0 &&
-    ![125, 126, 127, 137, 143].includes(code)
+    ![124, 125, 126, 127, 137, 143].includes(code)
     ? "failed"
     : "runner_error";
 }
@@ -109,9 +109,10 @@ function validateCommand(command: string[]): void {
     throw new Error("SANDBOX_ARGUMENT_INVALID");
   }
   // No shell, eval, or implicit command parsing. Test images should expose a fixed entrypoint.
+  const executable = command[0].replace(/\\/g, "/").split("/").at(-1)?.toLowerCase();
   if (
-    ["sh", "bash", "zsh", "cmd", "powershell", "pwsh"].includes(
-      command[0].toLowerCase(),
+    ["sh", "bash", "zsh", "dash", "ash", "ksh", "cmd", "cmd.exe", "powershell", "pwsh", "pwsh.exe"].includes(
+      executable ?? "",
     )
   ) {
     throw new Error("SANDBOX_SHELL_ENTRYPOINT_FORBIDDEN");

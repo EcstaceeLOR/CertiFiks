@@ -271,7 +271,10 @@ test("external verification CLI reproduces signed bundle offline and rejects abs
     assert.equal(output.status, 1);
     assert.match(output.stderr, /EVIDENCE_REJECTED/);
     await rm(join(folder, "regression-log.bin"));
-    await writeFile(join(folder, "regression-log.bin"), files["regression-log"]);
+    await writeFile(
+      join(folder, "regression-log.bin"),
+      files["regression-log"],
+    );
     output = run();
     assert.equal(output.status, 0, output.stderr);
   } finally {

@@ -398,7 +398,9 @@ test("capability states distinguish configured transport from unavailable money 
         assert.equal(body.capabilities[key].state, "not_available", key);
       }
       assert.ok(!response.body.includes(serviceRole));
-      assert.ok(!response.body.includes(scenario.config.webhookSecret));
+      if (scenario.config.webhookSecret) {
+        assert.ok(!response.body.includes(scenario.config.webhookSecret));
+      }
     } finally {
       await app.close();
     }

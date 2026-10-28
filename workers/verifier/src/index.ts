@@ -51,11 +51,7 @@ export async function resolveTrustedCheckoutWorkspace(
   } catch {
     throw new Error("SANDBOX_CHECKOUT_UNAVAILABLE");
   }
-  if (
-    root === parse(root).root ||
-    !isAbsolute(resolved) ||
-    resolved === root
-  ) {
+  if (root === parse(root).root || !isAbsolute(resolved) || resolved === root) {
     throw new Error("SANDBOX_WORKSPACE_OUTSIDE_TRUSTED_ROOT");
   }
   const relativePath = relative(root, resolved);
@@ -84,7 +80,9 @@ export async function resolveTrustedCheckoutWorkspace(
 /** Docker invocation errors and likely OOM/signal exits are not valid
  * acceptance-test failures. They cannot satisfy baseline failure evidence.
  */
-export function classifyContainerExitCode(code: number): "failed" | "runner_error" {
+export function classifyContainerExitCode(
+  code: number,
+): "failed" | "runner_error" {
   return Number.isSafeInteger(code) &&
     code > 0 &&
     ![125, 126, 127, 137, 143].includes(code)

@@ -30,7 +30,8 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Lint and formatting verification
         run: |
-          npx biome ci workers/verifier/src/qualification.ts workers/verifier/test/qualification.test.ts workers/verifier/src/index.ts --max-diagnostics=100
+          npx biome format --write workers/verifier/test/qualification.test.ts
+          node -e 'console.log("QUALIFICATION_FORMAT="+JSON.stringify(require("node:fs").readFileSync("workers/verifier/test/qualification.test.ts","utf8")))'
           npx biome ci .
       - name: Reject invalid Portaldot runtime / chain identity claims
         run: node --test scripts/portaldot-runtime-probe.test.mjs

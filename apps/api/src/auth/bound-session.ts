@@ -122,8 +122,7 @@ export async function authorizeBoundSessionV1(
         "content-type": "application/json",
         accept: "application/json",
         apikey: policy.serviceRoleKey,
-        authorization: `Bearer ${policy.serviceRoleKey}`,
-      },
+        authorization: `***      },
       body: JSON.stringify({
         p_token_digest: digest(token),
         p_organization_id: policy.organizationId,

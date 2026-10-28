@@ -111,8 +111,7 @@ export async function mintRepositoryInstallationToken(
         redirect: "error",
         cache: "no-store",
         headers: {
-          Authorization: `Bearer ${jwt}`,
-          Accept: "application/vnd.github+json",
+          Authorization: `***          Accept: "application/vnd.github+json",
           "X-GitHub-Api-Version": VERSION,
           "content-type": "application/json",
         },

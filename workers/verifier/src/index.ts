@@ -109,11 +109,25 @@ function validateCommand(command: string[]): void {
     throw new Error("SANDBOX_ARGUMENT_INVALID");
   }
   // No shell, eval, or implicit command parsing. Test images should expose a fixed entrypoint.
-  const executable = command[0].replace(/\\/g, "/").split("/").at(-1)?.toLowerCase();
+  const executable = command[0]
+    .replace(/\\/g, "/")
+    .split("/")
+    .at(-1)
+    ?.toLowerCase();
   if (
-    ["sh", "bash", "zsh", "dash", "ash", "ksh", "cmd", "cmd.exe", "powershell", "pwsh", "pwsh.exe"].includes(
-      executable ?? "",
-    )
+    [
+      "sh",
+      "bash",
+      "zsh",
+      "dash",
+      "ash",
+      "ksh",
+      "cmd",
+      "cmd.exe",
+      "powershell",
+      "pwsh",
+      "pwsh.exe",
+    ].includes(executable ?? "")
   ) {
     throw new Error("SANDBOX_SHELL_ENTRYPOINT_FORBIDDEN");
   }

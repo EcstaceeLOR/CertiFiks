@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { realpath, stat } from "node:fs/promises";
+import { isAbsolute, parse, relative, sep } from "node:path";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
@@ -28,6 +29,67 @@ function boundedText(value: string): string {
   const bytes = Buffer.from(value, "utf8");
   if (bytes.length <= MAX_OUTPUT_BYTES) return value;
   return `${bytes.subarray(0, MAX_OUTPUT_BYTES).toString("utf8")}\n[output truncated]`;
+}
+
+/**
+ * Only a dedicated, operator-configured checkout volume may enter a Docker
+ * bind mount. A caller-controlled workspace must never mount /, home,
+ * credentials, another job's checkout, or a path reached via a symlink.
+ */
+export async function resolveTrustedCheckoutWorkspace(
+  workspace: string,
+  configuredRoot: string | undefined,
+): Promise<string> {
+  if (!configuredRoot || !isAbsolute(configuredRoot)) {
+    throw new Error("SANDBOX_CHECKOUT_ROOT_UNCONFIGURED");
+  }
+  let root: string;
+  let resolved: string;
+  try {
+    root = await realpath(configuredRoot);
+    resolved = await realpath(workspace);
+  } catch {
+    throw new Error("SANDBOX_CHECKOUT_UNAVAILABLE");
+  }
+  if (
+    root === parse(root).root ||
+    !isAbsolute(resolved) ||
+    resolved === root
+  ) {
+    throw new Error("SANDBOX_WORKSPACE_OUTSIDE_TRUSTED_ROOT");
+  }
+  const relativePath = relative(root, resolved);
+  if (
+    relativePath === "" ||
+    relativePath === ".." ||
+    relativePath.startsWith(`..${sep}`) ||
+    isAbsolute(relativePath)
+  ) {
+    throw new Error("SANDBOX_WORKSPACE_OUTSIDE_TRUSTED_ROOT");
+  }
+  try {
+    const [rootInfo, workspaceInfo] = await Promise.all([
+      stat(root),
+      stat(resolved),
+    ]);
+    if (!rootInfo.isDirectory() || !workspaceInfo.isDirectory()) {
+      throw new Error("invalid directory");
+    }
+  } catch {
+    throw new Error("SANDBOX_CHECKOUT_UNAVAILABLE");
+  }
+  return resolved;
+}
+
+/** Docker invocation errors and likely OOM/signal exits are not valid
+ * acceptance-test failures. They cannot satisfy baseline failure evidence.
+ */
+export function classifyContainerExitCode(code: number): "failed" | "runner_error" {
+  return Number.isSafeInteger(code) &&
+    code > 0 &&
+    ![125, 126, 127, 137, 143].includes(code)
+    ? "failed"
+    : "runner_error";
 }
 
 function validateImage(image: string): void {
@@ -72,11 +134,10 @@ export async function runUntrustedCode(
     throw new Error("SANDBOX_TIMEOUT_OUT_OF_RANGE");
   }
 
-  const workspace = await realpath(request.workspace);
-  const info = await stat(workspace);
-  if (!info.isDirectory()) {
-    throw new Error("SANDBOX_WORKSPACE_NOT_DIRECTORY");
-  }
+  const workspace = await resolveTrustedCheckoutWorkspace(
+    request.workspace,
+    process.env.CERTIFIKS_TRUSTED_CHECKOUT_ROOT,
+  );
 
   // Never pass host environment variables through. No Docker socket, credentials, network, or writable host mount.
   const args = [
@@ -88,6 +149,10 @@ export async function runUntrustedCode(
     "--cap-drop=ALL",
     "--security-opt=no-new-privileges:true",
     "--pids-limit=64",
+    "--ulimit=core=0:0",
+    "--ulimit=nproc=64:64",
+    "--log-driver=none",
+    "--ipc=none",
     "--memory=512m",
     "--memory-swap=512m",
     "--cpus=1",
@@ -135,7 +200,7 @@ export async function runUntrustedCode(
     if (e.killed || e.code === "ETIMEDOUT" || e.signal === "SIGTERM") {
       status = "timed_out";
     } else if (typeof e.code === "number") {
-      status = "failed";
+      status = classifyContainerExitCode(e.code);
       exitCode = e.code;
     } else {
       status = "runner_error";

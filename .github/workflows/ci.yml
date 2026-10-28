@@ -165,6 +165,7 @@ jobs:
             supabase/migrations/202610260011_partner_keys.sql \
             supabase/migrations/202610270001_github_revision_receipts.sql \
             supabase/migrations/202610270002_verifier_independence.sql \
+            supabase/migrations/202610280001_session_authorization_guard.sql \
             scripts/db/ci_assertions.sql
           do
             docker run --rm --network host \

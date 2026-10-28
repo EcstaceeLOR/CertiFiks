@@ -21,8 +21,8 @@ function payload(event: string, action: string): Record<string, unknown> {
       ...common,
       pull_request: {
         number: 12,
-        head: { sha: "a".repeat(40) },
-        base: { sha: "b".repeat(40) },
+        head: { sha: "a".repeat(40), repo: { id: 999 } },
+        base: { sha: "b".repeat(40), repo: { id: REPOSITORY_ID } },
       },
     };
   }
@@ -149,6 +149,50 @@ test("expired installation access, malformed and unsupported PR events fail clos
       (await app.inject(request("push", "created"))).statusCode,
       422,
     );
+    assert.deepEqual(await readdir(directory), []);
+  } finally {
+    await app.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("correctly signed PRs cannot misbind base repo or omit pinned commit identity", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "certifiks-webhooks-"));
+  const app = buildApp({
+    webhookSecret: SECRET,
+    webhookJournalDirectory: directory,
+  });
+  try {
+    const original = payload("pull_request", "opened");
+    const changed = [
+      {
+        ...original,
+        pull_request: {
+          ...original.pull_request as object,
+          base: { repo: { id: REPOSITORY_ID + 1 }, sha: "b".repeat(40) },
+        },
+      },
+      {
+        ...original,
+        pull_request: {
+          ...original.pull_request as object,
+          base: { repo: { id: REPOSITORY_ID }, sha: "0x1234" },
+        },
+      },
+      {
+        ...original,
+        pull_request: {
+          ...original.pull_request as object,
+          head: { sha: "a".repeat(40) },
+        },
+      },
+    ];
+    for (const forged of changed) {
+      const response = await app.inject(
+        request("pull_request", "opened", { body: JSON.stringify(forged) }),
+      );
+      assert.equal(response.statusCode, 422);
+    }
     assert.deepEqual(await readdir(directory), []);
   } finally {
     await app.close();

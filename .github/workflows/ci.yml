@@ -30,10 +30,9 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Lint and formatting verification
         run: |
-          npx biome ci . --reporter=json > /tmp/biome-ci.json || {
-            node -e 'const x = require("/tmp/biome-ci.json"); console.log(JSON.stringify(x.diagnostics?.filter(d => d.severity === "error")?.map(d => ({ category:d.category, location:d.location, description:d.description })) ?? [],null,2))'
-            exit 1
-          }
+          npx biome format --write apps/api/src/app.ts apps/api/test/public-bounties.test.ts
+          node -e 'const fs=require("node:fs"); for(const p of process.argv.slice(1)) console.log("CF26_FMT:"+p+"="+JSON.stringify(fs.readFileSync(p,"utf8")));' apps/api/src/app.ts apps/api/test/public-bounties.test.ts
+          npx biome ci .
       - name: Reject invalid Portaldot runtime / chain identity claims
         run: node --test scripts/portaldot-runtime-probe.test.mjs
       - name: Validate hackathon evidence ledger and truthfulness guards

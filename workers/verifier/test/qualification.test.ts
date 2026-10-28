@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { VerifierRunResult } from "../src/index.js";
+import {
+  digestRunnerExecutionEvidenceV1,
+  type VerifierRunResult,
+} from "../src/index.js";
 import {
   digestRunOutcomeV1,
   type QualificationPolicyV1,
@@ -58,7 +61,10 @@ function scripted(runs: VerifierRunResult[]): {
       history.push(input.workspace + ":" + input.command.join(" "));
       const next = runs.shift();
       if (!next) throw new Error("unexpected extra run");
-      return next;
+      return {
+        ...next,
+        evidenceSha256: digestRunnerExecutionEvidenceV1(input, next),
+      };
     },
   };
 }
@@ -158,6 +164,50 @@ test("runner outage, thrown container errors or timeouts never claim success", a
   });
   assert.equal(crashed.outcome, "infrastructure_error");
   assert.ok(!JSON.stringify(crashed).includes("secret internal"));
+});
+
+test("forged runner evidence hashes cannot qualify a baseline failure or a green fix", async () => {
+  const forged = await qualifyCandidateV1(policy, async () => ({
+    ...baseline,
+    evidenceSha256: "f".repeat(64),
+  }));
+  assert.equal(forged.outcome, "infrastructure_error");
+  assert.equal(forged.reason, "SANDBOX_EXECUTION_UNAVAILABLE");
+  assert.equal(forged.steps.length, 0);
+  assert.equal(forged.payoutAuthorized, false);
+
+  const fakeGreen = await qualifyCandidateV1(
+    policy,
+    scripted([
+      baseline,
+      baseline,
+      {
+        ...passed,
+        stdout: "0 tests discovered\n",
+        evidenceSha256: "f".repeat(64),
+      },
+      passed,
+    ]).executor,
+  );
+  // A claim of zero discovered tests cannot automatically be treated as a
+  // meaningful passing suite merely because the command exited successfully.
+  assert.equal(fakeGreen.outcome, "needs_review");
+  assert.equal(fakeGreen.payoutAuthorized, false);
+});
+
+test("truncated acceptance or regression output is inconclusive, never qualified", async () => {
+  const truncated = await qualifyCandidateV1(
+    policy,
+    scripted([
+      {
+        ...baseline,
+        stderr: "real failure\n[output truncated]",
+      },
+    ]).executor,
+  );
+  assert.equal(truncated.outcome, "inconclusive");
+  assert.equal(truncated.payoutAuthorized, false);
+  assert.equal(truncated.steps.length, 1);
 });
 
 test("immutable commit, image, acceptance and regression policies are mandatory", async () => {

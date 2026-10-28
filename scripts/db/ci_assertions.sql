@@ -6,6 +6,112 @@ insert into public.certifiks_auth_users (user_id) values
   ('10000000-0000-4000-8000-000000000003'),
   ('10000000-0000-4000-8000-000000000004');
 
+-- Issue #23: session refresh is an atomic revocation+insert, never two
+-- simultaneously redeemable sessions or an arbitrary expiry extension.
+insert into public.certifiks_auth_sessions (
+  token_digest, csrf_digest, user_id, created_at, expires_at
+) values (
+  repeat('a',64), repeat('b',64),
+  '10000000-0000-4000-8000-000000000001',
+  now(), now() + interval '60 minutes'
+);
+
+do $auth_rotate$
+declare
+  applied boolean;
+begin
+  perform set_config('request.jwt.claim.role','service_role',true);
+  applied := public.certifiks_rotate_auth_session_once(
+    repeat('a',64), repeat('b',64), repeat('c',64),
+    repeat('d',64), now() + interval '30 minutes'
+  );
+  if applied is distinct from true then
+    raise exception 'first authenticated session rotation was not accepted';
+  end if;
+  if (select revoked_at is null from public.certifiks_auth_sessions
+       where token_digest=repeat('a',64)) or
+     (select revoked_at is not null from public.certifiks_auth_sessions
+       where token_digest=repeat('c',64)) or
+     (select rotation_parent_digest from public.certifiks_auth_sessions
+       where token_digest=repeat('c',64)) <> repeat('a',64)
+  then
+    raise exception 'session rotation failed subject or old-token invalidation';
+  end if;
+
+  applied := public.certifiks_rotate_auth_session_once(
+    repeat('a',64), repeat('b',64), repeat('e',64),
+    repeat('f',64), now() + interval '20 minutes'
+  );
+  if applied then raise exception 'replay created a second valid child'; end if;
+
+  applied := public.certifiks_rotate_auth_session_once(
+    repeat('c',64), repeat('e',64), repeat('e',64),
+    repeat('f',64), now() + interval '20 minutes'
+  );
+  if applied then raise exception 'wrong CSRF digest rotated valid session'; end if;
+
+  begin
+    perform public.certifiks_rotate_auth_session_once(
+      repeat('c',64), repeat('d',64), repeat('e',64),
+      repeat('f',64), now() + interval '90 minutes'
+    );
+    raise exception 'refresh illegally prolonged signed login lifetime';
+  exception when raise_exception then
+    if sqlerrm <> 'rotation must not prolong authenticated lifetime' then raise; end if;
+  end;
+  if (select revoked_at is not null from public.certifiks_auth_sessions
+       where token_digest=repeat('c',64)) then
+    raise exception 'failed expiry validation accidentally revoked live session';
+  end if;
+
+  begin
+    update public.certifiks_auth_sessions set revoked_at=null
+     where token_digest=repeat('a',64);
+    raise exception 'previous token reactivated';
+  exception when raise_exception then
+    if sqlerrm <> 'auth session revocation is one-way' then raise; end if;
+  end;
+  begin
+    update public.certifiks_auth_sessions set csrf_digest=repeat('f',64)
+     where token_digest=repeat('c',64);
+    raise exception 'session token was rebound in place';
+  exception when raise_exception then
+    if sqlerrm <> 'auth session identity and expiry are immutable' then raise; end if;
+  end;
+  begin
+    insert into public.certifiks_auth_sessions (
+      token_digest,csrf_digest,user_id,created_at,expires_at,
+      rotation_parent_digest
+    ) values (
+      repeat('e',64),repeat('f',64),
+      '10000000-0000-4000-8000-000000000001',
+      now(),now()+interval '20 minutes',repeat('a',64)
+    );
+    raise exception 'duplicate rotated child escaped unique constraint';
+  exception when unique_violation then null;
+  end;
+
+  if has_function_privilege(
+       'anon',
+       'public.certifiks_rotate_auth_session_once(text,text,text,text,timestamptz)',
+       'EXECUTE'
+     ) then
+    raise exception 'anonymous browser can rotate sessions';
+  end if;
+
+  perform set_config('request.jwt.claim.role','authenticated',true);
+  begin
+    perform public.certifiks_rotate_auth_session_once(
+      repeat('c',64), repeat('d',64), repeat('e',64),
+      repeat('f',64), now() + interval '20 minutes'
+    );
+    raise exception 'non-service identity rotated a session';
+  exception when raise_exception then
+    if sqlerrm <> 'server-only auth session rotation' then raise; end if;
+  end;
+end;
+$auth_rotate$;
+
 insert into public.certifiks_github_installations (installation_id) values (1234);
 
 insert into public.certifiks_organizations (organization_id, display_name) values

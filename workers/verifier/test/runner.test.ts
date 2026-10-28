@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
+import { mkdtemp, mkdir, realpath, rm, symlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import {
+  classifyContainerExitCode,
+  resolveTrustedCheckoutWorkspace,
   runUntrustedCode,
   verifierAvailable,
   verifierLimits,
@@ -47,4 +52,43 @@ test("rejects timeout values outside the policy range", async () => {
     }),
     /SANDBOX_TIMEOUT_OUT_OF_RANGE/,
   );
+});
+
+test("trusted checkout root admits its child but refuses root, host and symlink escapes", async () => {
+  const root = await mkdtemp(join(tmpdir(), "certifiks-trusted-checkouts-"));
+  const external = await mkdtemp(join(tmpdir(), "certifiks-external-host-"));
+  const work = join(root, "attempt-a");
+  try {
+    await mkdir(work);
+    await symlink(external, join(root, "stolen-host"));
+    assert.equal(
+      await resolveTrustedCheckoutWorkspace(work, root),
+      await realpath(work),
+    );
+    for (const [requested, allowedRoot] of [
+      [work, undefined],
+      [work, "."],
+      [work, "/"],
+      [root, root],
+      [external, root],
+      [join(root, "stolen-host"), root],
+    ] as const) {
+      await assert.rejects(
+        resolveTrustedCheckoutWorkspace(requested, allowedRoot),
+        /SANDBOX_(CHECKOUT_ROOT_UNCONFIGURED|WORKSPACE_OUTSIDE_TRUSTED_ROOT)/,
+      );
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+    await rm(external, { recursive: true, force: true });
+  }
+});
+
+test("Docker, OOM, and signal failures can never masquerade as a failed baseline test", () => {
+  for (const code of [0, 125, 126, 127, 137, 143, -1, 1.5]) {
+    assert.equal(classifyContainerExitCode(code), "runner_error");
+  }
+  for (const code of [1, 2, 42, 124]) {
+    assert.equal(classifyContainerExitCode(code), "failed");
+  }
 });

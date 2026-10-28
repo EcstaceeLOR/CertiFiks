@@ -304,3 +304,99 @@ test("public history rejects unknown sorting and CSV filter injection without qu
     await app.close();
   }
 });
+
+test("public lifecycle query allowlists reject inherited sort names and unknown filters before database access", async () => {
+  let dbCalls = 0;
+  const app = buildApp({
+    supabaseUrl: "https://public-example.supabase.co",
+    supabaseServiceRoleKey: serviceRole,
+    publicBountyFetch: (async () => {
+      dbCalls += 1;
+      return new Response(JSON.stringify([record]), { status: 200 });
+    }) as typeof fetch,
+  });
+  try {
+    for (const url of [
+      "/v1/bounties?sort=constructor",
+      "/v1/bounties?sort=toString",
+      "/v1/bounties?sort=__proto__",
+      "/v1/bounties?include_private=true",
+      "/v1/bounties?foo=bar",
+      "/v1/bounties/export.csv?sort=constructor",
+      "/v1/bounties/export.csv?include_private=true",
+      `/v1/bounties/${ID}?include_private=true`,
+    ]) {
+      const response = await app.inject({ method: "GET", url });
+      assert.equal(response.statusCode, 400, url + ": " + response.body);
+      assert.ok(
+        ["PUBLIC_BOUNTY_INVALID_QUERY", "PUBLIC_BOUNTY_INVALID_FILTER"].includes(
+          response.json().error,
+        ),
+      );
+    }
+    assert.equal(dbCalls, 0);
+  } finally {
+    await app.close();
+  }
+});
+
+test("capability states distinguish configured transport from unavailable money moving actions", async () => {
+  const cases = [
+    {
+      config: {
+        supabaseUrl: "",
+        supabaseServiceRoleKey: "",
+        webhookSecret: "",
+        webhookJournalDirectory: "",
+      },
+      bountyState: "not_configured",
+      webhookState: "not_configured",
+    },
+    {
+      config: {
+        supabaseUrl: "https://public-example.supabase.co",
+        supabaseServiceRoleKey: serviceRole,
+        webhookSecret: "synthetic-webhook-secret-with-enough-entropy",
+      },
+      bountyState: "configured_unverified",
+      webhookState: "configured_unverified",
+    },
+  ];
+  for (const scenario of cases) {
+    const app = buildApp({ ...scenario.config, production: true });
+    try {
+      const response = await app.inject({
+        method: "GET",
+        url: "/v1/capabilities",
+      });
+      assert.equal(response.statusCode, 200, response.body);
+      assert.equal(response.headers["cache-control"], "no-store");
+      const body = response.json();
+      assert.equal(body.version, "1");
+      assert.equal(body.productReady, false);
+      assert.equal(body.settlementReady, false);
+      assert.equal(body.capabilities.publicBounties.state, scenario.bountyState);
+      assert.equal(
+        body.capabilities.githubWebhookIngestion.state,
+        scenario.webhookState,
+      );
+      assert.equal(body.capabilities.githubWebhookIngestion.verifiedFix, false);
+      for (const key of [
+        "walletSignIn",
+        "githubOAuth",
+        "bountyFunding",
+        "candidateSubmission",
+        "signedVerification",
+        "disputes",
+        "withdrawals",
+        "privateEvidence",
+      ]) {
+        assert.equal(body.capabilities[key].state, "not_available", key);
+      }
+      assert.ok(!response.body.includes(serviceRole));
+      assert.ok(!response.body.includes(scenario.config.webhookSecret));
+    } finally {
+      await app.close();
+    }
+  }
+});

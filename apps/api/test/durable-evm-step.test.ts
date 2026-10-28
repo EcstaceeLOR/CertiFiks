@@ -123,6 +123,83 @@ test("cursor-chain mismatch, halted cursor and parent reorg never write any obse
   }
 });
 
+test("under-confirmed blocks never enter the durable chain ledger", async () => {
+  for (const depth of [4, 1000]) {
+    let writes = 0;
+    const databaseFetch = (async (_url: string, options?: RequestInit) => {
+      if (options?.method === "POST") {
+        writes += 1;
+        throw new Error("under-confirmed event must never be committed");
+      }
+      return new Response(
+        JSON.stringify([
+          {
+            genesis_hash: genesis,
+            last_hash: genesis,
+            last_scanned: 0,
+            confirmation_depth: depth,
+            halted: false,
+          },
+        ]),
+        { status: 200 },
+      );
+    }) as typeof fetch;
+    const step = new DurableEvmIndexStepV1(
+      config,
+      "https://sandbox.supabase.co",
+      "server-side-test-key-long",
+      rpcFetch(),
+      databaseFetch,
+    );
+    await assert.rejects(
+      step.pollOnce(),
+      (error: unknown) =>
+        error instanceof ChainIndexerBlockedError &&
+        error.message.startsWith("BLOCK_PENDING_CONFIRMATIONS"),
+    );
+    assert.equal(writes, 0);
+  }
+});
+
+test("invalid or corrupted confirmation-depth policy fails before any RPC scan", async () => {
+  for (const depth of [0, -1, 1001, "not-a-depth", null]) {
+    let reads = 0;
+    let writes = 0;
+    const databaseFetch = (async (_url: string, options?: RequestInit) => {
+      if (options?.method === "POST") {
+        writes += 1;
+        throw new Error("unexpected write");
+      }
+      return new Response(
+        JSON.stringify([
+          {
+            genesis_hash: genesis,
+            last_hash: genesis,
+            last_scanned: 0,
+            confirmation_depth: depth,
+            halted: false,
+          },
+        ]),
+        { status: 200 },
+      );
+    }) as typeof fetch;
+    const rpc = (async () => {
+      reads += 1;
+      throw new Error("unexpected RPC call");
+    }) as typeof fetch;
+    const step = new DurableEvmIndexStepV1(
+      config,
+      "https://sandbox.supabase.co",
+      "server-side-test-key-long",
+      rpc,
+      databaseFetch,
+    );
+    await assert.rejects(step.pollOnce(), ChainIndexerBlockedError);
+    assert.equal(reads, 0);
+    assert.equal(writes, 0);
+  }
+});
+
 test("database outage never becomes a verified blockchain transaction", async () => {
   const step = new DurableEvmIndexStepV1(
     config,

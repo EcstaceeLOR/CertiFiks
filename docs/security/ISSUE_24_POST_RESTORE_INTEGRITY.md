@@ -9,7 +9,7 @@ The CI workflow already initializes PostgreSQL from versioned migrations, create
 - The sponsor tenant, authenticated sponsor, exact destination repository/installation and funded native-asset amounts are preserved.
 - The immutable version-one manifest commitment and private storage *reference* are unchanged.
 - The developer application links to the assigned developer, the pinned base/head SHAs, and the authenticated GitHub read receipt with the same repository/manifest/installation identities.
-- The verification run retains its expected image and test-plan commitments and remains `pending`, not a fabricated green verdict.
+- The verification run retains its expected image and test-plan commitments and retains the fixture's expected `needs_review` result digest, not a fabricated green verdict.
 - The synthetic finalized non-orphaned funding event is still linked to the funded transaction and blocks, so the separate published-finality view contains exactly one permitted entry.
 - The funding audit entry retains its original action and digest, a second organization's repository is still present, and restored RLS/grants still deny anonymous inspection of sensitive tables.
 - On the restored database, direct privileged modification of the original manifest or deletion of the immutable audit entry is **actively rejected by restored triggers**.

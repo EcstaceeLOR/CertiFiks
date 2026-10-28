@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import {
+  digestRunnerExecutionEvidenceV1,
   runUntrustedCode,
   type VerifierRunRequest,
   type VerifierRunResult,
@@ -135,6 +136,13 @@ function validate(input: QualificationPolicyV1): void {
 function classify(
   value: VerifierRunResult,
 ): "success" | "failure" | "uncertain" | "error" {
+  if (value.status === "runner_error") return "error";
+  // An output buffer that exceeded the runner limit cannot be asserted as
+  // proving the exact intended test failure or a complete passing suite.
+  if (
+    value.stdout.includes("[output truncated]") ||
+    value.stderr.includes("[output truncated]")
+  ) return "uncertain";
   if (value.status === "passed" && value.exitCode === 0) return "success";
   if (
     value.status === "failed" &&
@@ -192,19 +200,24 @@ export async function qualifyCandidateV1(
   ): Promise<VerifierRunResult[]> {
     const outcomes: VerifierRunResult[] = [];
     for (const repetition of [1, 2] as const) {
-      const value = await executor({
+      const request: VerifierRunRequest = {
         workspace,
         image: policy.image,
         command: [...command],
         timeoutMs: 120000,
-      });
+      };
+      const value = await executor(request);
       if (
         !value ||
         !["passed", "failed", "runner_error", "timed_out"].includes(
           value.status,
         ) ||
-        typeof value.evidenceSha256 !== "string" ||
-        !/^[a-f0-9]{64}$/.test(value.evidenceSha256)
+        typeof value.stdout !== "string" ||
+        typeof value.stderr !== "string" ||
+        !Number.isSafeInteger(value.durationMs) ||
+        value.durationMs < 0 ||
+        !/^[a-f0-9]{64}$/.test(value.evidenceSha256) ||
+        value.evidenceSha256 !== digestRunnerExecutionEvidenceV1(request, value)
       ) {
         throw new Error("invalid sandbox execution receipt");
       }

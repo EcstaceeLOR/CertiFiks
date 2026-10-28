@@ -107,10 +107,26 @@ export function parseTrustedGitHubWebhook(
       !positiveId(pr.number) ||
       !record(pr.base) ||
       !record(pr.head) ||
+      !record(pr.base.repo) ||
+      !positiveId(pr.base.repo.id) ||
+      pr.base.repo.id !== repositoryId ||
+      typeof pr.base.sha !== "string" ||
+      !/^[a-f0-9]{40}$/.test(pr.base.sha) ||
       typeof pr.head.sha !== "string" ||
       !/^[a-f0-9]{40}$/.test(pr.head.sha)
     ) {
       throw new GitHubWebhookError(422, "Malformed pull request identity");
+    }
+    // A deleted fork can have a null head repository on a closed PR;
+    // all other changes must preserve the source repository's numeric ID.
+    if (
+      action !== "closed" &&
+      (!record(pr.head.repo) || !positiveId(pr.head.repo.id))
+    ) {
+      throw new GitHubWebhookError(
+        422,
+        "Missing pull request source repository identity",
+      );
     }
     if (
       !["opened", "reopened", "synchronize", "edited", "closed"].includes(

@@ -195,8 +195,8 @@ export async function mintRepositoryInstallationToken(
     p === null ||
     !("contents" in p) ||
     !("pull_requests" in p) ||
-    !["read", "write"].includes(String(p.contents)) ||
-    !["read", "write"].includes(String(p.pull_requests))
+    p.contents !== "read" ||
+    p.pull_requests !== "read"
   ) {
     throw new GitHubAppAuthError(
       "FORBIDDEN",

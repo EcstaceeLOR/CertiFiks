@@ -15,6 +15,14 @@ npm run test --workspace=@certifiks/api
 
 The `relational-db` CI job applies migrations to a clean PostgreSQL service and asserts sequential continuity, replay handling, gap rejection, safe branch rewinds, finality boundaries, private RLS, and that synthetic chain events cannot mutate bounty funding. It then exercises database backup/restore.
 
+## Confirmation-depth admission guard
+
+The single-block database poll step now validates that the private PostgreSQL cursor has an integer confirmation-depth setting between 1 and 1000, and refuses to commit a new observed block unless the current RPC head is at least the candidate height plus the operator-pinned confirmation depth. This is a deliberately conservative observation policy that prevents prematurely ingesting under-confirmed event data into the durable ledger; the rejecting branch issues no database mutation.
+
+Node regression tests show that a chain head of block 4 cannot admit block 1 with confirmation depths of 4 or 1000, and that missing/invalid depth settings cannot initiate an RPC fetch or a DB write. Existing tests continue to prove acceptance of a sufficiently confirmed block and no synthetic payout mutation.
+
+**This is a confirmations heuristic, not cryptographic chain finality.** A malicious RPC provider can invent a head and confirmations, and a chain can reorganize beyond the chosen depth. Production indexing requires independently approved chain identity, finality semantics, independent provider agreement, actual deployed contract ABI mapping and a reconciled on-chain payout witness. User interfaces must not label an event as settled merely because this guard passes.
+
 ## Still required for full Issue #27
 
 - Verify the actual hackathon-approved **Portaldot** runtime and determine whether it even exposes EVM JSON-RPC. The existing `portaldot-runtime-probe.mjs` is a *Substrate* WS read-only probe; this EVM adapter must not be used on a Substrate-only chain.

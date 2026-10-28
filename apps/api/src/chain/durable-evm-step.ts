@@ -98,16 +98,28 @@ export class DurableEvmIndexStepV1 {
     }
     const row = cursor[0] as Record<string, unknown>;
     const height = Number(row.last_scanned);
+    const depth = Number(row.confirmation_depth);
     if (
       row.halted !== false ||
       row.genesis_hash !== this.config.approvedGenesisHash ||
       typeof row.last_hash !== "string" ||
       !/^0x[a-f0-9]{64}$/.test(row.last_hash) ||
       !Number.isSafeInteger(height) ||
-      height < 0
+      height < 0 ||
+      !Number.isSafeInteger(depth) ||
+      depth < 1 ||
+      depth > 1000
     )
       throw new ChainIndexerBlockedError("Chain cursor inconsistent or halted");
     const block = await this.observer.observeBlock(height + 1);
+    // Never commit a block before the tenant-scoped, database-pinned
+    // confirmation threshold. A healthy node head is not true finality,
+    // but skipping under-confirmed events prevents premature projection.
+    if (BigInt(block.observedHead) < BigInt(height + 1) + BigInt(depth)) {
+      throw new ChainIndexerBlockedError(
+        "BLOCK_PENDING_CONFIRMATIONS: no event committed",
+      );
+    }
     if (block.parentHash !== row.last_hash) {
       // DO NOT resolve this automatically: finality and accounting history
       // must be examined before choosing an authorized rewind ancestor.

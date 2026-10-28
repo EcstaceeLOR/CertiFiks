@@ -9,8 +9,9 @@
 3. Runs the baseline acceptance suite twice, requiring a nonzero exit with the exact committed failure digest in both runs. A baseline that already passes, fails with a different reason, or gives variable output is not an accepted fix.
 4. Runs the same committed acceptance suite against the candidate twice, requiring two clean passes and identical observable result digests.
 5. Runs a separate committed regression suite against the candidate twice, requiring two clean and repeatable passes.
-6. Emits a structured status: qualified (claim only), rejected, needs_review (flaky), inconclusive (ambiguous/timeouts) or infrastructure_error. Only public digests and status are returned; raw stdout/stderr are not returned in the public qualification receipt.
-7. Marks every result `signed:false` and `payoutAuthorized:false`. Trustworthy settlement requires Issue #22 enrolled independent signatures, private evidence retention and on-chain decision state.
+6. Validates the sandbox's exact SHA-256 runner receipt against the image, command, status, exit, bounded stdout/stderr and execution duration. A mismatch is a **runner infrastructure error**. Truncated stdout/stderr and common empty/skipped-test signals are **inconclusive** even if the process claims success. These heuristics are a conservative signal, **not** a complete proof that tests executed or a defense against a compromised runner.
+7. Emits a structured status: qualified (claim only), rejected, needs_review (flaky), inconclusive (ambiguous/timeouts/skips) or infrastructure_error. Only public digests and status are returned; raw stdout/stderr are not returned in the public qualification receipt.
+8. Marks every result `signed:false` and `payoutAuthorized:false`. Trustworthy settlement requires Issue #22 enrolled independent signatures, private evidence retention and on-chain decision state.
 
 Run local unit tests with `npm run test --workspace=@certifiks/verifier`.
 

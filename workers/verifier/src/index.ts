@@ -25,6 +25,33 @@ export interface VerifierRunResult {
   evidenceSha256: string;
 }
 
+/**
+ * Deterministic evidence receipt hash for an exact runner request and
+ * observable result. A private worker must persist/authenticate the actual
+ * stdout and stderr separately: this hash is not proof of who executed it.
+ */
+export function digestRunnerExecutionEvidenceV1(
+  request: Pick<VerifierRunRequest, "image" | "command">,
+  outcome: Pick<
+    VerifierRunResult,
+    "status" | "exitCode" | "stdout" | "stderr" | "durationMs"
+  >,
+): string {
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        image: request.image,
+        command: request.command,
+        status: outcome.status,
+        exitCode: outcome.exitCode,
+        stdout: outcome.stdout,
+        stderr: outcome.stderr,
+        durationMs: outcome.durationMs,
+      }),
+    )
+    .digest("hex");
+}
+
 function boundedText(value: string): string {
   const bytes = Buffer.from(value, "utf8");
   if (bytes.length <= MAX_OUTPUT_BYTES) return value;
@@ -223,19 +250,13 @@ export async function runUntrustedCode(
   const durationMs = Date.now() - start;
   const safeStdout = boundedText(stdout);
   const safeStderr = boundedText(stderr);
-  const evidenceSha256 = createHash("sha256")
-    .update(
-      JSON.stringify({
-        image: request.image,
-        command: request.command,
-        status,
-        exitCode,
-        stdout: safeStdout,
-        stderr: safeStderr,
-        durationMs,
-      }),
-    )
-    .digest("hex");
+  const evidenceSha256 = digestRunnerExecutionEvidenceV1(request, {
+    status,
+    exitCode,
+    stdout: safeStdout,
+    stderr: safeStderr,
+    durationMs,
+  });
 
   return {
     status,

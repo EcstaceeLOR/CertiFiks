@@ -70,7 +70,8 @@ test("mints one-repository read-only installation token without redirects", asyn
     });
     assert.match(
       new Headers(options?.headers).get("Authorization") ?? "",
-      /^***    );
+      /^Bearer eyJ/,
+    );
     return tokenResponse();
   }) as typeof fetch;
   const scoped = await mintRepositoryInstallationToken(

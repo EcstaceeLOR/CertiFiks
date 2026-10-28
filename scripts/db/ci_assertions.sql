@@ -1099,3 +1099,75 @@ end;
 $$;
 reset request.jwt.claim.role;
 select 'PASS: partner scopes, revocation, cross-replica quota, owner approval and private RLS' as result;
+
+-- Issue #23: atomic server-side session, tenant, role and CSRF decisions.
+insert into public.certifiks_auth_role_memberships
+  (user_id, organization_id, role)
+values (
+  '10000000-0000-4000-8000-000000000002',
+  '20000000-0000-4000-8000-000000000001',
+  'developer'
+) on conflict (user_id,organization_id,role) do nothing;
+
+insert into public.certifiks_auth_sessions (
+  token_digest, csrf_digest, user_id, created_at, expires_at
+) values (
+  repeat('a',64), repeat('b',64),
+  '10000000-0000-4000-8000-000000000002',
+  now(), now()+interval '1 hour'
+);
+
+select set_config('request.jwt.claim.role','service_role',false);
+do $session_test$
+declare
+  session_user_id uuid;
+  tenant uuid := '20000000-0000-4000-8000-000000000001';
+begin
+  select user_id into session_user_id
+    from public.certifiks_authorize_session_v1(
+      repeat('a',64),tenant,'developer',true,repeat('b',64)
+    );
+  if session_user_id is distinct from
+     '10000000-0000-4000-8000-000000000002'::uuid
+  then raise exception 'valid scoped session was denied'; end if;
+
+  if exists(select 1 from public.certifiks_authorize_session_v1(
+     repeat('a',64),tenant,'developer',true,repeat('f',64)))
+  then raise exception 'wrong CSRF accepted'; end if;
+
+  if exists(select 1 from public.certifiks_authorize_session_v1(
+     repeat('a',64),
+     '20000000-0000-4000-8000-000000000002',
+     'developer',false,null))
+  then raise exception 'session crossed tenant'; end if;
+
+  if exists(select 1 from public.certifiks_authorize_session_v1(
+     repeat('a',64),tenant,'arbitrator',false,null))
+  then raise exception 'forged privileged role accepted'; end if;
+
+  perform set_config('request.jwt.claim.role','authenticated',true);
+  begin
+    perform public.certifiks_authorize_session_v1(
+      repeat('a',64),tenant,'developer',false,null);
+    raise exception 'browser called private role RPC';
+  exception when raise_exception then
+    if sqlerrm <> 'session lookup is service-role only'
+    then raise; end if;
+  end;
+  perform set_config('request.jwt.claim.role','service_role',true);
+
+  update public.certifiks_auth_sessions
+     set revoked_at=now() where token_digest=repeat('a',64);
+  if exists(select 1 from public.certifiks_authorize_session_v1(
+     repeat('a',64),tenant,'developer',false,null))
+  then raise exception 'revoked session accepted'; end if;
+
+  if has_function_privilege('anon',
+    'public.certifiks_authorize_session_v1(text,uuid,text,boolean,text)',
+    'EXECUTE')
+  then raise exception 'browser can inspect private session and roles'; end if;
+end;
+$session_test$;
+reset request.jwt.claim.role;
+select 'PASS: tenant-scoped session, CSRF, role, revocation and no browser access'
+  as result;

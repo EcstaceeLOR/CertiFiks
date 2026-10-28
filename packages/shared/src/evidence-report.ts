@@ -283,6 +283,7 @@ export function verifyEvidenceBundleV1(
   );
   const orgs = new Set<string>();
   const keys = new Set<string>();
+  const publicKeyFingerprints = new Set<string>();
   for (const entry of bundle.signatures) {
     onlyKeys(entry, [
       "keyId",
@@ -318,6 +319,16 @@ export function verifyEvidenceBundleV1(
     assert(signature.length === 64, "wrong signature length");
     const publicKey = createPublicKey(trusted.publicKeyPem);
     assert(publicKey.asymmetricKeyType === "ed25519", "invalid trust anchor");
+    // Distinct organization labels are not enough: the same Ed25519 key
+    // registered under two different IDs cannot form an independent quorum.
+    const fingerprint = sha256(
+      publicKey.export({ format: "der", type: "spki" }),
+    );
+    assert(
+      !publicKeyFingerprints.has(fingerprint),
+      "duplicate signer key material across reviewer organizations",
+    );
+    publicKeyFingerprints.add(fingerprint);
     assert(
       verify(null, signingBytes(digest), publicKey, signature),
       "evidence signature verification failed",

@@ -29,7 +29,8 @@ test("public bounty list fetches server-filtered finalized projection with preci
     assert.equal(opts?.redirect, "error");
     assert.equal(
       new Headers(opts?.headers).get("Authorization"),
-      `***    );
+      `Bearer ${serviceRole}`,
+    );
     return new Response(JSON.stringify([record]), { status: 200 });
   }) as typeof fetch;
   const app = buildApp({
@@ -165,7 +166,8 @@ test("developer search applies exact DB filters before pagination and never infl
     assert.equal(u.searchParams.get("offset"), "24");
     assert.equal(
       new Headers(options?.headers).get("Authorization"),
-      `***    );
+      `Bearer ${serviceRole}`,
+    );
     return new Response(JSON.stringify([record]), { status: 200 });
   }) as typeof fetch;
   const app = buildApp({
@@ -228,7 +230,8 @@ test("public history uses only whitelisted deterministic sorting and returns bou
       assert.equal(options?.redirect, "error");
       assert.equal(
         new Headers(options?.headers).get("Authorization"),
-        `***      );
+        `Bearer ${serviceRole}`,
+      );
       return new Response(JSON.stringify([record]), { status: 200 });
     }) as typeof fetch,
   });

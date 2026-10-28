@@ -71,7 +71,7 @@ if (args.length !== 3) {
         readBoundedRegularFile(join(artifactDirectory, "candidate-log.bin")),
         readBoundedRegularFile(join(artifactDirectory, "regression-log.bin")),
       ]);
-     const bundle = JSON.parse(reportBytes.toString("utf8"));
+    const bundle = JSON.parse(reportBytes.toString("utf8"));
     const roster = JSON.parse(rosterBytes.toString("utf8"));
     const result = verifyEvidenceBundleV1(bundle, roster, {
       "baseline-log": baseline,

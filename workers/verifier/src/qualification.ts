@@ -158,7 +158,6 @@ function classify(
     value.exitCode > 0
   )
     return "failure";
-  if (value.status === "runner_error") return "error";
   return "uncertain";
 }
 

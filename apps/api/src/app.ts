@@ -62,7 +62,9 @@ export function buildApp(config: AppConfiguration = {}) {
       settlementReady: false,
       capabilities: {
         publicBounties: {
-          state: postgresConfigured ? "configured_unverified" : "not_configured",
+          state: postgresConfigured
+            ? "configured_unverified"
+            : "not_configured",
           readOnly: true,
         },
         githubWebhookIngestion: {

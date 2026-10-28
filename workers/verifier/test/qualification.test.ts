@@ -186,13 +186,26 @@ test("forged runner evidence hashes cannot qualify a baseline failure or a green
         stdout: "0 tests discovered\n",
         evidenceSha256: "f".repeat(64),
       },
-      passed,
     ]).executor,
   );
-  // A claim of zero discovered tests cannot automatically be treated as a
-  // meaningful passing suite merely because the command exited successfully.
-  assert.equal(fakeGreen.outcome, "needs_review");
+  // Zero discovered tests cannot count as a real pass even with exit code 0.
+  assert.equal(fakeGreen.outcome, "inconclusive");
   assert.equal(fakeGreen.payoutAuthorized, false);
+});
+
+test("empty or skipped test suites cannot satisfy a candidate pass", async () => {
+  for (const line of ["no tests ran", "0 tests passed", "2 skipped", "all tests skipped"]) {
+    const result = await qualifyCandidateV1(
+      policy,
+      scripted([
+        baseline,
+        baseline,
+        { ...passed, stdout: line + "\n" },
+      ]).executor,
+    );
+    assert.equal(result.outcome, "inconclusive", line);
+    assert.equal(result.payoutAuthorized, false);
+  }
 });
 
 test("truncated acceptance or regression output is inconclusive, never qualified", async () => {

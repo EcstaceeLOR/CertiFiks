@@ -70,7 +70,8 @@ begin
       and v.run_id='70000000-0000-4000-8000-000000000001'
       and v.committed_plan_digest='0x'||repeat('d',64)
       and v.image_digest=git.image_digest
-      and v.outcome='pending'
+      and v.outcome='needs_review'
+      and v.result_digest='0x'||repeat('9',64)
       and ev.transaction_hash=b.funded_transaction_hash
       and ev.block_hash='0x'||repeat('2',64)
       and ev.event_digest='0x'||repeat('3',64)

@@ -13,13 +13,16 @@ const token = "a".repeat(43);
 const csrf = "b".repeat(43);
 const cookie = `other=unrelated; __Host-certi_session=${token}`;
 const trustedOrigin = "https://certifiks.example";
-const sha = (value: string) =>
-  createHash("sha256").update(value).digest("hex");
+const sha = (value: string) => createHash("sha256").update(value).digest("hex");
 
-function setup(reply: unknown = [{
-  user_id: userId,
-  expires_at: "2099-01-01T00:00:00.000Z",
-}]) {
+function setup(
+  reply: unknown = [
+    {
+      user_id: userId,
+      expires_at: "2099-01-01T00:00:00.000Z",
+    },
+  ],
+) {
   const requests: unknown[] = [];
   const policy: TrustedSessionPolicyV1 = {
     supabaseUrl: "https://certifiks-ci.supabase.co",
@@ -49,7 +52,10 @@ function setup(reply: unknown = [{
 
 test("server-side role lookup binds opaque cookie to exact tenant and required role", async () => {
   const { policy, requests } = setup();
-  const result = await authorizeBoundSessionV1({ cookieHeader: cookie }, policy);
+  const result = await authorizeBoundSessionV1(
+    { cookieHeader: cookie },
+    policy,
+  );
   assert.deepEqual(result, {
     userId,
     expiresAt: "2099-01-01T00:00:00.000Z",
@@ -122,9 +128,10 @@ test("revoked/expired/missing role, ambiguous rows and upstream errors deny acce
       { cookieHeader: cookie },
       {
         ...policy,
-        request: (async () => new Response("private upstream error", {
-          status: 503,
-        })) as typeof fetch,
+        request: (async () =>
+          new Response("private upstream error", {
+            status: 503,
+          })) as typeof fetch,
       },
     ),
     (error: unknown) =>
@@ -141,7 +148,9 @@ test("no unapproved database origin, stolen cookies or untrusted role configurat
     { policy: { ...policy, trustedOrigin: "http://certifiks.example" } },
     { policy: { ...policy, requiredRole: "custodian" as never } },
     { policy: { ...policy, organizationId: "not-a-tenant" } },
-    { cookieHeader: `__Host-certi_session=${token}; __Host-certi_session=${token}` },
+    {
+      cookieHeader: `__Host-certi_session=${token}; __Host-certi_session=${token}`,
+    },
     { cookieHeader: "session=browser-faked" },
   ]) {
     await assert.rejects(

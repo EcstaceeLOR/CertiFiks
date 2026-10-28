@@ -168,21 +168,21 @@ test("correctly signed PRs cannot misbind base repo or omit pinned commit identi
       {
         ...original,
         pull_request: {
-          ...original.pull_request as object,
+          ...(original.pull_request as object),
           base: { repo: { id: REPOSITORY_ID + 1 }, sha: "b".repeat(40) },
         },
       },
       {
         ...original,
         pull_request: {
-          ...original.pull_request as object,
+          ...(original.pull_request as object),
           base: { repo: { id: REPOSITORY_ID }, sha: "0x1234" },
         },
       },
       {
         ...original,
         pull_request: {
-          ...original.pull_request as object,
+          ...(original.pull_request as object),
           head: { sha: "a".repeat(40) },
         },
       },

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { generateKeyPairSync } from "node:crypto";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -166,6 +166,23 @@ test("missing logs, untrusted keys, revoked identities and one-organization quor
   );
 });
 
+test("aliases for the same Ed25519 key cannot count as independent organizations", () => {
+  const alias = deep(fixture());
+  alias.signatures[1] = signEvidenceReportV1(alias.report, {
+    keyId: "key-two",
+    organizationId: "org-two",
+    privateKeyPem: pemPrivate(signerA),
+  });
+  const forgedRoster: TrustedEvidenceSignerV1[] = [
+    roster[0],
+    { ...roster[1], publicKeyPem: pemPublic(signerA) },
+  ];
+  assert.throws(
+    () => verifyEvidenceBundleV1(alias, forgedRoster, files),
+    /duplicate signer key material/,
+  );
+});
+
 test("manifest, image, test plan, commit and strict private-log descriptors cannot be altered", () => {
   for (const field of [
     "manifestDigest",
@@ -233,6 +250,30 @@ test("external verification CLI reproduces signed bundle offline and rejects abs
     output = run();
     assert.equal(output.status, 1);
     assert.match(output.stderr, /EVIDENCE_REJECTED/);
+
+    // An enormous log is refused without reading it all into memory.
+    await writeFile(
+      join(folder, "regression-log.bin"),
+      Buffer.alloc(1024 * 1024 + 1, 65),
+    );
+    output = run();
+    assert.equal(output.status, 1);
+    assert.match(output.stderr, /EVIDENCE_REJECTED/);
+    assert.ok(!output.stderr.includes(tmp), "private filesystem path leaked");
+
+    // A symlink to another host file must be refused EVEN when its bytes
+    // happen to be the exact digest committed in the trusted report.
+    await rm(join(folder, "regression-log.bin"));
+    const outside = join(tmp, "sensitive-host-target.bin");
+    await writeFile(outside, files["regression-log"]);
+    await symlink(outside, join(folder, "regression-log.bin"));
+    output = run();
+    assert.equal(output.status, 1);
+    assert.match(output.stderr, /EVIDENCE_REJECTED/);
+    await rm(join(folder, "regression-log.bin"));
+    await writeFile(join(folder, "regression-log.bin"), files["regression-log"]);
+    output = run();
+    assert.equal(output.status, 0, output.stderr);
   } finally {
     await rm(tmp, { recursive: true, force: true });
   }

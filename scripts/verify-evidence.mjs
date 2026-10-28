@@ -26,11 +26,7 @@ async function readBoundedRegularFile(path) {
   const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
   try {
     const info = await file.stat();
-    if (
-      !info.isFile() ||
-      info.size <= 0 ||
-      info.size > MAX_PRIVATE_BYTES
-    ) {
+    if (!info.isFile() || info.size <= 0 || info.size > MAX_PRIVATE_BYTES) {
       throw new Error("evidence input is not a bounded regular file");
     }
     const bytes = Buffer.alloc(MAX_PRIVATE_BYTES + 1);

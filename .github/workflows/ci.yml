@@ -192,6 +192,14 @@ jobs:
             postgres:16 psql -tA -h 127.0.0.1 -U postgres -d certifiks_restored \
             -c "select (select count(*) from public.certifiks_bounties), (select count(*) from public.certifiks_attempts), (select count(*) from public.certifiks_audit_entries), (select count(*) from public.certifiks_public_bounties_v1);" -F '|')
           test "$result" = "2|1|1|1"
+          # Row totals alone cannot detect a restored but corrupted lifecycle.
+          # Re-assert exact cross-table identities, commitments, finalized
+          # chain observation, tenant grants and append-only audit triggers.
+          docker run --rm --network host \
+            -e PGPASSWORD=certifiks-ci-only-password \
+            -v "$PWD:/repo:ro" postgres:16 \
+            psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres \
+              -d certifiks_restored -f /repo/scripts/db/ci_restore_integrity.sql
           rm -rf "$RUNNER_TEMP/certifiks-backup"
 
 

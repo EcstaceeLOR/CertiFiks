@@ -42,6 +42,26 @@ test("rejects shell entrypoints to prevent implicit shell evaluation", async () 
   );
 });
 
+test("rejects absolute and alternative shell entrypoints before Docker", async () => {
+  for (const executable of [
+    "/bin/sh",
+    "/usr/bin/bash",
+    "/bin/dash",
+    "/bin/ash",
+    "C:\\Windows\\System32\\cmd.exe",
+    "/usr/bin/pwsh",
+  ]) {
+    await assert.rejects(
+      runUntrustedCode({
+        workspace: ".",
+        image: pinnedImage,
+        command: [executable, "-c", "echo unsafe"],
+      }),
+      /SANDBOX_SHELL_ENTRYPOINT_FORBIDDEN/,
+    );
+  }
+});
+
 test("rejects timeout values outside the policy range", async () => {
   await assert.rejects(
     runUntrustedCode({
@@ -85,10 +105,10 @@ test("trusted checkout root admits its child but refuses root, host and symlink 
 });
 
 test("Docker, OOM, and signal failures can never masquerade as a failed baseline test", () => {
-  for (const code of [0, 125, 126, 127, 137, 143, -1, 1.5]) {
+  for (const code of [0, 124, 125, 126, 127, 137, 143, -1, 1.5]) {
     assert.equal(classifyContainerExitCode(code), "runner_error");
   }
-  for (const code of [1, 2, 42, 124]) {
+  for (const code of [1, 2, 42]) {
     assert.equal(classifyContainerExitCode(code), "failed");
   }
 });

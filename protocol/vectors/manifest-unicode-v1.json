@@ -9,11 +9,7 @@
       "A": "literal \"quote\" and slash /",
       "𐐀": "Deseret"
     },
-    "paths": [
-      "tests/🧪/fix.py",
-      "a\tb",
-      "line\nbreak"
-    ],
+    "paths": ["tests/🧪/fix.py", "a\tb", "line\nbreak"],
     "check": true,
     "nullValue": null,
     "amount": 42

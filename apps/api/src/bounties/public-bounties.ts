@@ -126,7 +126,8 @@ export class PublicBountyClient {
       (bountyId !== undefined && !ID.test(bountyId)) ||
       (filters.state !== undefined &&
         !PUBLIC_BOUNTY_STATES.has(filters.state)) ||
-      (filters.sort !== undefined && !(filters.sort in PUBLIC_HISTORY_SORTS)) ||
+      (filters.sort !== undefined &&
+        !Object.hasOwn(PUBLIC_HISTORY_SORTS, filters.sort)) ||
       (filters.repositoryFullName !== undefined &&
         !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(filters.repositoryFullName))
     ) {
